@@ -11,6 +11,7 @@ srcDir        = "src"
 
 requires "nim >= 1.5.1"
 requires "aglet"
+requires "nimPNG >= 0.2.5"
 
 task rund, "Runs the project":
   selfExec("c -r -d:debug --out:./truss3d.out ./src/truss3d")

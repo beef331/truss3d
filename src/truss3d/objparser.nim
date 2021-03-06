@@ -50,5 +50,6 @@ proc parseObj*(path: string): mesh.Mesh =
 proc loadObjMesh*(win: var WindowGlfw, path: string): auto =
   let 
     model = parseObj(path)
-  win.newMesh(dpTriangles,  model.toVerts)
+    (verts, tris) = model.toVerts
+  result = win.newMesh[: Vertex](dpTriangleFan, verts)
   

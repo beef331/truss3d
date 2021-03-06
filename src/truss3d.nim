@@ -1,7 +1,7 @@
 import aglet
 import aglet/window/glfw  # we need a backend for windowing
 from nimPNG import decodePng32
-import truss3d/[objparser, mesh, renderobject]
+import truss3d/[objparser, mesh, renderobject, gltf]
 import times
 # initialize the library state
 var agl = initAglet()
@@ -27,7 +27,7 @@ const
     #version 330 core
     out float color;
     void main(void) {
-      color = gl_FragCoord.z;
+      color = gl_FragCoord.z / gl_FragCoord.w;
     }
   """
   TestVert = glsl"""
@@ -71,11 +71,11 @@ const
     out vec4 color;
 
     void main(void) {
-      color = texture(shadowMap, fragUv);
+      color = texture(tex, fragUv);
       vec2 shadowCoord = lightSpace.xy * 0.5 + 0.5;
       float depth = lightSpace.z * 0.5 + 0.5;
       float shadow = 0.0;
-      float bias = max(0.1 *  (dot(normal, lightDir)), 0.005);  
+      float bias = max(0.004 *  (dot(normal, lightDir)), 0.005);  
       vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
       for(int x = -1; x <= 1; ++x)
       {
@@ -90,7 +90,7 @@ const
         shadow = 1;
       }
       float ndotl = dot(normal, -lightDir) * 0.5 + 0.5;
-      //color *= vec4(shadow + 0.1) * ndotl;
+      color *= vec4(shadow + 0.1) * ndotl;
 
     }
   """
@@ -108,6 +108,7 @@ let
   cube = win.loadObjMesh("./assets/cube.obj")
   sphere = win.loadObjMesh("./assets/sphere.obj")
   plane = win.loadObjMesh("./assets/plane.obj")
+  lantern = win.loadGltf("./assets/Lantern.gltf")
   testTexture = win.newTexture2D(Rgba8, decodePng32(TestPng))
   shadowMap = win.newTexture2D[: Red16](vec2i(4096, 4096)).toFramebuffer()
 
@@ -126,7 +127,9 @@ var
 var renderQueue = @[
   initRenderObject(vec3f(0,-0.5,0), vec3f(0,0,0), vec3f(1,1,1), testMesh),
   initRenderObject(vec3f(3,0,0), vec3f(0,0,0), vec3f(1,1,1), cube),
-  initRenderObject(vec3f(0, -1, 0), vec3f(0,0,0), vec3f(3, 1, 3), plane)
+  initRenderObject(vec3f(0, -1, 0), vec3f(0,0,0), vec3f(3, 1, 3), plane),
+  initRenderObject(vec3f(0, 0, 5), vec3f(0,0,0), vec3f(1, 1, 1), lantern)
+
 ]
 
 proc renderLightPass() = 
@@ -176,7 +179,7 @@ while not win.closeRequested:
     params = defaultDrawParams().derive:
           depthTest
           faceCulling {facingBack}
-  for i, ro in renderQueue[2..2]:
+  for i, ro in renderQueue:
     frame.draw(baseProgram, ro.mesh, uniforms {
       model: mat4f()
         .translate(ro.pos)
