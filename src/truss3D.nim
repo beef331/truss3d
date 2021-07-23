@@ -66,12 +66,13 @@ when isMainModule:
   var
     model: Model
     shader: Shader
-    view = lookAt(vec3(0, 0, -10), vec3(0, 0, 0), vec3(0, 1, 0))
-    proj = perspective(90f, 16f / 9f, 0.1, 100)
+    view = lookAt(vec3(0, 0, -3), vec3(0, 0, 0), vec3(0, 1, 0))
+    proj: Mat4
 
   proc init() =
-    model = loadModel("assets/Cube.glb")
+    model = loadModel("assets/Sphere.glb")
     shader = loadShader("assets/vert.glsl", "assets/frag.glsl")
+    proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.1, 100)
     shader.setUniform "mvp", proj * view * mat4()
 
   proc update(dt: float32) =
@@ -80,8 +81,7 @@ when isMainModule:
 
   proc draw() =
     with shader:
-      glBindVertexArray(model.buffers[0].vao)
-      glEnableVertexAttribArray(0)
-      glDrawArrays(GlTriangles, 0, model.buffers[0].size)
+      glBindBuffer(GlElementArrayBuffer, model.buffers[0].indices)
+      glDrawElements(GlTriangles, model.buffers[0].size, GlUnsignedInt, nil)
 
   initTruss("Test", ivec2(1280, 720), init, update, draw)
