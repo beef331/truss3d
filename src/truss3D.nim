@@ -67,7 +67,8 @@ when isMainModule:
     model: Model
     shader: Shader
     view = lookAt(vec3(0, 0, -10), vec3(0, 0, 0), vec3(0, 1, 0))
-    proj = perspective(60f, 16f / 9f, 0.1, 100)
+    proj = perspective(90f, 16f / 9f, 0.1, 100)
+
   proc init() =
     model = loadModel("assets/Cube.glb")
     shader = loadShader("assets/vert.glsl", "assets/frag.glsl")
@@ -82,4 +83,5 @@ when isMainModule:
       glBindVertexArray(model.buffers[0].vao)
       glEnableVertexAttribArray(0)
       glDrawArrays(GlTriangles, 0, model.buffers[0].size)
+
   initTruss("Test", ivec2(1280, 720), init, update, draw)

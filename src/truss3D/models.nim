@@ -10,7 +10,7 @@ type
 
 
 proc loadModel*(path: string): Model =
-  let scene = aiImportFile(path, ConvertToLeftHanded)
+  let scene = aiImportFile(path, TargetRealtimeQuality)
   for mesh in scene.imeshes:
     var vbo: Gluint
     glGenBuffers(1, vbo.addr)
