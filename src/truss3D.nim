@@ -37,7 +37,7 @@ proc update =
     lastFrame = getMonoTime()
     pollInputs()
     gupdateProc(dt)
-    glClear(GL_ColorBufferBit)
+    glClear(GlColorBufferBit or GlDepthBufferBit)
     gdrawProc()
     glSwapWindow(app.window)
   quitTruss()
@@ -53,6 +53,7 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     app.context = glCreateContext(app.window)
     loadExtensions()
     glClearColor(0.0, 0.0, 0.0, 1)
+    glClearDepth(1)
     discard glSetSwapInterval(0.cint)
 
     if initProc != nil:
@@ -66,13 +67,13 @@ when isMainModule:
   var
     model: Model
     shader: Shader
-    view = lookAt(vec3(0, 0, -3), vec3(0, 0, 0), vec3(0, 1, 0))
+    view = lookAt(vec3(0, 4, -5), vec3(0, 0, 0), vec3(0, 1, 0))
     proj: Mat4
 
   proc init() =
-    model = loadModel("assets/Sphere.glb")
+    model = loadModel("assets/TestModel.glb")
     shader = loadShader("assets/vert.glsl", "assets/frag.glsl")
-    proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.1, 100)
+    proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
     shader.setUniform "mvp", proj * view * mat4()
 
   proc update(dt: float32) =
@@ -81,7 +82,7 @@ when isMainModule:
 
   proc draw() =
     with shader:
-      glBindBuffer(GlElementArrayBuffer, model.buffers[0].indices)
-      glDrawElements(GlTriangles, model.buffers[0].size, GlUnsignedInt, nil)
+      glEnable(GlDepthTest)
+      model.render
 
   initTruss("Test", ivec2(1280, 720), init, update, draw)
