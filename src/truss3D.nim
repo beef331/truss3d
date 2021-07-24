@@ -1,6 +1,6 @@
-import opengl, vmath
+import opengl, vmath, pixie
 import std/[monotimes, times]
-import truss3D/[inputs, models, shaders]
+import truss3D/[inputs, models, shaders, textures]
 import sdl2/sdl except Keycode
 
 type App = object
@@ -32,7 +32,7 @@ proc update =
     assert gupdateProc != nil
     assert gdrawProc != nil
 
-    let dt = (getMonoTime() - lastFrame).inNanoseconds.float / 10000000
+    let dt = (getMonoTime() - lastFrame).inNanoseconds.float / 1000000000
     time += dt
     lastFrame = getMonoTime()
     pollInputs()
@@ -40,6 +40,7 @@ proc update =
     glClear(GlColorBufferBit or GlDepthBufferBit)
     gdrawProc()
     glSwapWindow(app.window)
+
   quitTruss()
 
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
@@ -69,16 +70,25 @@ when isMainModule:
     shader: Shader
     view = lookAt(vec3(0, 4, -5), vec3(0, 0, 0), vec3(0, 1, 0))
     proj: Mat4
+    texture: textures.Texture
 
   proc init() =
-    model = loadModel("assets/TestModel.glb")
+    model = loadModel("assets/Cube.glb")
     shader = loadShader("assets/vert.glsl", "assets/frag.glsl")
     proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
     shader.setUniform "mvp", proj * view * mat4()
+    let sam = readImage"assets/Sam.jpg"
+    texture = genTexture()
+    sam.copyTo texture
+    shader.setUniform "tex", texture
 
   proc update(dt: float32) =
     if KeycodeQ.isDown:
       app.isRunning = false
+    view = lookAt(vec3(sin(time) * 4, 1, -3), vec3(0, 0, 0), vec3(0, 1, 0))
+    proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
+    shader.setUniform "mvp", proj * view * mat4()
+
 
   proc draw() =
     with shader:

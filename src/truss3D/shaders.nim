@@ -1,5 +1,6 @@
 import opengl, vmath
 import std/[tables, typetraits]
+import textures
 
 type
   ShaderKind* = enum
@@ -111,3 +112,14 @@ proc setUniform*(shader: Shader, uniform: string, value: Mat4) =
     if loc != -1:
       glUniformMatrix4fv(loc, 1, GlFalse, value[0, 0].unsafeAddr)
 
+proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
+  with shader:
+    let loc = glGetUniformLocation(shader.Gluint, uniform)
+    if loc != -1:
+      let textureUnit = 0.Gluint;
+      glBindTextureUnit(texture_unit, tex.GLuint);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+      glUniform1i(loc, textureUnit.Glint)
