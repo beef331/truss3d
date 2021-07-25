@@ -1,4 +1,4 @@
-import opengl, vmath
+import opengl, vmath, pixie
 import std/[tables, typetraits]
 import textures
 
@@ -57,15 +57,11 @@ proc loadShader*(vert, frag: string): Shader =
   glDeleteShader(fs)
 
 
-const UboTable = {
-  "Camera": 1.Gluint,
-  "Light": 2.Gluint
-  }.toTable
 
-proc genUbo*[T; U: static[string]](shader: Gluint): Ubo[T] =
+proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
   glGenBuffers(1, result.Gluint.addr)
   glBindBuffer(GlUniformBuffer, result.Gluint)
-  glBindBufferbase(GlUniformBuffer, UboTable[U], result.Gluint) # Apparently no way to go name -> Ubo bind location
+  glBindBufferbase(GlUniformBuffer, binding.Gluint, result.Gluint) # Apparently no way to go name -> Ubo bind location
 
 proc copyTo*[T](val: T, ubo: Ubo[T]) =
   glBindBuffer(GlUniformBuffer, ubo.GLuint)
@@ -105,6 +101,12 @@ proc setUniform*(shader: Shader, uniform: string, value: Vec4) =
     let loc = glGetUniformLocation(shader.Gluint, uniform)
     if loc != -1:
       glUniform4f(loc, value.x, value.y, value.z, value.w)
+
+proc setUniform*(shader: Shader, uniform: string, value: Color) =
+  with shader:
+    let loc = glGetUniformLocation(shader.Gluint, uniform)
+    if loc != -1:
+      glUniform4f(loc, value.r, value.g, value.b, value.a)
 
 proc setUniform*(shader: Shader, uniform: string, value: Mat4) =
   with shader:
