@@ -16,7 +16,7 @@ const KindLut = [
 ]
 
 template with*(shader: Shader, body: untyped) =
-  glUseProgram(shader.Gluint)
+  glUseProgram(Gluint(shader))
   body
 
 proc loadShader*(shader: string, kind: ShaderKind): Gluint =

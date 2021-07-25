@@ -2,6 +2,7 @@ import opengl, vmath, pixie
 import std/[monotimes, times]
 import truss3D/[inputs, models, shaders, textures]
 import sdl2/sdl except Keycode
+export models, shaders, textures, inputs, opengl
 
 type App = object
   window: Window
@@ -9,7 +10,6 @@ type App = object
   context: GLContext
   isRunning: bool
   rect: Gluint
-
 
 type
   InitProc* = proc(){.nimcall.}
@@ -23,8 +23,10 @@ var
   time = 0f32
 
 proc quitTruss*() =
-  glDeleteContext(app.context)
-  app.window.destroyWindow
+  app.isRunning = false
+
+proc screenSize*: IVec2 = app.windowSize
+proc getTime*: float32 = time
 
 proc update =
   var lastFrame = getMonoTime()
@@ -42,6 +44,8 @@ proc update =
     glSwapWindow(app.window)
 
   quitTruss()
+  glDeleteContext(app.context)
+  app.window.destroyWindow
 
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc) =

@@ -18,6 +18,7 @@ proc loadModel*(path: string): Model =
     let
       hasNormals = mesh.hasNormals
       hasUvs =  mesh.texCoords[0] != nil
+
     glGenBuffers(1, vertVbo.addr)
     glBindBuffer(GlArrayBuffer, vertVbo)
     glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.vertices, GlStaticDraw)
@@ -69,11 +70,12 @@ proc loadModel*(path: string): Model =
       glVertexAttribPointer(2, 3, cGlFloat, GlTrue, 0, nil)
       glEnableVertexAttribArray(2)
 
+    glBindBuffer(GlElementArrayBuffer, msh.indices)
+
     result.buffers.add msh
   aiReleaseImport(scene)
 
 proc render*(model: Model) =
   for buf in model.buffers:
     glBindVertexArray(buf.vao)
-    glBindBuffer(GlElementArrayBuffer, buf.indices)
     glDrawElements(GlTriangles, buf.size, GlUnsignedInt, nil)
