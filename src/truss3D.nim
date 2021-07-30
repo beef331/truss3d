@@ -39,6 +39,7 @@ proc update =
     lastFrame = getMonoTime()
     pollInputs()
     gupdateProc(dt)
+    glBindFramebuffer(GlFrameBuffer, 0)
     glClear(GlColorBufferBit or GlDepthBufferBit)
     gdrawProc()
     glSwapWindow(app.window)
