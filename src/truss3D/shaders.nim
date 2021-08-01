@@ -37,10 +37,12 @@ proc loadShader*(shader: string, kind: ShaderKind): Gluint =
 
   shaderProg.deallocCStringArray
 
-proc loadShader*(vert, frag: string): Shader =
+proc loadShader*(vert, frag: string, isFile: bool): Shader =
   let
-    vs = loadShader(readFile(vert), Vertex)
-    fs = loadShader(readFile(frag), Fragment)
+    vert = if isFile: vert else: readFile(vert)
+    frag = if isFile: frag else: readFile(frag)
+    vs = loadShader(vert, Vertex)
+    fs = loadShader(frag, Fragment)
   result = glCreateProgram().Shader
   glAttachShader(result.Gluint, vs)
   glAttachShader(result.Gluint, fs)

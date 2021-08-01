@@ -88,17 +88,17 @@ proc uploadData*(mesh: MeshData): Model =
 
   glGenBuffers(1, vertVbo.addr)
   glBindBuffer(GlArrayBuffer, vertVbo)
-  glBufferData(GlArrayBuffer, mesh.verts.len * sizeOf(mesh.type.T), mesh.vertices, GlStaticDraw)
+  glBufferData(GlArrayBuffer, mesh.verts.len * sizeOf(mesh.type.T), mesh.verts[0].unsafeaddr, GlStaticDraw)
 
   if hasNormals:
     glGenBuffers(1, normVbo.addr)
     glBindBuffer(GlArrayBuffer, normVbo)
-    glBufferData(GlArrayBuffer, mesh.normals.len * sizeOf(Vec3), mesh.normals, GlStaticDraw)
+    glBufferData(GlArrayBuffer, mesh.normals.len * sizeOf(Vec3), mesh.normals[0].unsafeaddr, GlStaticDraw)
   
   if hasUvs:
     glGenBuffers(1, uvVbo.addr)
     glBindBuffer(GlArrayBuffer, uvVbo)
-    glBufferData(GlArrayBuffer, mesh.uvs.len * sizeOf(Vec2), mesh.texCoords[0], GlStaticDraw)
+    glBufferData(GlArrayBuffer, mesh.uvs.len * sizeOf(Vec2), mesh.uvs[0].unsafeaddr, GlStaticDraw)
 
 
   var msh: Mesh
@@ -108,13 +108,15 @@ proc uploadData*(mesh: MeshData): Model =
   glBufferData(
     GlElementArrayBuffer,
     mesh.indices.len * sizeof(int),
-    mesh.indices[0].addr,
+    mesh.indices[0].unsafeaddr,
     GlStaticDraw)
+
+  msh.size = mesh.indices.len.GlSizei
 
   glGenVertexArrays(1, msh.vao.addr)
   glBindVertexArray(msh.vao)
   glBindBuffer(GlArrayBuffer, vertVbo)
-  glVertexAttribPointer(0, 3, cGlFloat, GlFalse, 0, nil)
+  glVertexAttribPointer(0, sizeOf(mesh.type.T) div 4, cGlFloat, GlFalse, 0, nil)
   glEnableVertexAttribArray(0)
 
   if hasNormals:
@@ -135,3 +137,4 @@ proc render*(model: Model) =
   for buf in model.buffers:
     glBindVertexArray(buf.vao)
     glDrawElements(GlTriangles, buf.size, GlUnsignedInt, nil)
+    glBindVertexArray(0)
