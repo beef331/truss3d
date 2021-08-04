@@ -2,7 +2,7 @@
 
 version       = "0.1.0"
 author        = "Jason"
-description   = "A new awesome nimble package"
+description   = "Simple 2D/3D framework"
 license       = "MIT"
 srcDir        = "src"
 
@@ -10,8 +10,8 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.5.1"
-requires "pixie"
-requires "sdl2_nim"
-requires "vmath"
-requires "opengl"
-requires "assimp"
+requires "pixie >= 2.1.1"
+requires "sdl2_nim >= 2.0.14.1"
+requires "vmath >= 1.0.10"
+requires "opengl >= 1.2.6"
+requires "https://github.com/beef331/nimassimp >= 0.1.3"
