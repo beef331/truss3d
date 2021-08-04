@@ -39,8 +39,16 @@ proc loadShader*(shader: string, kind: ShaderKind): Gluint =
 
 proc loadShader*(vert, frag: string, isPath = true): Shader =
   let
-    vert = if isPath: readFile(vert) else: vert
-    frag = if isPath: readFile(frag) else: frag
+    vert =
+      if isPath:
+        readFile(vert)
+      else:
+        vert
+    frag =
+      if isPath:
+        readFile(frag)
+      else:
+        frag
     vs = loadShader(vert, Vertex)
     fs = loadShader(frag, Fragment)
   result = glCreateProgram().Shader
