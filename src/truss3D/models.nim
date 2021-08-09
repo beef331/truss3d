@@ -159,8 +159,6 @@ proc render*(model: Model) =
 
 macro renderWith*(model: Model, shader: Shader, body: untyped): untyped =
   result = newStmtList()
-  result.add quote do:
-    glUseProgram(Gluint(shader))
   for x in body:
     let
       name = x[0]

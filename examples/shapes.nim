@@ -65,29 +65,30 @@ proc update(dt: float32) =
 proc draw =
   let ov = ortho * view
 
-  pentagon.renderWith(shader):
-    "col": vec4(1)
-    "matrix": ov
+  with shader:
+    pentagon.renderWith(shader):
+      "col": vec4(1)
+      "matrix": ov
 
-  pentagon.renderWith(shader):
-    "col": vec4(0.3, 0.9, 0.9, 1)
-    "matrix": ov * scale(vec3(0.9))
+    pentagon.renderWith(shader):
+      "col": vec4(0.3, 0.9, 0.9, 1)
+      "matrix": ov * scale(vec3(0.9))
 
-  circle.renderWith(shader):
-    "col": vec4(1, 0, 0, 1)
-    "matrix": ov * translate(vec3(3, 0, 0))
-  
-  triangle.renderWith(shader):
-    "col": vec4(0, 1, 0, 1)
-    "matrix": ov * translate(vec3(-3, 0, 0))
+    circle.renderWith(shader):
+      "col": vec4(1, 0, 0, 1)
+      "matrix": ov * translate(vec3(3, 0, 0))
+    
+    triangle.renderWith(shader):
+      "col": vec4(0, 1, 0, 1)
+      "matrix": ov * translate(vec3(-3, 0, 0))
 
-  square.renderWith(shader):
-    "col": vec4(0, 0.5, 0.5, 1)
-    "matrix": ov * translate(vec3(0, -3, 0)) * rotateZ(Tau.float32 / 8f)
+    square.renderWith(shader):
+      "col": vec4(0, 0.5, 0.5, 1)
+      "matrix": ov * translate(vec3(0, -3, 0)) * rotateZ(Tau.float32 / 8f)
 
-  hexagon.renderWith(shader):
-    "col": vec4(0, 0, 1, 1)
-    "matrix": ov * translate(vec3(0, 3, 0))
+    hexagon.renderWith(shader):
+      "col": vec4(0, 0, 1, 1)
+      "matrix": ov * translate(vec3(0, 3, 0))
 
 
 initTruss("Something", ivec2(1280, 720), init, update, draw)
