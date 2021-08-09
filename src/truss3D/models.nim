@@ -167,4 +167,3 @@ macro renderWith*(model: Model, shader: Shader, body: untyped): untyped =
       `shader`.setUniform(`name`, `val`)
   result.add quote do:
     render(`model`)
-  echo result.repr
