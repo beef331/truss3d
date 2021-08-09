@@ -7,8 +7,10 @@ type
     size*: GLsizei
     indices*: Gluint
     matrix: Mat4
+
   Model* = object
     buffers*: seq[Mesh]
+
   MeshData*[T: Vec2 or Vec3] = object
     verts*: seq[T]
     indices*: seq[uint32]
@@ -76,6 +78,9 @@ proc loadModel*(path: string): Model =
       glEnableVertexAttribArray(2)
 
     glBindBuffer(GlElementArrayBuffer, msh.indices)
+    glBindVertexArray(0)
+    glBindBuffer(GlArrayBuffer, 0)
+    glBindBuffer(GlElementArrayBuffer, 0)
 
     result.buffers.add msh
   aiReleaseImport(scene)
@@ -84,7 +89,7 @@ proc uploadData*(mesh: MeshData): Model =
   var vertVbo, normVbo, uvVbo: Gluint
   let
     hasNormals = mesh.normals.len > 0
-    hasUvs =  mesh.normals.len > 0
+    hasUvs =  mesh.uvs.len > 0
 
   glGenBuffers(1, vertVbo.addr)
   glBindBuffer(GlArrayBuffer, vertVbo)
@@ -107,7 +112,7 @@ proc uploadData*(mesh: MeshData): Model =
 
   glBufferData(
     GlElementArrayBuffer,
-    mesh.indices.len * sizeof(int),
+    mesh.indices.len * sizeof(uint32),
     mesh.indices[0].unsafeaddr,
     GlStaticDraw)
 
@@ -130,7 +135,9 @@ proc uploadData*(mesh: MeshData): Model =
     glEnableVertexAttribArray(2)
 
   glBindBuffer(GlElementArrayBuffer, msh.indices)
-
+  glBindVertexArray(0)
+  glBindBuffer(GlArrayBuffer, 0)
+  glBindBuffer(GlElementArrayBuffer, 0)
   result.buffers.add msh
 
 proc render*(model: Model) =
