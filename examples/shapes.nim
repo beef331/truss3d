@@ -5,32 +5,32 @@ const
   vert = """
   #version 430
   layout(location = 0) in vec3 vertex_position;
-  layout(location = 2) in vec2 vUv;
+  layout(location = 3) in vec4 vCol;
 
   uniform mat4 matrix;
-  out vec2 uv;
+  out vec4 fCol;
   void main() {
     gl_Position = matrix * vec4(vertex_position, 1.0);
-    uv = vUv;
+    fCol = vCol;
   }"""
   frag = """
   #version 430
   out vec4 fragCol;
   uniform vec4 col;
-  in vec2 uv;
+  in vec4 fCol;
   void main() {
-    fragCol = col * uv.x;
+    fragCol = col * fCol;
   }"""
 
 
 proc makeNgon(sides: int, size: float): Model =
   var data: MeshData[Vec2]
   data.verts = @[vec2(0, 0)]
-  data.uvs = @[vec2(0, 0)]
+  data.colors = @[rgba(0,0,0,0).asColor]
   for i in 0..sides:
     let angle = Tau / sides.float * i.float
     data.verts.add vec2(size * cos(angle - (Tau / 4)), size * sin(angle - (Tau / 4)))
-    data.uvs.add vec2(1)
+    data.colors.add rgba(255, 255, 255, 255).asColor
 
   let len = data.verts.len.uint32
   for i in 0u32..<len:
@@ -40,7 +40,7 @@ proc makeNgon(sides: int, size: float): Model =
 
   result = uploadData(data)
 
-const camSize = 6f
+const camSize = 10f
 var
   circle, triangle, hexagon, square, pentagon: Model
   shader: Shader

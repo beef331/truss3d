@@ -86,10 +86,11 @@ proc loadModel*(path: string): Model =
   aiReleaseImport(scene)
 
 proc uploadData*(mesh: MeshData): Model =
-  var vertVbo, normVbo, uvVbo: Gluint
+  var vertVbo, normVbo, uvVbo, colVbo: Gluint
   let
     hasNormals = mesh.normals.len > 0
-    hasUvs =  mesh.uvs.len > 0
+    hasUvs = mesh.uvs.len > 0
+    hasColors = mesh.colors.len > 0
 
   glGenBuffers(1, vertVbo.addr)
   glBindBuffer(GlArrayBuffer, vertVbo)
@@ -104,7 +105,11 @@ proc uploadData*(mesh: MeshData): Model =
     glGenBuffers(1, uvVbo.addr)
     glBindBuffer(GlArrayBuffer, uvVbo)
     glBufferData(GlArrayBuffer, mesh.uvs.len * sizeOf(Vec2), mesh.uvs[0].unsafeaddr, GlStaticDraw)
-
+  
+  if hasColors:
+    glGenBuffers(1, colVbo.addr)
+    glBindBuffer(GlArrayBuffer, colVbo)
+    glBufferData(GlArrayBuffer, mesh.colors.len * sizeOf(Color), mesh.colors[0].unsafeaddr, GlStaticDraw)
 
   var msh: Mesh
   glGenBuffers(1, msh.indices.addr)
@@ -133,6 +138,11 @@ proc uploadData*(mesh: MeshData): Model =
     glBindBuffer(GlArrayBuffer, uvVbo)
     glVertexAttribPointer(2, 2, cGlFloat, GlTrue, 0, nil)
     glEnableVertexAttribArray(2)
+
+  if hasColors:
+    glBindBuffer(GlArrayBuffer, colVbo)
+    glVertexAttribPointer(3, 4, cGlFloat, GlTrue, 0, nil)
+    glEnableVertexAttribArray(3)
 
   glBindBuffer(GlElementArrayBuffer, msh.indices)
   glBindVertexArray(0)
