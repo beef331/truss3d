@@ -5,28 +5,32 @@ const
   vert = """
   #version 430
   layout(location = 0) in vec3 vertex_position;
+  layout(location = 2) in vec2 vUv;
 
   uniform mat4 matrix;
-
+  out vec2 uv;
   void main() {
     gl_Position = matrix * vec4(vertex_position, 1.0);
+    uv = vUv;
   }"""
   frag = """
   #version 430
   out vec4 fragCol;
   uniform vec4 col;
-
+  in vec2 uv;
   void main() {
-    fragCol = col;
+    fragCol = col * uv.x;
   }"""
 
 
 proc makeNgon(sides: int, size: float): Model =
   var data: MeshData[Vec2]
   data.verts = @[vec2(0, 0)]
+  data.uvs = @[vec2(0, 0)]
   for i in 0..sides:
     let angle = Tau / sides.float * i.float
     data.verts.add vec2(size * cos(angle - (Tau / 4)), size * sin(angle - (Tau / 4)))
+    data.uvs.add vec2(1)
 
   let len = data.verts.len.uint32
   for i in 0u32..<len:
@@ -36,10 +40,11 @@ proc makeNgon(sides: int, size: float): Model =
 
   result = uploadData(data)
 
+const camSize = 6f
 var
   circle, triangle, hexagon, square, pentagon: Model
   shader: Shader
-  ortho = ortho(-10f, 10f, -10f, 10f, 0f, 10f)
+  ortho = ortho(-camSize, camSize, -camSize, camSize, 0f, 10f)
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, 1, 0))
 
 proc init =
@@ -50,7 +55,7 @@ proc init =
   square = makeNgon(4, 1)
   shader = loadShader(vert, frag, false)
   let xAspect = (screenSize().x / screenSize().y).float32
-  ortho = ortho(-10f * xAspect, 10f * xAspect, -10f, 10f, 0f, 10f)
+  ortho = ortho(-camSize * xAspect, camSize * xAspect, -camSize, camSize, 0f, 10f)
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, -1, 0))
 
 proc update(dt: float32) =
@@ -67,7 +72,7 @@ proc draw =
     pentagon.render()
     
     mat = ov * scale(vec3(0.9))
-    shader.setUniform("col", vec4(0.9, 0.9, 0.9, 1))
+    shader.setUniform("col", vec4(0.3, 0.9, 0.9, 1))
     shader.setUniform("matrix", mat)
     pentagon.render()
     

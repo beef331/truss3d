@@ -131,7 +131,7 @@ proc uploadData*(mesh: MeshData): Model =
 
   if hasUvs:
     glBindBuffer(GlArrayBuffer, uvVbo)
-    glVertexAttribPointer(2, 3, cGlFloat, GlTrue, 0, nil)
+    glVertexAttribPointer(2, 2, cGlFloat, GlTrue, 0, nil)
     glEnableVertexAttribArray(2)
 
   glBindBuffer(GlElementArrayBuffer, msh.indices)
