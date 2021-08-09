@@ -21,12 +21,12 @@ const
   }"""
 
 
-proc makeNgon(sides: int, size: float32): Model =
+proc makeNgon(sides: int, size: float): Model =
   var data: MeshData[Vec2]
   data.verts = @[vec2(0, 0)]
   for i in 0..sides:
     let angle = Tau / sides.float * i.float
-    data.verts.add vec2(size.float * cos(angle), size.float * sin(angle))
+    data.verts.add vec2(size * cos(angle - (Tau / 4)), size * sin(angle - (Tau / 4)))
 
   let len = data.verts.len.uint32
   for i in 0u32..<len:
@@ -37,7 +37,7 @@ proc makeNgon(sides: int, size: float32): Model =
   result = uploadData(data)
 
 var
-  circle, triangle, hexagon, square: Model
+  circle, triangle, hexagon, square, pentagon: Model
   shader: Shader
   ortho = ortho(-10f, 10f, -10f, 10f, 0f, 10f)
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, 1, 0))
@@ -46,6 +46,7 @@ proc init =
   triangle = makeNgon(3, 1)
   circle = makeNgon(32, 1)
   hexagon = makeNgon(6, 1)
+  pentagon = makeNgon(5, 10)
   square = makeNgon(4, 1)
   shader = loadShader(vert, frag, false)
   let xAspect = (screenSize().x / screenSize().y).float32
@@ -59,12 +60,23 @@ proc update(dt: float32) =
 proc draw =
   with shader:
     let ov = ortho * view
-    var mat = ov * translate(vec3(3, 0, 0))
+
+    var mat = ov
+    shader.setUniform("col", vec4(1, 1, 1, 1))
+    shader.setUniform("matrix", mat)
+    pentagon.render()
+    
+    mat = ov * scale(vec3(0.9))
+    shader.setUniform("col", vec4(0.9, 0.9, 0.9, 1))
+    shader.setUniform("matrix", mat)
+    pentagon.render()
+    
+    mat = ov * translate(vec3(3, 0, 0))
     shader.setUniform("col", vec4(1, 0, 0, 1))
     shader.setUniform("matrix", mat)
     circle.render()
 
-    mat = ov * translate(vec3(-3, 0, 0)) * rotatez(90.toRadians)
+    mat = ov * translate(vec3(-3, 0, 0))
     shader.setUniform("col", vec4(0, 1, 0, 1))
     shader.setUniform("matrix", mat)
     triangle.render()
