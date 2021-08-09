@@ -1,5 +1,6 @@
 import assimp, opengl, vmath, chroma
-
+import shaders
+import std/macros
 
 type
   Mesh* = object
@@ -155,3 +156,17 @@ proc render*(model: Model) =
     glBindVertexArray(buf.vao)
     glDrawElements(GlTriangles, buf.size, GlUnsignedInt, nil)
     glBindVertexArray(0)
+
+macro renderWith*(model: Model, shader: Shader, body: untyped): untyped =
+  result = newStmtList()
+  result.add quote do:
+    glUseProgram(Gluint(shader))
+  for x in body:
+    let
+      name = x[0]
+      val = x[1]
+    result.add quote do:
+      `shader`.setUniform(`name`, `val`)
+  result.add quote do:
+    render(`model`)
+  echo result.repr

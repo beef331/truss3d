@@ -63,38 +63,31 @@ proc update(dt: float32) =
     quitTruss()
 
 proc draw =
-  with shader:
-    let ov = ortho * view
+  let ov = ortho * view
 
-    var mat = ov
-    shader.setUniform("col", vec4(1, 1, 1, 1))
-    shader.setUniform("matrix", mat)
-    pentagon.render()
-    
-    mat = ov * scale(vec3(0.9))
-    shader.setUniform("col", vec4(0.3, 0.9, 0.9, 1))
-    shader.setUniform("matrix", mat)
-    pentagon.render()
-    
-    mat = ov * translate(vec3(3, 0, 0))
-    shader.setUniform("col", vec4(1, 0, 0, 1))
-    shader.setUniform("matrix", mat)
-    circle.render()
+  pentagon.renderWith(shader):
+    "col": vec4(1)
+    "matrix": ov
 
-    mat = ov * translate(vec3(-3, 0, 0))
-    shader.setUniform("col", vec4(0, 1, 0, 1))
-    shader.setUniform("matrix", mat)
-    triangle.render()
+  pentagon.renderWith(shader):
+    "col": vec4(0.3, 0.9, 0.9, 1)
+    "matrix": ov * scale(vec3(0.9))
 
-    mat = ov * translate(vec3(0, -3, 0)) * rotatez(45.toRadians)
-    shader.setUniform("col", vec4(0, 0.5, 0.5, 1))
-    shader.setUniform("matrix", mat)
-    square.render()
+  circle.renderWith(shader):
+    "col": vec4(1, 0, 0, 1)
+    "matrix": ov * translate(vec3(3, 0, 0))
+  
+  triangle.renderWith(shader):
+    "col": vec4(0, 1, 0, 1)
+    "matrix": ov * translate(vec3(-3, 0, 0))
 
-    mat = ov * translate(vec3(0, 3, 0))
-    shader.setUniform("col", vec4(0, 0, 1, 1))
-    shader.setUniform("matrix", mat)
-    hexagon.render()
+  square.renderWith(shader):
+    "col": vec4(0, 0.5, 0.5, 1)
+    "matrix": ov * translate(vec3(0, -3, 0)) * rotateZ(Tau.float32 / 8f)
+
+  hexagon.renderWith(shader):
+    "col": vec4(0, 0, 1, 1)
+    "matrix": ov * translate(vec3(0, 3, 0))
 
 
 initTruss("Something", ivec2(1280, 720), init, update, draw)
