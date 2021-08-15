@@ -173,35 +173,41 @@ macro renderWith*(model: Model, shader: Shader, body: untyped): untyped =
   result.add quote do:
     render(`model`)
 
-template append(m: var MeshData[Vec3 or Vec2], ind: IndicesIter) =
+template append*(m: var MeshData, ind: IndicesIter) =
   let start = m.indices.len.uint32
   for i in ind:
     m.indices.add start + i
 
-template append*(m: var MeshData, colIter: ColorIter) =
+template appendColor*(m: var MeshData, colIter: ColorIter) =
   for x in colIter:
     m.colors.add(x)
   m.colors.setLen(m.verts.len)
 
-template append*(m: var MeshData, uvIter: UvIter) =
+template appendUV*(m: var MeshData, uvIter: UvIter) =
   for x in uvIter:
     m.uvs.add(x)
   m.uvs.setLen(m.verts.len)
 
-template append*(m: var MeshData[Vec3], verts: VertIter, ind: IndicesIter) =
-  for v in verts:
-    when typeOf(v) is Vec2:
-      m.verts.add vec3(v)
-    else:
-      m.verts.add v
-  m.append(ind)
-
-template append*(m: var MeshData[Vec2], vertIter: VertIter, ind: IndicesIter) =
+template appendVerts*(m: var MeshData[Vec2], vertIter: VertIter) =
   for v in vertIter:
     when typeof(v) is Vec3:
       m.verts.add v.xy
     else:
       m.verts.add v
+
+template appendVerts*(m: var MeshData[Vec3], verts: VertIter) =
+  for v in verts:
+    when typeOf(v) is Vec2:
+      m.verts.add vec3(v)
+    else:
+      m.verts.add v
+
+template append*(m: var MeshData[Vec3], verts: VertIter, ind: IndicesIter) =
+  m.append(verts)
+  m.append(ind)
+
+template append*(m: var MeshData[Vec2], vertIter: VertIter, ind: IndicesIter) =
+  m.appendVerts(vertIter)
   m.append(ind)
 
 template append*(m: var MeshData[Vec2], vertIter: VertIter, ind: IndicesIter,
@@ -211,5 +217,5 @@ template append*(m: var MeshData[Vec2], vertIter: VertIter, ind: IndicesIter,
       m.verts.add v.xy
     else:
       m.verts.add v
-  m.append(colorIter)
+  m.appendColor(colorIter)
   m.append(ind)

@@ -47,15 +47,14 @@ proc makeNgon(sides: int, size: float): Model =
 
 proc makeRect(w, h: float32): Model =
   var data: MeshData[Vec2]
-  data.append(
+  data.appendVerts:
     [
-      vec2(-w / 2, h / 2),
-      vec2(w / 2, h / 2),
+      vec2(-w / 2, h / 2), vec2(w / 2, h / 2),
       vec2(-w / 2, -h / 2),
       vec2(w / 2, -h / 2)
-    ].items,
-    [0u32, 1, 2, 2, 1, 3].items)
-  data.append([color(1, 0, 0), color(1, 1, 0), color(0, 0, 0), color(0, 1, 0)].items)
+    ].items
+  data.append([0u32, 1, 2, 2, 1, 3].items)
+  data.appendColor([color(1, 0, 0), color(1, 1, 0), color(0, 0, 0), color(0, 1, 0)].items)
   result = data.uploadData()
 
 
