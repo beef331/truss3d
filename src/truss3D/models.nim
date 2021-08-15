@@ -12,6 +12,11 @@ type
   Model* = object
     buffers*: seq[Mesh]
 
+  VertIter* = iterable[Vec2 or Vec3]
+  IndicesIter* = iterable[uint32]
+  UvIter* = iterable[Vec2]
+  ColorIter* = iterable[Color]
+
   MeshData*[T: Vec2 or Vec3] = object
     verts*: seq[T]
     indices*: seq[uint32]
@@ -25,7 +30,7 @@ proc loadModel*(path: string): Model =
     var vertVbo, normVbo, uvVbo: Gluint
     let
       hasNormals = mesh.hasNormals
-      hasUvs =  mesh.texCoords[0] != nil
+      hasUvs = mesh.texCoords[0] != nil
 
     glGenBuffers(1, vertVbo.addr)
     glBindBuffer(GlArrayBuffer, vertVbo)
@@ -35,7 +40,7 @@ proc loadModel*(path: string): Model =
       glGenBuffers(1, normVbo.addr)
       glBindBuffer(GlArrayBuffer, normVbo)
       glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.normals, GlStaticDraw)
-    
+
     if hasUvs:
       glGenBuffers(1, uvVbo.addr)
       glBindBuffer(GlArrayBuffer, uvVbo)
@@ -101,12 +106,12 @@ proc uploadData*(mesh: MeshData): Model =
     glGenBuffers(1, normVbo.addr)
     glBindBuffer(GlArrayBuffer, normVbo)
     glBufferData(GlArrayBuffer, mesh.normals.len * sizeOf(Vec3), mesh.normals[0].unsafeaddr, GlStaticDraw)
-  
+
   if hasUvs:
     glGenBuffers(1, uvVbo.addr)
     glBindBuffer(GlArrayBuffer, uvVbo)
     glBufferData(GlArrayBuffer, mesh.uvs.len * sizeOf(Vec2), mesh.uvs[0].unsafeaddr, GlStaticDraw)
-  
+
   if hasColors:
     glGenBuffers(1, colVbo.addr)
     glBindBuffer(GlArrayBuffer, colVbo)
@@ -167,3 +172,44 @@ macro renderWith*(model: Model, shader: Shader, body: untyped): untyped =
       `shader`.setUniform(`name`, `val`)
   result.add quote do:
     render(`model`)
+
+template append(m: var MeshData[Vec3 or Vec2], ind: IndicesIter) =
+  let start = m.indices.len.uint32
+  for i in ind:
+    m.indices.add start + i
+
+template append*(m: var MeshData, colIter: ColorIter) =
+  for x in colIter:
+    m.colors.add(x)
+  m.colors.setLen(m.verts.len)
+
+template append*(m: var MeshData, uvIter: UvIter) =
+  for x in uvIter:
+    m.uvs.add(x)
+  m.uvs.setLen(m.verts.len)
+
+template append*(m: var MeshData[Vec3], verts: VertIter, ind: IndicesIter) =
+  for v in verts:
+    when typeOf(v) is Vec2:
+      m.verts.add vec3(v)
+    else:
+      m.verts.add v
+  m.append(ind)
+
+template append*(m: var MeshData[Vec2], vertIter: VertIter, ind: IndicesIter) =
+  for v in vertIter:
+    when typeof(v) is Vec3:
+      m.verts.add v.xy
+    else:
+      m.verts.add v
+  m.append(ind)
+
+template append*(m: var MeshData[Vec2], vertIter: VertIter, ind: IndicesIter,
+    colorIter: ColorIter) =
+  for v in vertIter:
+    when typeof(v) is Vec3:
+      m.verts.add v.xy
+    else:
+      m.verts.add v
+  m.append(colorIter)
+  m.append(ind)

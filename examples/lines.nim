@@ -22,36 +22,35 @@ proc generateMesh(lr: var LineRenderer) =
   let totalLength = lr.getLength
   var travelled = 0f
   for i, cur in lr.points:
-    if i < lr.points.high:
+    if i < lr.points.high - 1:
       let
         nextPoint = lr.points[i + 1]
         dir = (nextPoint - cur).normalize
         adjacent = vec2(dir.y, -dir.x) * lr.width / 2
-        offSet = dist(cur, nextPoint)
+        offset = dist(cur, nextPoint)
         curDist = travelled / totalLength
         nextDist = curDist + offset / totalLength
-
+        endPos = nextPoint - dir * lr.width / 2
 
       if i == 0:
-        lr.meshData.verts.add cur - adjacent
-        lr.meshData.verts.add cur + adjacent
-        lr.meshData.uvs.add vec2(0, curDist)
-        lr.meshData.uvs.add vec2(1, curDist)
+        let offset = cur + dir * lr.width / 2
+        lr.meshData.verts.add offset + adjacent
+        lr.meshData.verts.add offset - adjacent
 
-      lr.meshData.verts.add nextPoint - adjacent
-      lr.meshData.verts.add nextPoint + adjacent
+      lr.meshData.verts.add endPos + adjacent
+      lr.meshData.verts.add endPos - adjacent
 
-      lr.meshData.uvs.add vec2(0, nextDist)
-      lr.meshData.uvs.add vec2(1, nextDist)
-      
-      let ind = i.uint32 * 2
-      lr.meshData.indices.add ind
-      lr.meshData.indices.add ind + 1
-      lr.meshData.indices.add ind + 2
-      
-      lr.meshData.indices.add ind + 2
-      lr.meshData.indices.add ind + 1
-      lr.meshData.indices.add ind + 3
+      let nextDir = (lr.points[i + 2] - nextPoint).normalize
+
+
+
+      lr.meshData.verts.add endPos + adjacent
+      lr.meshData.verts.add endPos - adjacent
+
+
+
+
+
 
       travelled += offset
   lr.mesh = uploadData(lr.meshData)
@@ -80,7 +79,7 @@ const
 
 const camSize = 10f
 var
-  line = LineRenderer(points: @[vec2(-5, -9), vec2(5, 5), vec2(-5, 5), vec2(-9, 9), vec2(-9, -8), vec2(0, 0)], width: 1)
+  line = LineRenderer(points: @[vec2(-5, -9), vec2(5, 5), vec2(-5, 5)], width: 1)
   shader: Shader
   ortho = ortho(-camSize, camSize, -camSize, camSize, 0f, 10f)
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, 1, 0))
