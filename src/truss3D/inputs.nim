@@ -1,4 +1,4 @@
-import sdl2/sdl
+import sdl2_nim/sdl
 import std/[macros, tables, strutils]
 
 type

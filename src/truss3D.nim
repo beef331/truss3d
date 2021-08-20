@@ -1,7 +1,7 @@
 import opengl, vmath, pixie
 import std/[monotimes, times]
 import truss3D/[inputs, models, shaders, textures]
-import sdl2/sdl except Keycode
+import sdl2_nim/sdl except Keycode
 export models, shaders, textures, inputs, opengl
 
 type App = object
