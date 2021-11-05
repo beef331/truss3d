@@ -195,8 +195,8 @@ template appendVerts*(m: var MeshData[Vec2], vertIter: VertIter) =
     else:
       m.verts.add v
 
-template appendVerts*(m: var MeshData[Vec3], verts: VertIter) =
-  for v in verts:
+template appendVerts*(m: var MeshData[Vec3], vertIter: VertIter) =
+  for v in vertIter:
     when typeOf(v) is Vec2:
       m.verts.add vec3(v)
     else:

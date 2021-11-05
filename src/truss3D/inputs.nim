@@ -57,10 +57,12 @@ proc pollInputs*() =
     case e.kind:
     of Keydown:
       let key = e.key.keysym.sym
-      keyState[KeyLut[key]] = pressed
+      if keyState[KeyLut[key]] != held:
+        keyState[KeyLut[key]] = pressed
     of KeyUp:
       let key = e.key.keysym.sym
-      keyState[KeyLut[key]] = released
+      if keyState[KeyLut[key]] == held:
+        keyState[KeyLut[key]] = released
     else: discard
 
 proc isDown*(k: TKeycode): bool = keyState[k] == pressed

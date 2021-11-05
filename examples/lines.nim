@@ -22,35 +22,36 @@ proc generateMesh(lr: var LineRenderer) =
   let totalLength = lr.getLength
   var travelled = 0f
   for i, cur in lr.points:
-    if i < lr.points.high - 1:
+    if i < lr.points.high:
       let
         nextPoint = lr.points[i + 1]
         dir = (nextPoint - cur).normalize
         adjacent = vec2(dir.y, -dir.x) * lr.width / 2
-        offset = dist(cur, nextPoint)
+        offSet = dist(cur, nextPoint)
         curDist = travelled / totalLength
         nextDist = curDist + offset / totalLength
-        endPos = nextPoint - dir * lr.width / 2
+
 
       if i == 0:
-        let offset = cur + dir * lr.width / 2
-        lr.meshData.verts.add offset + adjacent
-        lr.meshData.verts.add offset - adjacent
+        lr.meshData.verts.add cur - adjacent
+        lr.meshData.verts.add cur + adjacent
+        lr.meshData.uvs.add vec2(0, curDist)
+        lr.meshData.uvs.add vec2(1, curDist)
 
-      lr.meshData.verts.add endPos + adjacent
-      lr.meshData.verts.add endPos - adjacent
+      lr.meshData.verts.add nextPoint - adjacent
+      lr.meshData.verts.add nextPoint + adjacent
 
-      let nextDir = (lr.points[i + 2] - nextPoint).normalize
+      lr.meshData.uvs.add vec2(0, nextDist)
+      lr.meshData.uvs.add vec2(1, nextDist)
 
+      let ind = i.uint32 * 2
+      lr.meshData.indices.add ind
+      lr.meshData.indices.add ind + 1
+      lr.meshData.indices.add ind + 2
 
-
-      lr.meshData.verts.add endPos + adjacent
-      lr.meshData.verts.add endPos - adjacent
-
-
-
-
-
+      lr.meshData.indices.add ind + 2
+      lr.meshData.indices.add ind + 1
+      lr.meshData.indices.add ind + 3
 
       travelled += offset
   lr.mesh = uploadData(lr.meshData)

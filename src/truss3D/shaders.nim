@@ -66,33 +66,23 @@ proc loadShader*(vert, frag: string, isPath = true): Shader =
   glDeleteShader(vs)
   glDeleteShader(fs)
 
-
-
 proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
-  glGenBuffers(1, result.Gluint.addr)
-  glBindBuffer(GlUniformBuffer, result.Gluint)
-  glBindBufferbase(GlUniformBuffer, binding.Gluint, result.Gluint) # Apparently no way to go name -> Ubo bind location
-
-proc copyTo*[T](val: T, ubo: Ubo[T]) =
-  glBindBuffer(GlUniformBuffer, ubo.GLuint)
-  glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
-  glBindBuffer(GlUniformBuffer, 0.Gluint)
-
-proc genSsbo*[T](shader: Shader, binding: Gluint): Ssbo[T] =
   glCreateBuffers(1, result.Gluint.addr)
-  glBindBufferbase(GlShaderStorageBuffer, binding, result.Gluint)
+  glBindBufferbase(GlUniformBuffer, binding.Gluint, result.Gluint)
+proc copyTo*[T](val: T, ubo: Ubo[T]) =
+  glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
+
+proc genSsbo*[T](shader: Shader, binding: Natural): Ssbo[T] =
+  glCreateBuffers(1, result.Gluint.addr)
+  glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), result.Gluint)
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
-  glBindBuffer(GlShaderStorageBuffer, ssbo.GLuint)
-  glBufferData(GlShaderStorageBuffer, sizeof(T).GLsizeiptr, val.unsafeAddr, GlDynamicDraw)
-  glBindBuffer(GlShaderStorageBuffer, 0.Gluint)
+  glNamedBufferData(GlShaderStorageBuffer, sizeof(T).GLsizeiptr, val.unsafeAddr, GlDynamicDraw)
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
-  glBindBuffer(GlShaderStorageBuffer, ssbo.GLuint)
   let newData = val[slice.a].unsafeAddr
-  glBufferSubData(GlShaderStorageBuffer, slice.a * sizeof(int16), (slice.b - slice.a) * sizeOf(
+  glNamedBufferData(GlShaderStorageBuffer, slice.a * sizeof(int16), (slice.b - slice.a) * sizeOf(
       int16), newData)
-  glBindBuffer(GlShaderStorageBuffer, 0.Gluint)
 
 proc setUniform*(shader: Shader, uniform: string, value: float32) =
   with shader:
@@ -128,10 +118,11 @@ proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
   with shader:
     let loc = glGetUniformLocation(shader.Gluint, uniform)
     if loc != -1:
-      let textureUnit = 0.Gluint;
+      var textureUnit {.global.} = 0.Gluint;
       glBindTextureUnit(texture_unit, tex.GLuint);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
       glUniform1i(loc, textureUnit.Glint)
+      inc textureUnit

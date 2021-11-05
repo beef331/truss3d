@@ -99,5 +99,4 @@ when isMainModule:
     with shader:
       glEnable(GlDepthTest)
       model.render
-
   initTruss("Test", ivec2(1280, 720), init, update, draw)
