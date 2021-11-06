@@ -26,11 +26,14 @@ type
 
 proc loadModel*(path: string): Model =
   let scene = aiImportFile(path, TargetRealtimeQuality)
+  if scene == nil:
+    raise newException(IOError, path & " invalid model file")
   for mesh in scene.imeshes:
-    var vertVbo, normVbo, uvVbo: Gluint
+    var vertVbo, normVbo, uvVbo, colorVbo: Gluint
     let
       hasNormals = mesh.hasNormals
       hasUvs = mesh.texCoords[0] != nil
+      hasColours = mesh.colors[0] != nil
 
     glGenBuffers(1, vertVbo.addr)
     glBindBuffer(GlArrayBuffer, vertVbo)
@@ -46,6 +49,10 @@ proc loadModel*(path: string): Model =
       glBindBuffer(GlArrayBuffer, uvVbo)
       glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.texCoords[0], GlStaticDraw)
 
+    if hasColours:
+      glGenBuffers(1, colorVbo.addr)
+      glBindBuffer(GlArrayBuffer, colorVbo)
+      glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TColor4d), mesh.colors[0], GlStaticDraw)
 
     var msh: Mesh
     glGenBuffers(1, msh.indices.addr)
@@ -82,6 +89,11 @@ proc loadModel*(path: string): Model =
       glBindBuffer(GlArrayBuffer, uvVbo)
       glVertexAttribPointer(2, 3, cGlFloat, GlTrue, 0, nil)
       glEnableVertexAttribArray(2)
+
+    if hasColours:
+      glBindBuffer(GlArrayBuffer, colorVbo)
+      glVertexAttribPointer(3, 4, cGlFloat, GlTrue, 0, nil)
+      glEnableVertexAttribArray(3)
 
     glBindBuffer(GlElementArrayBuffer, msh.indices)
     glBindVertexArray(0)
