@@ -7,8 +7,8 @@ type
     nothing, pressed, held, released
   MouseButton* = enum
     leftMb
-    rightMb
     middleMb
+    rightMb
     fourthMb
     fifthMb
 
