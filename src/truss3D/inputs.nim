@@ -1,9 +1,16 @@
 import sdl2_nim/sdl
 import std/[macros, tables, strutils]
+import vmath
 
 type
   KeyState = enum
     nothing, pressed, held, released
+  MouseButton* = enum
+    leftMb
+    rightMb
+    middleMb
+    fourthMb
+    fifthMb
 
 
 
@@ -41,7 +48,11 @@ macro emitEnumFaff(key: typedesc[enum]): untyped =
 
 emitEnumFaff(Keycode)
 
-var keyState: array[TKeyCode, KeyState]
+var
+  keyState: array[TKeyCode, KeyState]
+  mouseState: array[MouseButton, KeyState]
+  mouseDelta: IVec2
+  mousePos: IVec2
 
 proc pollInputs*() =
   for key in keyState.mitems:
@@ -51,6 +62,15 @@ proc pollInputs*() =
     of pressed:
       key = held
     else: discard
+
+  for btn in mouseState.mitems:
+    case btn:
+    of released:
+      btn = nothing
+    of pressed:
+      btn = held
+    else:
+      discard
 
   var e: Event
   while pollEvent(addr e) != 0:
@@ -63,9 +83,28 @@ proc pollInputs*() =
       let key = e.key.keysym.sym
       if keyState[KeyLut[key]] == held:
         keyState[KeyLut[key]] = released
+    of MouseMotion:
+      let motion = e.motion
+      mousePos = ivec2(motion.x.int, motion.y.int)
+      mouseDelta = ivec2(motion.xrel.int, motion.yrel.int)
+    of MouseButtonDown:
+      let button = MouseButton(e.button.button - 1)
+      mouseState[button] = pressed
+    of MouseButtonUp:
+      let button = MouseButton(e.button.button - 1)
+      mouseState[button] = released
     else: discard
 
 proc isDown*(k: TKeycode): bool = keyState[k] == pressed
 proc isPressed*(k: TKeycode): bool = keyState[k] == held
 proc isUp*(k: TKeycode): bool = keyState[k] == released
 proc isNothing*(k: TKeycode): bool = keyState[k] == nothing
+
+proc isDown*(mb: MouseButton): bool = mouseState[mb] == pressed
+proc isPressed*(mb: MouseButton): bool = mouseState[mb] == held
+proc isUp*(mb: MouseButton): bool = mouseState[mb] == released
+proc isNothing*(mb: MouseButton): bool = mouseState[mb] == nothing
+
+
+proc getMousePos*(): IVec2 = mousePos
+proc getMouseDelta*(): IVec2 = mouseDelta
