@@ -53,8 +53,9 @@ var
   mouseState: array[MouseButton, KeyState]
   mouseDelta: IVec2
   mousePos: IVec2
+  mouseScroll: int32
 
-proc pollInputs*() =
+proc resetInputs() =
   for key in keyState.mitems:
     case key:
     of released:
@@ -71,6 +72,12 @@ proc pollInputs*() =
       btn = held
     else:
       discard
+
+  mouseDelta = ivec2(0, 0)
+  mouseScroll = 0
+
+proc pollInputs*() =
+  resetInputs()
 
   var e: Event
   while pollEvent(addr e) != 0:
@@ -93,6 +100,9 @@ proc pollInputs*() =
     of MouseButtonUp:
       let button = MouseButton(e.button.button - 1)
       mouseState[button] = released
+    of MouseWheel:
+      let sign = if e.wheel.direction == MouseWheelFlipped: -1 else: 1
+      mouseScroll = sign * e.wheel.y
     else: discard
 
 proc isDown*(k: TKeycode): bool = keyState[k] == pressed
@@ -108,3 +118,4 @@ proc isNothing*(mb: MouseButton): bool = mouseState[mb] == nothing
 
 proc getMousePos*(): IVec2 = mousePos
 proc getMouseDelta*(): IVec2 = mouseDelta
+proc getMouseScroll*(): int32 = mouseScroll
