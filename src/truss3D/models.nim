@@ -29,29 +29,31 @@ proc loadModel*(path: string): Model =
   if scene == nil:
     raise newException(IOError, path & " invalid model file")
   for mesh in scene.imeshes:
-    var vertVbo, normVbo, uvVbo, colorVbo: Gluint
+    type VboKinds = enum
+      vert, norm, uv, col
+    var vbos: array[VboKinds, Gluint]
     let
       hasNormals = mesh.hasNormals
-      hasUvs = mesh.texCoords[0] != nil
-      hasColours = mesh.colors[0] != nil
+      hasUvs = mesh.hasUvs()
+      hasColours = mesh.hasColors()
 
-    glGenBuffers(1, vertVbo.addr)
-    glBindBuffer(GlArrayBuffer, vertVbo)
+    glGenBuffers(1, vbos[vert].addr)
+    glBindBuffer(GlArrayBuffer, vbos[vert])
     glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.vertices, GlStaticDraw)
 
     if hasNormals:
-      glGenBuffers(1, normVbo.addr)
-      glBindBuffer(GlArrayBuffer, normVbo)
+      glGenBuffers(1, vbos[norm].addr)
+      glBindBuffer(GlArrayBuffer, vbos[norm])
       glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.normals, GlStaticDraw)
 
     if hasUvs:
-      glGenBuffers(1, uvVbo.addr)
-      glBindBuffer(GlArrayBuffer, uvVbo)
+      glGenBuffers(1, vbos[uv].addr)
+      glBindBuffer(GlArrayBuffer, vbos[uv])
       glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.texCoords[0], GlStaticDraw)
 
     if hasColours:
-      glGenBuffers(1, colorVbo.addr)
-      glBindBuffer(GlArrayBuffer, colorVbo)
+      glGenBuffers(1, vbos[col].addr)
+      glBindBuffer(GlArrayBuffer, vbos[col])
       glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TColor4d), mesh.colors[0], GlStaticDraw)
 
     var msh: Mesh
@@ -76,22 +78,22 @@ proc loadModel*(path: string): Model =
 
     glGenVertexArrays(1, msh.vao.addr)
     glBindVertexArray(msh.vao)
-    glBindBuffer(GlArrayBuffer, vertVbo)
+    glBindBuffer(GlArrayBuffer, vbos[vert])
     glVertexAttribPointer(0, 3, cGlFloat, GlFalse, 0, nil)
     glEnableVertexAttribArray(0)
 
     if hasNormals:
-      glBindBuffer(GlArrayBuffer, normVbo)
+      glBindBuffer(GlArrayBuffer, vbos[norm])
       glVertexAttribPointer(1, 3, cGlFloat, GlTrue, 0, nil)
       glEnableVertexAttribArray(1)
 
     if hasUvs:
-      glBindBuffer(GlArrayBuffer, uvVbo)
+      glBindBuffer(GlArrayBuffer, vbos[uv])
       glVertexAttribPointer(2, 3, cGlFloat, GlTrue, 0, nil)
       glEnableVertexAttribArray(2)
 
     if hasColours:
-      glBindBuffer(GlArrayBuffer, colorVbo)
+      glBindBuffer(GlArrayBuffer, vbos[col])
       glVertexAttribPointer(3, 4, cGlFloat, GlTrue, 0, nil)
       glEnableVertexAttribArray(3)
 

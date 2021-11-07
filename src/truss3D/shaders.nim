@@ -125,4 +125,3 @@ proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
       glUniform1i(loc, textureUnit.Glint)
-      inc textureUnit
