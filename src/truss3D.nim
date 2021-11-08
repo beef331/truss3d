@@ -69,6 +69,9 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     gdrawProc = drawProc
     update()
 
+proc moveMouse*(target: IVec2) =
+  warpMouseInWindow(cast[ptr Window](app.window), target.x.cint, target.y.cint)
+
 when isMainModule:
   var
     model: Model
