@@ -37,7 +37,7 @@ proc update =
     let dt = (getMonoTime() - lastFrame).inNanoseconds.float / 1000000000
     time += dt
     lastFrame = getMonoTime()
-    pollInputs()
+    pollInputs(app.windowSize)
     gupdateProc(dt)
     glBindFramebuffer(GlFrameBuffer, 0)
     glClear(GlColorBufferBit or GlDepthBufferBit)
@@ -55,7 +55,7 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     discard glSetAttribute(GL_CONTEXT_MAJOR_VERSION, 4)
     discard glSetAttribute(GL_CONTEXT_MINOR_VERSION, 3)
     app.windowSize = size
-    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x, size.y, WindowOpenGl)
+    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x, size.y, WindowOpenGl or WindowResizable)
     app.context = glCreateContext(app.window)
     loadExtensions()
     glClearColor(0.0, 0.0, 0.0, 1)

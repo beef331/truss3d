@@ -1,4 +1,5 @@
 import sdl2_nim/sdl
+import opengl
 import std/[macros, tables, strutils]
 import vmath
 
@@ -76,7 +77,7 @@ proc resetInputs() =
   mouseDelta = ivec2(0, 0)
   mouseScroll = 0
 
-proc pollInputs*() =
+proc pollInputs*(screenSize: var IVec2) =
   resetInputs()
 
   var e: Event
@@ -103,6 +104,14 @@ proc pollInputs*() =
     of MouseWheel:
       let sign = if e.wheel.direction == MouseWheelFlipped: -1 else: 1
       mouseScroll = sign * e.wheel.y
+    of WindowEvent:
+      case e.window.event.WindowEventID
+      of WindowEventResized, WindowEventSizeChanged:
+        screenSize.x = e.window.data1
+        screenSize.y = e.window.data2
+        glViewport(0, 0, screenSize.x, screenSize.y)
+      else: discard
+
     else: discard
 
 proc isDown*(k: TKeycode): bool = keyState[k] == pressed
