@@ -1,14 +1,26 @@
 import opengl, pixie
 
 type
-  Texture* = distinct Gluint
-  FrameBuffer* = distinct Gluint
-  RenderBuffer* = distinct GLuint
   TextureFormat* = enum
     tfRgba
     tfRgb
     tfRg
     tfR
+
+  ClearFlag* = enum
+    colour, depth
+
+  Texture* = distinct Gluint
+  RenderBuffer* = distinct GLuint
+  FrameBufferId* = distinct Gluint
+  FrameBuffer* = object
+    id: FrameBufferId
+    size*: IVec2
+    format: TextureFormat
+    texture*: Texture
+    clearFlags*: set[ClearFlag]
+    clearColor*: Color
+
 
 const textureLut =
   [
@@ -33,31 +45,34 @@ proc copyTo*(img: Image, tex: Texture) =
                       GlUnsignedByte,
                       img.data[0].unsafeAddr)
 
-
-proc attachTexture*(buffer: FrameBuffer, size: IVec2, tex: Texture, format: TextureFormat) =
-  glBindFrameBuffer(GlFrameBuffer, buffer.Gluint)
-  glBindTexture(GlTexture2d, tex.Gluint)
-  glTexImage2D(GlTexture2d, 0.Glint, textureLut[format].Glint, size.x.GlSizei, size.y.GlSizei, 0.Glint, textureLut[format], GlUnsignedByte, nil)
-  glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GL_TEXTURE_2D, tex.Gluint, 0);  
+proc attachTexture*(buffer: var FrameBuffer) =
+  glBindFrameBuffer(GlFrameBuffer, buffer.id.Gluint)
+  glBindTexture(GlTexture2d, buffer.texture.Gluint)
+  glTexImage2D(GlTexture2d, 0.Glint, textureLut[buffer.format].Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, textureLut[buffer.format], GlUnsignedByte, nil)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+  glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.texture.Gluint, 0)
   glBindFrameBuffer(GlFrameBuffer, 0)
 
-proc attachTexture*(buffer: FrameBuffer, size: IVec2, format: TextureFormat) =
-  glBindFrameBuffer(GlFrameBuffer, buffer.Gluint)
-  let tex = genTexture()
-  glBindTexture(GlTexture2d, tex.Gluint)
-  glTexImage2D(GlTexture2d, 0.Glint, textureLut[format].Glint, size.x.GlSizei, size.y.GlSizei, 0.Glint, textureLut[format], GlUnsignedByte, nil)
-  glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GL_TEXTURE_2D, tex.Gluint, 0);  
-  glBindFrameBuffer(GlFrameBuffer, 0)
+proc clear*(fb: FrameBuffer) =
+  if fb.clearFlags.card > 0:
+    glBindFrameBuffer(GlFrameBuffer, fb.id.Gluint)
+    if colour in fb.clearFlags:
+      glClearColor(fb.clearColor.r, fb.clearColor.g, fb.clearColor.b, fb.clearColor.a)
+      glClear(GlColorBufferBit)
+    if depth in fb.clearFlags:
+      glClearDepth(0)
+      glClear(GLDepthbufferBit)
+    glBindFrameBuffer(GlFrameBuffer, 0)
 
-proc genFrameBuffer*(): FrameBuffer =
-  glGenFramebuffers(1, result.Gluint.addr)
-  glBindFrameBuffer(GlFrameBuffer, result.Gluint)
-  glClearColor(0, 0, 0, 0)
-  glClearDepth(1.0)
-  glBindFrameBuffer(GlFrameBuffer, 0)
+proc genFrameBuffer*(size: Ivec2, format: TextureFormat, clearFlags = {colour}): FrameBuffer =
+  result.clearFlags = clearFlags
+  result.texture = genTexture()
+  glCreateFramebuffers(1, result.id.Gluint.addr)
+  result.attachTexture()
+  result.clear()
 
-proc genFrameBuffer*(size: Ivec2, format: TextureFormat): FrameBuffer =
-  result = genFrameBuffer()
-  glGenFramebuffers(1, result.Gluint.addr)
-  result.attachTexture(size, format)
-  glBindFrameBuffer(GlFrameBuffer, 0)
+proc resize*(fb: var FrameBuffer, size: IVec2) =
+  if size != fb.size:
+    fb.size = size
+    fb.attachTexture()

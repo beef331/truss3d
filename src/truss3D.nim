@@ -48,6 +48,19 @@ proc update =
   glDeleteContext(app.context)
   app.window.destroyWindow
 
+
+proc openGlDebug(source: GLenum,
+    typ: GLenum,
+    id: GLuint,
+    severity: GLenum,
+    length: GLsizei,
+    message: ptr GLchar,
+    userParam: pointer) {.stdcall.} =
+  if length > 0 and message != nil:
+    var str = newString(length)
+    copyMem(str[0].addr, message, length)
+    echo str
+
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc) =
   if init(INIT_VIDEO) == 0:
@@ -61,7 +74,9 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     glClearColor(0.0, 0.0, 0.0, 1)
     glClearDepth(1)
     discard glSetSwapInterval(0.cint)
-
+    when defined(debug):
+      glEnable(GlDebugOutput)
+      glDebugMessageCallback(openGlDebug, nil)
     if initProc != nil:
       initProc()
 
