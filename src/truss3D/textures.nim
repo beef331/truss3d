@@ -6,6 +6,7 @@ type
     tfRgb
     tfRg
     tfR
+    tfDepth
 
   ClearFlag* = enum
     colour, depth
@@ -22,13 +23,23 @@ type
     clearColor*: Color
 
 
-const textureLut =
-  [
-    tfRgba: GlRgba,
-    tfRgb: GlRgb,
-    tfRg: GlRg,
-    tfR: GlRed
-  ]
+const 
+  formatLut =
+    [
+      tfRgba: GlRgba,
+      tfRgb: GlRgb,
+      tfRg: GlRg,
+      tfR: GlRed,
+      tfDepth: GlDepthComponent
+    ]
+  dataType =
+    [
+      tfRgba: GlUnsignedByte,
+      tfRgb: GlUnsignedByte,
+      tfRg: GlUnsignedByte,
+      tfR: GlUnsignedByte,
+      tfDepth: cGlFloat
+    ]
 
 proc genTexture*(): Texture =
   glCreateTextures(GlTexture2D, 1, result.Gluint.addr)
@@ -45,21 +56,29 @@ proc copyTo*(img: Image, tex: Texture) =
                       GlUnsignedByte,
                       img.data[0].unsafeAddr)
 
-proc attachTexture*(buffer: var FrameBuffer) =
-  glBindFrameBuffer(GlFrameBuffer, buffer.id.Gluint)
-  glBindTexture(GlTexture2d, buffer.texture.Gluint)
-  glTexImage2D(GlTexture2d, 0.Glint, textureLut[buffer.format].Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, textureLut[buffer.format], GlUnsignedByte, nil)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-  glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.texture.Gluint, 0)
-  glBindFrameBuffer(GlFrameBuffer, 0)
-  glBindTexture(GlTexture2d, Gluint(0))
-
 proc bindBuffer*(fb: FrameBuffer) =
   glBindFrameBuffer(GlFrameBuffer, fb.id.Gluint)
 
 proc unbindFrameBuffer*() = 
   glBindFrameBuffer(GlFrameBuffer, 0.Gluint)
+
+proc attachTexture*(buffer: var FrameBuffer) =
+  glBindTexture(GlTexture2d, buffer.texture.Gluint)
+  glTexImage2D(GlTexture2d, 0.Glint, formatLut[buffer.format].Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, formatLut[buffer.format], dataType[buffer.format], nil)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+
+  buffer.bindBuffer()
+  if buffer.format == tfDepth:
+    glFramebufferTexture2D(GlFrameBuffer, GlDepthAttachment, GlTexture2D, buffer.texture.Gluint, 0)
+    glDrawBuffer(GlNone)
+    glReadBuffer(GlNone)
+  else:
+    glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.texture.Gluint, 0)
+  unbindFrameBuffer()
+  glBindTexture(GlTexture2d, Gluint(0))
 
 proc clear*(fb: FrameBuffer) =
   if fb.clearFlags.card > 0:
