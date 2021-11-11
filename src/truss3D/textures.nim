@@ -6,10 +6,6 @@ type
     tfRgb
     tfRg
     tfR
-    tfDepth
-
-  ClearFlag* = enum
-    colour, depth
 
   Texture* = distinct Gluint
   RenderBuffer* = distinct GLuint
@@ -18,9 +14,12 @@ type
     id: FrameBufferId
     size*: IVec2
     format: TextureFormat
-    texture*: Texture
-    clearFlags*: set[ClearFlag]
+    colourTexture*: Texture
     clearColor*: Color
+    case hasDepth*: bool
+    of true:
+      depthTexture*: Texture
+    else: discard
 
 
 const 
@@ -30,7 +29,6 @@ const
       tfRgb: GlRgb,
       tfRg: GlRg,
       tfR: GlRed,
-      tfDepth: GlDepthComponent
     ]
   dataType =
     [
@@ -38,7 +36,6 @@ const
       tfRgb: GlUnsignedByte,
       tfRg: GlUnsignedByte,
       tfR: GlUnsignedByte,
-      tfDepth: cGlFloat
     ]
 
 proc genTexture*(): Texture =
@@ -63,45 +60,40 @@ proc unbindFrameBuffer*() =
   glBindFrameBuffer(GlFrameBuffer, 0.Gluint)
 
 proc attachTexture*(buffer: var FrameBuffer) =
-  glBindTexture(GlTexture2d, buffer.texture.Gluint)
+  glBindTexture(GlTexture2d, buffer.colourTexture.Gluint)
   glTexImage2D(GlTexture2d, 0.Glint, formatLut[buffer.format].Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, formatLut[buffer.format], dataType[buffer.format], nil)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-
   buffer.bindBuffer()
-  if buffer.format == tfDepth:
-    glFramebufferTexture2D(GlFrameBuffer, GlDepthAttachment, GlTexture2D, buffer.texture.Gluint, 0)
-    glDrawBuffer(GlNone)
-    glReadBuffer(GlNone)
-  else:
-    glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.texture.Gluint, 0)
+  glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.colourTexture.Gluint, 0)
+
+  if buffer.hasDepth:
+    glBindTexture(GlTexture2d, buffer.depthTexture.Gluint)
+    glTexImage2D(GlTexture2d, 0.Glint, GlDepthComponent.Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, GlDepthComponent, cGlFloat, nil)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glFramebufferTexture2D(GlFrameBuffer, GlDepthAttachment, GlTexture2D, buffer.depthTexture.Gluint, 0)
+
   unbindFrameBuffer()
   glBindTexture(GlTexture2d, Gluint(0))
 
 proc clear*(fb: FrameBuffer) =
-  if fb.clearFlags.card > 0:
-    fb.bindBuffer()
+  fb.bindBuffer()
+  var color: array[4, GlFloat]
+  glClearBufferfv(GlFrameBuffer, GlColor.Glint, color[0].addr)
+  if fb.hasDepth:
+    let depth: GlFloat = 1
+    glClearBufferfv(GlFrameBuffer, GlDepth.Glint, depth.unsafeaddr)
 
-    if colour in fb.clearFlags:
-      var color: array[4, GlFloat]
-      glGetFloatv(GlColorClearValue, color[0].addr)
-      glClearColor(fb.clearColor.r, fb.clearColor.g, fb.clearColor.b, fb.clearColor.a)
-      glClear(GlColorBufferBit)
-      glClearColor(color[0], color[1], color[2], color[3])
-
-    if depth in fb.clearFlags:
-      var depth: GlFloat
-      glGetFloatv(GlDepthClearValue, depth.addr)
-      glClearDepth(1)
-      glClear(GLDepthbufferBit)
-      glClearDepth(depth)
-
-proc genFrameBuffer*(size: Ivec2, format: TextureFormat, clearFlags = {colour}): FrameBuffer =
-  result.clearFlags = clearFlags
-  result.size = size
-  result.texture = genTexture()
+proc genFrameBuffer*(size: Ivec2, format: TextureFormat, hasDepth = true): FrameBuffer =
+  result = FrameBuffer(size: size, hasDepth: hasDepth)
+  result.colourTexture = genTexture()
+  if result.hasDepth:
+    result.depthTexture = genTexture()
   glCreateFramebuffers(1, result.id.Gluint.addr)
   result.attachTexture()
   result.clear()
@@ -116,4 +108,4 @@ template with*(fb: FrameBuffer, body: untyped) =
     fb.bindBuffer()
     body
     unbindFrameBuffer()
-    glClear(GLDepthbufferBit or GlColorBufferBit)
+    #glClear(GLDepthbufferBit or GlColorBufferBit)
