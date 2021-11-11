@@ -73,6 +73,7 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     loadExtensions()
     glClearColor(0.0, 0.0, 0.0, 1)
     glClearDepth(1)
+    enableAutoGLerrorCheck(false)
     discard glSetSwapInterval(0.cint)
     when defined(debug):
       glEnable(GlDebugOutput)

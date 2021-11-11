@@ -22,17 +22,21 @@ template with*(shader: Shader, body: untyped) =
 proc loadShader*(shader: string, kind: ShaderKind): Gluint =
   let
     shaderProg = allocCStringArray([shader])
+    shaderLen = shader.len.GLint
     shaderId = glCreateShader(KindLut[kind])
-  glShaderSource(shaderId, 1, shaderProg, nil)
+  glShaderSource(shaderId, 1, shaderProg, shaderLen.unsafeaddr)
   glCompileShader(shaderId)
   var success = 0.Glint
   glGetShaderiv(shaderId, GlCompileStatus, success.addr)
 
   if success == 0:
-    var buff = newString(512)
-    glGetShaderInfoLog(shaderId, 512, nil, buff[0].addr)
+    var
+      buff = newString(512)
+      len = 0.GlSizeI
+    glGetShaderInfoLog(shaderId, 512, len.addr, buff[0].addr)
+    buff.setLen(len.int)
     echo buff
-    return
+
   result = shaderId
 
   shaderProg.deallocCStringArray
