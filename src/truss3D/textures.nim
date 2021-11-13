@@ -83,7 +83,7 @@ proc attachTexture*(buffer: var FrameBuffer) =
 
 proc clear*(fb: FrameBuffer) =
   fb.bindBuffer()
-  let colorPtr = cast[ptr GlFloat](fb.clearColor.unsafeaddr)
+  let colorPtr = fb.clearColor.r.unsafeAddr
   glClearBufferfv(GlColor, 0, colorPtr)
   if fb.hasDepth:
     let depth: GlFloat = 1

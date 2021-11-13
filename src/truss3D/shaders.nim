@@ -1,5 +1,5 @@
 import opengl, vmath, pixie
-import std/[tables, typetraits]
+import std/[tables, typetraits, os]
 import textures
 
 type
@@ -14,6 +14,8 @@ const KindLut = [
   Fragment: GlFragmentShader,
   Compute: GlComputeShader
 ]
+
+var shaderPath* = ""
 
 template with*(shader: Shader, body: untyped) =
   glUseProgram(Gluint(shader))
@@ -45,12 +47,18 @@ proc loadShader*(vert, frag: string, isPath = true): Shader =
   let
     vert =
       if isPath:
-        readFile(vert)
+        try:
+          readFile(vert)
+        except:
+          readFile(shaderPath / vert)
       else:
         vert
     frag =
       if isPath:
-        readFile(frag)
+        try:
+          readFile(frag)
+        except:
+          readFile(shaderPath / frag)
       else:
         frag
     vs = loadShader(vert, Vertex)
@@ -124,8 +132,4 @@ proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
     if loc != -1:
       var textureUnit {.global.} = 0.Gluint;
       glBindTextureUnit(texture_unit, tex.GLuint);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
       glUniform1i(loc, textureUnit.Glint)

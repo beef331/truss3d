@@ -1,6 +1,6 @@
 import assimp, opengl, vmath, chroma
 import shaders
-import std/macros
+import std/[macros, os]
 
 type
   Mesh* = object
@@ -24,10 +24,14 @@ type
     uvs*: seq[Vec2]
     colors*: seq[Color]
 
+var modelPath* = ""
+
 proc loadModel*(path: string): Model =
-  let scene = aiImportFile(path, TargetRealtimeQuality)
+  var scene = aiImportFile(path, TargetRealtimeQuality)
   if scene == nil:
-    raise newException(IOError, path & " invalid model file")
+    scene = aiImportFile(cstring(modelPath / path), TargetRealtimeQuality)
+    if scene == nil:
+      raise newException(IOError, path & " invalid model file")
   for mesh in scene.imeshes:
     type VboKinds = enum
       vert, norm, uv, col
