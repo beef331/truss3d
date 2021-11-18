@@ -145,7 +145,7 @@ proc uploadData*(mesh: MeshData): Model =
     mesh.indices[0].unsafeaddr,
     GlStaticDraw)
 
-  msh.size = mesh.indices.len.GlSizei
+  msh.size = GlSizei(mesh.indices.len)
 
   glGenVertexArrays(1, msh.vao.addr)
   glBindVertexArray(msh.vao)
