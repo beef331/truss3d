@@ -17,9 +17,12 @@ const KindLut = [
 
 var shaderPath* = ""
 
+proc makeActive*(shader: Shader) = glUseProgram(Gluint(shader))
+
 template with*(shader: Shader, body: untyped) =
-  glUseProgram(Gluint(shader))
+  shader.makeActive
   body
+
 
 proc loadShader*(shader: string, kind: ShaderKind): Gluint =
   let
@@ -130,6 +133,5 @@ proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
   with shader:
     let loc = glGetUniformLocation(shader.Gluint, uniform)
     if loc != -1:
-      var textureUnit {.global.} = 0.Gluint;
-      glBindTextureUnit(texture_unit, tex.GLuint);
-      glUniform1i(loc, textureUnit.Glint)
+      glBindTextureUnit(loc.Gluint, tex.GLuint);
+      glUniform1i(loc, loc)
