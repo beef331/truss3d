@@ -86,7 +86,15 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     update()
 
 proc moveMouse*(target: IVec2) =
+  let target = ivec2(clamp(target.x, 0, app.windowSize.x), clamp(target.y, 0, app.windowSize.y))
+  setSoftwareMousePos(target)
   warpMouseInWindow(cast[ptr Window](app.window), target.x.cint, target.y.cint)
+
+proc getNormalizedMousePos*(): Vec2 =
+  let
+    screenSize = screenSize()
+    mousePos = getMousePos()
+  vec2(mousePos.x / screenSize.x, mousePos.y / screenSize.y)
 
 when isMainModule:
   var

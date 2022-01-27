@@ -4,7 +4,7 @@ import std/[macros, tables, strutils]
 import vmath
 
 type
-  KeyState = enum
+  KeyState* = enum
     nothing, pressed, held, released
   MouseButton* = enum
     leftMb
@@ -12,8 +12,12 @@ type
     rightMb
     fourthMb
     fifthMb
+  MouseRelativeMode* = enum
+    MouseRelative
+    MouseAbsolute
 
 
+const relativeMovement = {MouseRelative}
 
 macro emitEnumFaff(key: typedesc[enum]): untyped =
   result = key.getImpl
@@ -55,6 +59,7 @@ var
   mouseDelta: IVec2
   mousePos: IVec2
   mouseScroll: int32
+  mouseMovement = MouseAbsolute
 
 proc resetInputs() =
   for key in keyState.mitems:
@@ -93,7 +98,8 @@ proc pollInputs*(screenSize: var IVec2) =
         keyState[KeyLut[key]] = released
     of MouseMotion:
       let motion = e.motion
-      mousePos = ivec2(motion.x.int, motion.y.int)
+      if mouseMovement notin relativeMovement:
+        mousePos = ivec2(motion.x.int, motion.y.int)
       mouseDelta = ivec2(motion.xrel.int, motion.yrel.int)
     of MouseButtonDown:
       let button = MouseButton(e.button.button - 1)
@@ -119,12 +125,25 @@ proc isPressed*(k: TKeycode): bool = keyState[k] == held
 proc isUp*(k: TKeycode): bool = keyState[k] == released
 proc isNothing*(k: TKeycode): bool = keyState[k] == nothing
 
+proc state*(k: TKeycode): KeyState = keyState[k]
+
 proc isDown*(mb: MouseButton): bool = mouseState[mb] == pressed
 proc isPressed*(mb: MouseButton): bool = mouseState[mb] == held
 proc isUp*(mb: MouseButton): bool = mouseState[mb] == released
 proc isNothing*(mb: MouseButton): bool = mouseState[mb] == nothing
 
+proc state*(mb: MouseButton): KeyState = mouseState[mb]
+
 
 proc getMousePos*(): IVec2 = mousePos
 proc getMouseDelta*(): IVec2 = mouseDelta
 proc getMouseScroll*(): int32 = mouseScroll
+
+proc setMouseMode*(mode: MouseRelativeMode) =
+  mouseMovement = mode
+  discard setRelativeMouseMode(mode in relativeMovement)
+
+proc setSoftwareMousePos*(pos: IVec2) = 
+  ## Does not move the mouse in the OS, just inside Truss3D.
+  ## Useful for things like RTS pan cameras.
+  mousePos = pos
