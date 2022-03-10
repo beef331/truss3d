@@ -52,6 +52,26 @@ macro emitEnumFaff(key: typedesc[enum]): untyped =
       `arrName`
 
 emitEnumFaff(Keycode)
+type
+  KeyProc* = proc(ke: var KeyEvent, dt: float){.closure.}
+  MouseEvent* = proc(dt, delta: float){.closure.}
+
+  EventPriority* = enum
+    epHigh
+    epMedium
+    epLow
+
+  EventFlag* = enum
+    efInteruptable
+  EventFlags* = set[EventFlag]
+  KeyEvent* = object
+    flags: set[EventFlag]
+    event: KeyProc
+    interrupted*: bool
+
+
+  Events* = object
+    keyEvents: array[EventPriority, Table[(TKeyCode, KeyState), seq[KeyEvent]]]
 
 var
   keyState: array[TKeyCode, KeyState]
@@ -60,6 +80,12 @@ var
   mousePos: IVec2
   mouseScroll: int32
   mouseMovement = MouseAbsolute
+  events*: Events
+
+
+proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
+  if events.keyEvents[prio].hasKeyOrPut((key, state), @[KeyEvent(flags: eventFlags, event: prc)]):
+    events.keyEvents[prio][(key, state)].add KeyEvent(flags: eventFlags, event: prc)
 
 proc resetInputs() =
   for key in keyState.mitems:
@@ -82,20 +108,33 @@ proc resetInputs() =
   mouseDelta = ivec2(0, 0)
   mouseScroll = 0
 
-proc pollInputs*(screenSize: var IVec2) =
+proc dispatchEvents*(keyCode: TKeyCode, state: KeyState, dt: float32) =
+  for prio in EventPriority:
+    if (keyCode, state) in events.keyEvents[prio]:
+      for event in events.keyEvents[prio][(keyCode, state)].mitems:
+        if efInteruptable notin event.flags or not event.interrupted:
+          event.event(event, dt)
+
+proc pollInputs*(screenSize: var IVec2, dt: float32) =
   resetInputs()
 
   var e: Event
   while pollEvent(addr e) != 0:
     case e.kind:
     of Keydown:
-      let key = e.key.keysym.sym
-      if keyState[KeyLut[key]] != held:
-        keyState[KeyLut[key]] = pressed
+      let
+        key = e.key.keysym.sym
+        lutd = KeyLut[key]
+      if keyState[lutd] != held:
+        keyState[lutd] = pressed
+        dispatchEvents(lutd, pressed, dt)
     of KeyUp:
-      let key = e.key.keysym.sym
+      let
+        key = e.key.keysym.sym
+        lutd = KeyLut[key]
       if keyState[KeyLut[key]] == held:
         keyState[KeyLut[key]] = released
+        dispatchEvents(lutd, released, dt)
     of MouseMotion:
       let motion = e.motion
       if mouseMovement notin relativeMovement:

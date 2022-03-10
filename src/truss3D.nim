@@ -37,7 +37,7 @@ proc update =
     let dt = (getMonoTime() - lastFrame).inNanoseconds.float / 1000000000
     time += dt
     lastFrame = getMonoTime()
-    pollInputs(app.windowSize)
+    pollInputs(app.windowSize, dt)
     gupdateProc(dt)
     glBindFramebuffer(GlFrameBuffer, 0)
     glClear(GlColorBufferBit or GlDepthBufferBit)
@@ -104,6 +104,10 @@ when isMainModule:
     proj: Mat4
     texture: textures.Texture
 
+  addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
+    echo "buh bye"
+    quitTruss()
+
   proc init() =
     model = loadModel("assets/Cube.glb")
     shader = loadShader("assets/vert.glsl", "assets/frag.glsl")
@@ -115,8 +119,6 @@ when isMainModule:
     shader.setUniform "tex", texture
 
   proc update(dt: float32) =
-    if KeycodeQ.isDown:
-      app.isRunning = false
     view = lookAt(vec3(sin(time) * 4, 1, -3), vec3(0, 0, 0), vec3(0, 1, 0))
     proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
     shader.setUniform "mvp", proj * view * mat4()
