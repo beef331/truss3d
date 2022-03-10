@@ -87,13 +87,28 @@ proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc
   if events.keyEvents[prio].hasKeyOrPut((key, state), @[KeyEvent(flags: eventFlags, event: prc)]):
     events.keyEvents[prio][(key, state)].add KeyEvent(flags: eventFlags, event: prc)
 
-proc resetInputs() =
-  for key in keyState.mitems:
-    case key:
+proc addEvent*(keys: set[TKeyCode], state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
+  for key in keys:
+    addEvent(key, state, prio, prc, eventFlags)
+
+
+proc dispatchEvents(keyCode: TKeyCode, state: KeyState, dt: float32) =
+  for prio in EventPriority:
+    if (keyCode, state) in events.keyEvents[prio]:
+      for event in events.keyEvents[prio][(keyCode, state)].mitems:
+        if efInteruptable notin event.flags or not event.interrupted:
+          event.event(event, dt)
+          event.interrupted = true
+
+proc resetInputs(dt: float32) =
+  for key, state in keyState.pairs:
+    case state:
     of released:
-      key = nothing
+      keyState[key] = nothing
     of pressed:
-      key = held
+      keyState[key] = held
+    of held:
+      dispatchEvents(key, held, dt)
     else: discard
 
   for btn in mouseState.mitems:
@@ -108,15 +123,8 @@ proc resetInputs() =
   mouseDelta = ivec2(0, 0)
   mouseScroll = 0
 
-proc dispatchEvents*(keyCode: TKeyCode, state: KeyState, dt: float32) =
-  for prio in EventPriority:
-    if (keyCode, state) in events.keyEvents[prio]:
-      for event in events.keyEvents[prio][(keyCode, state)].mitems:
-        if efInteruptable notin event.flags or not event.interrupted:
-          event.event(event, dt)
-
 proc pollInputs*(screenSize: var IVec2, dt: float32) =
-  resetInputs()
+  resetInputs(dt)
 
   var e: Event
   while pollEvent(addr e) != 0:
