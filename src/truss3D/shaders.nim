@@ -117,6 +117,12 @@ proc setUniform*(shader: Shader, uniform: string, value: Vec4) =
     if loc != -1:
       glUniform4f(loc, value.x, value.y, value.z, value.w)
 
+proc setUniform*(shader: Shader, uniform: string, value: Vec2) =
+  with shader:
+    let loc = glGetUniformLocation(shader.Gluint, uniform)
+    if loc != -1:
+      glUniform2f(loc, value.x, value.y)
+
 proc setUniform*(shader: Shader, uniform: string, value: Color) =
   with shader:
     let loc = glGetUniformLocation(shader.Gluint, uniform)
