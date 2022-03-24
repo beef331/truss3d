@@ -87,12 +87,13 @@ proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
 proc copyTo*[T](val: T, ubo: Ubo[T]) =
   glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
 
-proc genSsbo*[T](shader: Shader, binding: Natural): Ssbo[T] =
+proc genSsbo*[T](binding: Natural): Ssbo[T] =
   glCreateBuffers(1, result.Gluint.addr)
+  glBufferData(GlShaderStorageBuffer, sizeof(T), nil, GlDynamicDraw)
   glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), result.Gluint)
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
-  glNamedBufferData(GlShaderStorageBuffer, sizeof(T).GLsizeiptr, val.unsafeAddr, GlDynamicDraw)
+  glNamedBufferData(ssbo.Gluint, sizeof(T).GLsizeiptr, val.unsafeAddr, GlDynamicDraw)
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
   let newData = val[slice.a].unsafeAddr
