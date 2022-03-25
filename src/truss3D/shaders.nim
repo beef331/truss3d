@@ -71,16 +71,16 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
     vs = loadShader(vert, Vertex)
     fs = loadShader(frag, Fragment)
   result = glCreateProgram().Shader
-  glAttachShader(result.Gluint, vs)
-  glAttachShader(result.Gluint, fs)
-  glLinkProgram(result.Gluint)
+  glAttachShader(Gluint result, vs)
+  glAttachShader(Gluint result, fs)
+  glLinkProgram(Gluint result)
 
-  var success = 1.Glint
+  var success = Glint 1
 
-  glGetProgramIv(result.Gluint, GlLinkStatus, success.addr)
+  glGetProgramIv(Gluint result, GlLinkStatus, success.addr)
   if success == 0:
     var msg = newString(512)
-    glGetProgramInfoLog(result.Gluint, 512, nil, msg[0].addr)
+    glGetProgramInfoLog(Gluint result, 512, nil, msg[0].addr)
     echo msg
   glDeleteShader(vs)
   glDeleteShader(fs)
