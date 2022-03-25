@@ -3,7 +3,7 @@ import vmath, chroma, pixie
 import std/random
 
 type
-  InstanceBuffer = object
+  InstanceBuffer {.packed.} = object
     pos: Vec4
     scale: Vec4
   Buffer = array[100000, InstanceBuffer]
@@ -29,8 +29,10 @@ layout(std430, binding = 1) buffer instanceData{
 
 out vec3 fNormal;
 out vec2 fUv;
+out float time;
 void main(){
-  vec3 newPos = instData[gl_InstanceID].scale.xyz * vertex_position + instData[gl_InstanceID].pos.xyz;
+  data theData = instData[gl_InstanceID];
+  vec3 newPos = theData.scale.xyz * vertex_position + theData.pos.xyz;
   gl_Position = VP * vec4(newPos, 1);
   fNormal = normal;
   fUv = uv;
@@ -73,7 +75,7 @@ proc randomizeSSBO() =
 
 proc init() =
   model = loadInstancedModel[Buffer]("assets/Cube.glb")
-  shader = loadShader(vertShader, fragShader, false)
+  shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
   let screenSize = screenSize()
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
   let sam = readImage"assets/Sam.jpg"
@@ -81,6 +83,7 @@ proc init() =
   sam.copyTo texture
   shader.setUniform "tex", texture
   randomizeSSBO()
+  model.drawCount = model.ssboData.len
 
 proc moveSSBO(dt: float32) =
   with shader:

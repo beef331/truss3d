@@ -110,7 +110,7 @@ when isMainModule:
 
   proc init() =
     model = loadModel("assets/Cube.glb")
-    shader = loadShader("assets/vert.glsl", "assets/frag.glsl")
+    shader = loadShader(ShaderPath"assets/vert.glsl", ShaderPath"assets/frag.glsl")
     proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
     shader.setUniform "mvp", proj * view * mat4()
     let sam = readImage"assets/Sam.jpg"

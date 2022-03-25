@@ -6,6 +6,7 @@ type
     ssboData*: T
     ssbo: Ssbo[T]
     model: Model
+    drawCount*: int
 
 proc loadInstancedModel*[T: array](path: string): InstancedModel[T] =
   result.model = loadModel(path)
@@ -18,5 +19,5 @@ proc reuploadSsbo*(instModel: InstancedModel) =
 proc render*(instModel: InstancedModel) =
   for buf in instModel.model.buffers:
     glBindVertexArray(buf.vao)
-    glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, instModel.ssboData.len.GlSizei)
+    glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, instModel.drawCount.GlSizei)
   glBindVertexArray(0)

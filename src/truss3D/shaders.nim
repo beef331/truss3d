@@ -9,6 +9,10 @@ type
   Ssbo*[T: array] = distinct Gluint
   Shader* = distinct Gluint
 
+  ShaderPath* = distinct string
+  ShaderFile* = distinct string
+  ShaderSource = ShaderPath or ShaderFile
+
 const KindLut = [
   Vertex: GlVertexShader,
   Fragment: GlFragmentShader,
@@ -46,24 +50,24 @@ proc loadShader*(shader: string, kind: ShaderKind): Gluint =
 
   shaderProg.deallocCStringArray
 
-proc loadShader*(vert, frag: string, isPath = true): Shader =
+proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   let
     vert =
-      if isPath:
+      when vert is ShaderPath:
         try:
-          readFile(vert)
+          readFile(vert.string)
         except:
-          readFile(shaderPath / vert)
+          readFile(shaderPath / vert.string)
       else:
-        vert
+        vert.string
     frag =
-      if isPath:
+      when frag is ShaderPath:
         try:
-          readFile(frag)
+          readFile(frag.string)
         except:
-          readFile(shaderPath / frag)
+          readFile(shaderPath / frag.string)
       else:
-        frag
+        frag.string
     vs = loadShader(vert, Vertex)
     fs = loadShader(frag, Fragment)
   result = glCreateProgram().Shader

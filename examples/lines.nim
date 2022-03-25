@@ -86,7 +86,7 @@ var
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, 1, 0))
 
 proc init =
-  shader = loadShader(vert, frag, false)
+  shader = loadShader(ShaderFile vert, ShaderFile frag)
   line.generateMesh
   let xAspect = (screenSize().x / screenSize().y).float32
   ortho = ortho(-camSize * xAspect, camSize * xAspect, -camSize, camSize, 0f, 10f)
