@@ -7,9 +7,6 @@ type
     ssbo: Ssbo[T]
     model: Model
 
-template getType(instModel: untyped): auto =
-  typeof(instModel.ssboData)
-
 proc loadInstancedModel*[T: array](path: string): InstancedModel[T] =
   result.model = loadModel(path)
   result.ssbo = genSsbo[T](1)
