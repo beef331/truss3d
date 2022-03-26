@@ -6,7 +6,7 @@ type
   ShaderKind* = enum
     Vertex, Fragment, Compute
   Ubo*[T] = distinct Gluint
-  Ssbo*[T: array] = distinct Gluint
+  Ssbo*[T: array or seq] = distinct Gluint
   Shader* = distinct Gluint
 
   ShaderPath* = distinct string
@@ -88,6 +88,7 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
 proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
   glCreateBuffers(1, result.Gluint.addr)
   glBindBufferbase(GlUniformBuffer, binding.Gluint, result.Gluint)
+
 proc copyTo*[T](val: T, ubo: Ubo[T]) =
   glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
 
@@ -97,7 +98,12 @@ proc genSsbo*[T](binding: Natural): Ssbo[T] =
   glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), result.Gluint)
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
-  glNamedBufferData(ssbo.Gluint, sizeof(T).GLsizeiptr, val.unsafeAddr, GlDynamicDraw)
+  let size =
+    when T is seq:
+      val.len
+    else:
+      sizeof(val)
+  glNamedBufferData(ssbo.Gluint, size.GLsizeiptr, val[0].unsafeAddr, GlDynamicDraw)
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
   let newData = val[slice.a].unsafeAddr
