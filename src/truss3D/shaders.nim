@@ -30,10 +30,10 @@ template with*(shader: Shader, body: untyped) =
 
 proc loadShader*(shader: string, kind: ShaderKind): Gluint =
   let
-    shaderProg = allocCStringArray([shader])
+    shaderProg = shader.cstring
     shaderLen = shader.len.GLint
     shaderId = glCreateShader(KindLut[kind])
-  glShaderSource(shaderId, 1, shaderProg, shaderLen.unsafeaddr)
+  glShaderSource(shaderId, 1, cast[cstringArray](shaderProg.unsafeAddr), shaderLen.unsafeaddr)
   glCompileShader(shaderId)
   var success = 0.Glint
   glGetShaderiv(shaderId, GlCompileStatus, success.addr)
@@ -47,8 +47,6 @@ proc loadShader*(shader: string, kind: ShaderKind): Gluint =
     echo buff
 
   result = shaderId
-
-  shaderProg.deallocCStringArray
 
 proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   let
