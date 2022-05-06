@@ -90,6 +90,9 @@ proc moveMouse*(target: IVec2) =
   setSoftwareMousePos(target)
   warpMouseInWindow(cast[ptr Window](app.window), target.x.cint, target.y.cint)
 
+proc grabWindow*() = setWindowGrab(app.window, true)
+proc releaseWindow*() = setWindowGrab(app.window, false)
+
 proc getNormalizedMousePos*(): Vec2 =
   let
     screenSize = screenSize()
