@@ -61,14 +61,14 @@ proc openGlDebug(source: GLenum,
     copyMem(str[0].addr, message, length)
     echo str
 
-proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
+template initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc) =
   if init(INIT_VIDEO) == 0:
     app.isRunning = true
     discard glSetAttribute(GL_CONTEXT_MAJOR_VERSION, 4)
     discard glSetAttribute(GL_CONTEXT_MINOR_VERSION, 3)
     app.windowSize = size
-    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x, size.y, WindowOpenGl or WindowResizable)
+    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x.cint, size.y.cint, WindowOpenGl or WindowResizable)
     app.context = glCreateContext(app.window)
     loadExtensions()
     glClearColor(0.0, 0.0, 0.0, 1)

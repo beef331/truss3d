@@ -90,23 +90,39 @@ proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
 proc copyTo*[T](val: T, ubo: Ubo[T]) =
   glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
 
+proc bindBuffer*(ssbo: Ssbo) =
+  glBindBuffer(GlShaderStorageBuffer, ssbo.Gluint)
+
+proc bindBuffer*(ssbo: Ssbo, binding: int) =
+  glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), ssbo.Gluint)
+
+proc unbindSsbo*() =
+  glBindBuffer(GlShaderStorageBuffer, 0)
+
 proc genSsbo*[T](binding: Natural): Ssbo[T] =
   glCreateBuffers(1, result.Gluint.addr)
-  glBufferData(GlShaderStorageBuffer, sizeof(T), nil, GlDynamicDraw)
+  result.bindBuffer()
   glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), result.Gluint)
+  unbindSsbo()
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
   let size =
     when T is seq:
-      val.len
+      val.len * sizeof(val[0])
     else:
       sizeof(val)
+  ssbo.bindBuffer()
   glNamedBufferData(ssbo.Gluint, size.GLsizeiptr, val[0].unsafeAddr, GlDynamicDraw)
+  unbindSsbo()
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
   let newData = val[slice.a].unsafeAddr
+  ssbo.bindBuffer()
   glNamedBufferData(GlShaderStorageBuffer, slice.a * sizeof(int16), (slice.b - slice.a) * sizeOf(
       int16), newData)
+  unbindSsbo()
+
+
 
 proc setUniform*(shader: Shader, uniform: string, value: float32) =
   with shader:
