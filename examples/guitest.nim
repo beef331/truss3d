@@ -14,39 +14,112 @@ emitDropDownMethods(MyEnum)
 
 var
   btns: seq[Button]
-  horzLayout = LayoutGroup.new(ivec2(0, 10), ivec2(500, 100), {bottom}, margin = 10)
-  vertLayout = LayoutGroup.new(ivec2(0, 10), ivec2(500, 300), {top}, margin = 10, layoutDirection = vertical)
+  horzLayout, vertLayout: LayoutGroup
   myDropDown: Dropdown[MyEnum]
   myVal: MyEnum
 
 proc init =
   gui.init()
 
-  btns.add  Button.new(ivec2(10, 10), ivec2(200, 100), "Hmmm", color = vec4(0.5), anchor = {left,top})
-  btns[^1].onClick = proc() = echo "Hello world"
+  btns.add:
+    makeUi(Button):
+      pos = ivec2(10, 10)
+      size = ivec2(200, 100)
+      text = "Hmm"
+      color = vec4(0.5)
+      anchor = {left, top}
+      onClick = proc() = echo "Hello World"
 
-  btns.add  Button.new(ivec2(10, 10), ivec2(200, 100), "Is this text?!", color = vec4(0.5), anchor = {left,bottom})
-  btns[^1].onClick = proc() = echo "Hello world"
+  btns.add:
+    makeUi(Button):
+      pos = ivec2(10, 10)
+      size = ivec2(200, 100)
+      text = "Is this text?!"
+      color = vec4(0.5)
+      anchor = {left, bottom}
+      onClick = proc() = echo "Hello World"
 
-  btns.add  Button.new(ivec2(10, 10), ivec2(200, 100), "So much memory being wasted", color = vec4(0.5), anchor = {right, bottom})
-  btns[^1].onClick = proc() = echo "Hello world"
+  btns.add:
+    makeUi(Button):
+      pos = ivec2(10, 10)
+      size = ivec2(200, 100)
+      text = "So much memory being wasted."
+      color = vec4(0.5)
+      anchor = {bottom, right}
+      onClick = proc() = echo "Hello World"
 
-  btns.add  Button.new(ivec2(10, 10), ivec2(200, 100), "Move dropbox down", color = vec4(0.5), anchor = {right, top})
-  btns[^1].onClick = proc() =
-    swap(myDropDown.anchor, btns[2].anchor)
-  btns.add  Button.new(ivec2(0), ivec2(200, 100), "This doesnt even fit", color = vec4(0.5), anchor = {})
-  btns[^1].onClick = proc() = echo "Hello world"
+  btns.add:
+    makeUi(Button):
+      size = ivec2(200, 100)
+      text = "This does not even fit"
+      color = vec4(0.5)
+      anchor = {}
+      onClick = proc() = echo "Hello World"
 
-  horzLayout.add Button.new(ivec2(10, 10), ivec2(100, 50), "Red", color = vec4(1, 0, 0, 1))
-  horzLayout.add Button.new(ivec2(10, 10), ivec2(100, 50), "Green", color = vec4(0, 1, 0 , 1))
-  horzLayout.add Button.new(ivec2(10, 10), ivec2(100, 50), "Blue", color = vec4(0, 0, 1, 1))
+  btns.add:
+    makeUi(Button):
+      pos = ivec2(10, 10)
+      size = ivec2(200, 100)
+      text = "Swap dropdown pos"
+      color = vec4(0.5)
+      anchor = {top, right}
+      onClick = proc() =
+        swap(myDropDown.anchor, btns[2].anchor)
+
+  horzLayout = makeUi(LayoutGroup):
+    pos = ivec2(0, 10)
+    size = ivec2(500, 100)
+    anchor = {bottom}
+    children:
+      makeUi(Button):
+        size = ivec2(100, 50)
+        text = "Red"
+        color = vec4(1, 0, 0, 1)
+        onClick = proc() =
+          echo "Red"
+      makeUi(Button):
+        size = ivec2(100, 50)
+        text = "Green"
+        color = vec4(0, 1, 0, 1)
+        onClick = proc() =
+          echo "Green"
+      makeUi(Button):
+        size = ivec2(100, 50)
+        text = "Blue"
+        color = vec4(0, 0, 1, 1)
+        onClick = proc() =
+          echo "Blue"
 
 
-  vertLayout.add ScrollBar[float32].new(ivec2(0, 0), iVec2(100, 20), 0f..4f, vec4(0, 0, 0.6, 1), vec4(0.1, 0.1, 0, 1))
-  vertLayout.add ScrollBar[float32].new(ivec2(0, 0), iVec2(400, 20), 0f..4f, vec4(0.6, 0, 0, 1), vec4(0.1, 0.1, 0.3, 1))
-  vertLayout.add ScrollBar[float32].new(ivec2(0, 0), iVec2(300, 20), 0f..4f, vec4(0.6, 0, 0.6, 1), vec4(0.1, 0.1, 0.1, 1))
-  myDropDown = Dropdown[MyEnum].new(ivec2(10, 10), ivec2(200, 45), MyEnum.toSeq, anchor = {right})
-  myDropDown.onValueChange = proc(a: MyEnum) = myVal = a
+  vertLayout = makeUi(LayoutGroup):
+    pos = ivec2(0, 10)
+    size = ivec2(500, 300)
+    anchor = {top}
+    layoutDirection = vertical
+    children:
+      makeUi(ScrollBar[float32]):
+        size = ivec2(100, 20)
+        minMax = 0f..4f
+        color = vec4(0, 0, 0.6, 1)
+        backgroundColor = vec4(0.1, 0.1, 0, 1)
+      makeUi(ScrollBar[float32]):
+        size = ivec2(400, 20)
+        minMax = 0f..4f
+        color = vec4(0.6, 0, 0, 1)
+        backgroundColor = vec4(0.1, 0.1, 0.3, 1)
+      makeUi(ScrollBar[float32]):
+        size = ivec2(300, 20)
+        minMax = 0f..4f
+        color = vec4(0.6, 0, 0.6, 1)
+        backgroundColor = vec4(0.1, 0.1, 0.1, 1)
+
+  myDropDown = makeUi(DropDown[MyEnum]):
+    pos = ivec2(10)
+    size = ivec2(200, 45)
+    values = MyEnum.toSeq
+    anchor = {right}
+    onValueChange = proc(a: MyEnum) = myVal = a
+
 
 proc update(dt: float32) =
   for btn in btns:

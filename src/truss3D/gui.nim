@@ -1,6 +1,6 @@
 import vmath, pixie, truss3D
 import truss3D/[textures, shaders, inputs, models]
-import std/[options, sequtils, sugar]
+import std/[options, sequtils, sugar, macros, genasts]
 
 
 type
@@ -170,8 +170,8 @@ method draw*(label: Label, offset = ivec2(0)) =
       uishader.setUniform("hasTex", 0)
 
 
-proc new*(_: typedesc[Button], pos, size: IVec2, text: string, color: Vec4 = vec4(1), anchor = {left, top}): Button =
-  result = Button(pos: pos, size: size, color: color, anchor: anchor)
+proc new*(_: typedesc[Button], pos, size: IVec2, text: string, color: Vec4 = vec4(1), anchor = {left, top}, onClick = (proc(){.closure.})(nil)): Button =
+  result = Button(pos: pos, size: size, color: color, anchor: anchor, onClick: onClick)
   if text.len > 0:
     result.textureId = genTexture()
     result.textureId.renderTextTo(size, text)
@@ -231,7 +231,7 @@ template emitScrollbarMethods*(t: typedesc) =
         let isOver = isOver(scrollBar, offset = offset)
 
         let sliderScale = scrollBar.size.vec2 * vec2(clamp(scrollbar.percentage, 0, 1), 1)
-
+        glEnable(GlDepthTest)
         uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, some(sliderScale), offset))
         uiShader.setUniform("color"):
           if isOver:
@@ -247,6 +247,7 @@ template emitScrollbarMethods*(t: typedesc) =
           else:
             scrollBar.backgroundColor
         render(uiQuad)
+        glDisable(GlDepthTest)
 
 
 
@@ -307,8 +308,8 @@ proc clear*(layoutGroup: LayoutGroup) =
   layoutGroup.children.setLen(0)
 
 
-proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(string, T)], anchor = {top, left}): DropDown[T] =
-  result = DropDown[T](pos: pos, size: size, anchor: anchor)
+proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(string, T)], anchor = {top, left}, onValueChange = (proc(a: T){.closure.})(nil)): DropDown[T] =
+  result = DropDown[T](pos: pos, size: size, anchor: anchor, onValueChange: onValueChange)
 
   let res = result # Hack to get around `result` outliving the closure
   for i, iterVal in values:
@@ -338,11 +339,11 @@ proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(stri
   result.button.onClick = proc() =
     res.opened = not res.opened
 
-proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[T], anchor = {top, left}): DropDown[T] =
+proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[T], anchor = {top, left}, onValueChange: proc(a: T){.closure.} = nil): DropDown[T] =
   var vals = newSeqOfCap[(string, T)](values.len)
   for x in values:
     vals.add ($x, x)
-  DropDown[T].new(pos, size, vals, anchor)
+  DropDown[T].new(pos, size, vals, anchor, onValueChange)
 
 iterator offsetElement(dropDown: DropDown, offset: IVec2): (IVec2, UiElement) =
   ## Iterates over `dropDown`s children yielding offset and element in proper order
@@ -386,3 +387,29 @@ template emitDropDownMethods*(t: typedesc) =
           item.draw(pos)
       else:
         dropDown.button.draw(offset)
+
+
+macro makeUi*(t: typedesc, body: untyped): untyped =
+  ## Nice DSL to make life less of a chore
+  let
+    constr = newCall("new", t)
+    childrenAdd = newStmtList()
+    uiName = genSym(nskVar, "ui")
+  var gotPos = false
+
+  for statement in body:
+    if statement[0].eqIdent"children":
+      for child in statement[1]:
+        childrenAdd.add newCall("add", uiName, child)
+    else:
+      if statement[0].eqIdent"pos":
+        gotPos = true
+      constr.add nnkExprEqExpr.newTree(statement[0], statement[1])
+  if not gotPos:
+    constr.add nnkExprEqExpr.newTree(ident"pos", newCall("ivec2", newLit 0))
+  result = genast(uiName, childrenAdd, constr):
+    block:
+      var uiName = constr
+      childrenAdd
+      uiName
+
