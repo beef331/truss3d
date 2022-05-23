@@ -201,11 +201,28 @@ method draw*(button: Button, offset = ivec2(0)) =
       uishader.setUniform("hasTex", 0)
 
 
-proc new*[T](_: typedesc[ScrollBar[T]], pos, size: IVec2, minMax: Slice[T], color, backgroundColor: Vec4, direction = InteractDirection.horizontal, anchor = {left, top}): ScrollBar[T] =
-  result = ScrollBar[T](pos: pos, size: size, minMax: minMax, direction: direction, color: color, backgroundColor: backgroundColor, anchor: anchor)
+proc new*[T](
+  _: typedesc[ScrollBar[T]],
+  pos, size: IVec2,
+  minMax: Slice[T],
+  color, backgroundColor: Vec4,
+  direction = InteractDirection.horizontal,
+  anchor = {left, top},
+  onValueChange: proc(a: T){.closure.} = nil
+): ScrollBar[T] =
+  result = ScrollBar[T](pos: pos, size: size, minMax: minMax, direction: direction, color: color, backgroundColor: backgroundColor, anchor: anchor, onValueChange: onValueChange)
 
-proc new*[T](_: typedesc[ScrollBar[T]], pos, size: IVec2, minMax: Slice[T], color, backgroundColor: Vec4, direction = InteractDirection.horizontal, anchor = {left, top}, startPercentage: float32): ScrollBar[T] =
-  result = ScrollBar[T](pos: pos, size: size, minMax: minMax, direction: direction, color: color, backgroundColor: backgroundColor, anchor: anchor, percentage: startPercentage)
+proc new*[T](
+  _: typedesc[ScrollBar[T]],
+  pos, size: IVec2,
+  minMax: Slice[T],
+  color, backgroundColor: Vec4,
+  startPercentage: float32,
+  direction = InteractDirection.horizontal,
+  anchor = {left, top},
+  onValueChange: proc(a: T){.closure.} = nil
+): ScrollBar[T] =
+  result = ScrollBar[T](pos: pos, size: size, minMax: minMax, direction: direction, color: color, backgroundColor: backgroundColor, anchor: anchor, onValueChange: onValueChange, percentage: startPercentage)
 
 template emitScrollbarMethods*(t: typedesc) =
   mixin lerp
@@ -248,7 +265,6 @@ template emitScrollbarMethods*(t: typedesc) =
             scrollBar.backgroundColor
         render(uiQuad)
         glDisable(GlDepthTest)
-
 
 
 proc new*(_: typedesc[LayoutGroup], pos, size: IVec2, anchor = {top, left}, margin = 10, layoutDirection = InteractDirection.horizontal, centre = true): LayoutGroup =
@@ -298,6 +314,11 @@ method draw*(layoutGroup: LayoutGroup, offset = ivec2(0)) =
 proc add*(layoutGroup: LayoutGroup, ui: UiElement) =
   ui.anchor = {top, left} # Layout groups require top left anchored elements
   layoutGroup.children.add ui
+
+proc add*[T: UiElement](layoutGroup: LayoutGroup, uis: openArray[T]) =
+  for ui in uis:
+    ui.anchor = {top, left} # Layout groups require top left anchored elements
+    layoutGroup.children.add ui
 
 proc remove*(layoutGroup: LayoutGroup, ui: UiElement) =
   let ind = layoutGroup.children.find(ui)
@@ -395,6 +416,7 @@ macro makeUi*(t: typedesc, body: untyped): untyped =
     constr = newCall("new", t)
     childrenAdd = newStmtList()
     uiName = genSym(nskVar, "ui")
+  var visCond: NimNode
   var gotPos = false
 
   for statement in body:
@@ -404,12 +426,18 @@ macro makeUi*(t: typedesc, body: untyped): untyped =
     else:
       if statement[0].eqIdent"pos":
         gotPos = true
-      constr.add nnkExprEqExpr.newTree(statement[0], statement[1])
+      if statement[0].eqIdent"visibleCond":
+        visCond = statement[1]
+      else:
+        constr.add nnkExprEqExpr.newTree(statement[0], statement[1])
   if not gotPos:
     constr.add nnkExprEqExpr.newTree(ident"pos", newCall("ivec2", newLit 0))
-  result = genast(uiName, childrenAdd, constr):
+  result = genast(uiName, childrenAdd, constr, visCond):
     block:
       var uiName = constr
+      when visCond != nil:
+        uiName.visibleCond = visCond
       childrenAdd
       uiName
 
+  echo result.repr
