@@ -20,7 +20,7 @@ var
 
 proc init =
   gui.init()
-
+  glClearColor(0.5, 0.5, 0.5, 1)
   btns.add:
     makeUi(Button):
       pos = ivec2(10, 10)

@@ -22,6 +22,8 @@ type
 
   Button* = ref object of UiElement
     textureId: Texture
+    nineSliceTex: Texture
+    backgroundColor: Vec4
     onClick*: proc(){.closure.}
 
   Scrollable* = concept s, type S
@@ -73,17 +75,43 @@ void main() {
 out vec4 frag_color;
 
 uniform sampler2D tex;
+uniform sampler2D nineSlice;
+uniform float nineSliceSize;
+
+
 uniform int hasTex;
 uniform vec4 color;
+uniform vec4 backgroundColor;
+
+uniform vec2 size;
+
 in vec2 fuv;
 
 void main() {
-  frag_color = color;
-  if(hasTex > 0){
-    frag_color *= texture(tex, fuv);
+  frag_color.a = 0;
+  if(nineSliceSize > 0){
+    ivec2 texSize = textureSize(nineSlice, 0);
+    vec2 realUv = size * fuv;
+    vec2 myUv = fuv;
+    if(realUv.x < nineSliceSize){
+      myUv.x = realUv.x / (texSize.x - nineSliceSize);
+    }
+    if(realUv.x > size.x - nineSliceSize){
+      myUv.x = (realUv.x - size.x) / (texSize.x - nineSliceSize);
+    }
+    if(realUv.y < nineSliceSize){
+      myUv.y = realUv.y / (texSize.x - nineSliceSize);
+    }
+    if(realUv.y > size.y - nineSliceSize){
+      myUv.y = (realUv.y - size.y) / (texSize.x - nineSliceSize);
+    }
+    frag_color = texture(nineSlice, myUv) * backgroundColor;
   }
-  if(frag_color.a < 0.01){
-    discard;
+  if(hasTex > 0){
+    vec4 newCol = texture(tex, fuv);
+    frag_color = mix(frag_color, newCol * color, newCol.a);
+  }else{
+    frag_color = color;
   }
 }
 """
@@ -93,6 +121,7 @@ var
   uiShader: Shader
   uiQuad: Model
   overGui*: bool
+  nineSlice: Texture
 
 proc init*() =
   uiShader = loadShader(vertShader, fragShader)
@@ -101,6 +130,8 @@ proc init*() =
   meshData.append([0u32, 1, 2, 0, 2, 3].items)
   meshData.appendUv([vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items)
   uiQuad = meshData.uploadData()
+  nineSlice = genTexture()
+  readImage("assets/uiframe.png").copyTo nineSlice
 
 proc shouldRender(ui: UiElement): bool =
  ui.visibleCond.isNil or ui.visibleCond()
@@ -162,12 +193,19 @@ method update*(label: Label, dt: float32, offset = ivec2(0)) = discard
 method draw*(label: Label, offset = ivec2(0)) =
   if label.shouldRender:
     with uishader:
+      glEnable(GlBlend)
+      glBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha)
       uiShader.setUniform("modelMatrix", label.calculateAnchorMatrix(offset = offset))
       uishader.setUniform("color", label.color)
       uishader.setUniform("tex", label.texture)
-      uishader.setUniform("hasTex", 1)
+      uishader.setUniform("hasTex", label.texture.int)
+
       render(uiQuad)
       uishader.setUniform("hasTex", 0)
+
+      glDisable(GlBlend)
+
+
 
 
 proc new*(_: typedesc[Button], pos, size: IVec2, text: string, color: Vec4 = vec4(1), anchor = {left, top}, onClick = (proc(){.closure.})(nil)): Button =
@@ -188,17 +226,34 @@ method update*(button: Button, dt: float32, offset = ivec2(0)) =
 
 method draw*(button: Button, offset = ivec2(0)) =
   if button.shouldRender:
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     with uiShader:
       uiShader.setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset))
       uiShader.setUniform("color"):
         if button.isOver(offset = offset):
-          button.color * 0.5
+          vec4(button.color.xyz * 0.5, 1)
         else:
           button.color
       uishader.setUniform("tex", button.textureId)
       uishader.setUniform("hasTex", button.textureId.int)
+      uishader.setUniform("screenSize", screenSize().vec2)
+      uiShader.setUniform("size", button.size.vec2)
+      uiShader.setUniform("nineSlice", nineSlice)
+      uiShader.setUniform("nineSliceSize", 28f)
+
+      uiShader.setUniform("backgroundColor"):
+        if button.isOver(offset = offset):
+          vec4(button.color.xyz * 0.5 * 0.3, 1)
+        else:
+          vec4(button.color.xyz * 0.3, 1)
+
       render(uiQuad)
       uishader.setUniform("hasTex", 0)
+      uiShader.setUniform("nineSliceSize", -1000f)
+      glDisable(GL_BLEND)
+
+
 
 
 proc new*[T](
@@ -249,6 +304,8 @@ template emitScrollbarMethods*(t: typedesc) =
 
         let sliderScale = scrollBar.size.vec2 * vec2(clamp(scrollbar.percentage, 0, 1), 1)
         glEnable(GlDepthTest)
+        uishader.setUniform("screenSize", screenSize().vec2)
+        uiShader.setUniform("size", vec2(float32(scrollBar.size.x) * scrollBar.percentage, scrollBar.size.y.float32))
         uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, some(sliderScale), offset))
         uiShader.setUniform("color"):
           if isOver:
@@ -329,8 +386,8 @@ proc clear*(layoutGroup: LayoutGroup) =
   layoutGroup.children.setLen(0)
 
 
-proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(string, T)], anchor = {top, left}, onValueChange = (proc(a: T){.closure.})(nil)): DropDown[T] =
-  result = DropDown[T](pos: pos, size: size, anchor: anchor, onValueChange: onValueChange)
+proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(string, T)], margin = 10, anchor = {top, left}, onValueChange = (proc(a: T){.closure.})(nil)): DropDown[T] =
+  result = DropDown[T](pos: pos, size: size, anchor: anchor, onValueChange: onValueChange, margin: margin)
 
   let res = result # Hack to get around `result` outliving the closure
   for i, iterVal in values:
@@ -360,11 +417,11 @@ proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(stri
   result.button.onClick = proc() =
     res.opened = not res.opened
 
-proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[T], anchor = {top, left}, onValueChange: proc(a: T){.closure.} = nil): DropDown[T] =
+proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[T], margin = 10, anchor = {top, left}, onValueChange: proc(a: T){.closure.} = nil): DropDown[T] =
   var vals = newSeqOfCap[(string, T)](values.len)
   for x in values:
     vals.add ($x, x)
-  DropDown[T].new(pos, size, vals, anchor, onValueChange)
+  DropDown[T].new(pos, size, vals, margin, anchor, onValueChange)
 
 iterator offsetElement(dropDown: DropDown, offset: IVec2): (IVec2, UiElement) =
   ## Iterates over `dropDown`s children yielding offset and element in proper order
