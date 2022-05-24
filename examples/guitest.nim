@@ -20,7 +20,7 @@ var
 
 proc init =
   gui.init()
-  glClearColor(0.5, 0.5, 0.5, 1)
+  glClearColor(0.1, 0.1, 0.1, 1)
   btns.add:
     makeUi(Button):
       pos = ivec2(10, 10)
@@ -28,7 +28,7 @@ proc init =
       text = "Hmm"
       backgroundColor = vec4(0.6, 0.6, 0.6, 1)
       backgroundTex = "assets/uiframe.png"
-      nineSliceSize = 56f
+      nineSliceSize = 28f
       anchor = {left, top}
       onClick = proc() = echo "Hello World"
 
@@ -74,21 +74,27 @@ proc init =
     anchor = {bottom}
     children:
       makeUi(Button):
-        size = ivec2(100, 50)
+        size = ivec2(100, 75)
         text = "Red"
-        color = vec4(1, 0, 0, 1)
+        backgroundColor = vec4(1, 0, 0, 1)
+        backgroundTex = "assets/uiframe.png"
+        nineSliceSize = 28f
         onClick = proc() =
           echo "Red"
       makeUi(Button):
-        size = ivec2(100, 50)
+        size = ivec2(100, 75)
         text = "Green"
-        color = vec4(0, 1, 0, 1)
+        backgroundColor = vec4(0, 1, 0, 1)
+        backgroundTex = "assets/uiframe.png"
+        nineSliceSize = 28f
         onClick = proc() =
           echo "Green"
       makeUi(Button):
-        size = ivec2(100, 50)
+        size = ivec2(100, 75)
         text = "Blue"
-        color = vec4(0, 0, 1, 1)
+        backgroundColor = vec4(0, 0, 1, 1)
+        backgroundTex = "assets/uiframe.png"
+        nineSliceSize = 28f
         onClick = proc() =
           echo "Blue"
 

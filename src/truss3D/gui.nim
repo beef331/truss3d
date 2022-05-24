@@ -473,8 +473,8 @@ proc new*[T](
             child.backgroundColor = color
             child.color = color
           else:
-            child.backgroundColor = vec4(color.xyz / 2, 1)
-            child.color = vec4(color.xyz / 2, 1)
+            child.backgroundColor = vec4(color.xyz / 2, color.w)
+            child.color = vec4(color.xyz / 2, color.w)
 
   result.button = Button.new(pos, size, values[0][0], color, nineSliceSize, backgroundTex, backgroundColor, fontColor)
   result.button.onClick = proc() =
