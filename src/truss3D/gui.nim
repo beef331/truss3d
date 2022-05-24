@@ -458,7 +458,7 @@ proc new*[T](
         if i == 0:
           color
         else:
-          vec4(color.xyz / 2, 1)
+          vec4(color.xyz / 2, color.w)
     result.buttons.add Button.new(ivec2(0), size, name, thisColor, nineSliceSize, backgroundTex, backgroundColor, fontColor)
     result.values.add value
     capture(name, value, i):
