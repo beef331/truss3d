@@ -16,15 +16,17 @@ type
     color*: Vec4
     anchor*: set[AnchorDirection]
     visibleCond*: proc(): bool {.closure.}
+    isNineSliced: bool
+    nineSliceSize: float32
+    backgroundTex: Texture
+    texture: Texture
+    backgroundColor: Vec4
 
   Label* = ref object of UiElement
-    texture: Texture
 
   Button* = ref object of UiElement
-    textureId: Texture
-    nineSliceTex: Texture
-    backgroundColor: Vec4
     onClick*: proc(){.closure.}
+    label: Label
 
   Scrollable* = concept s, type S
     lerp(s, s, 0f) is S
@@ -34,7 +36,6 @@ type
     val: T
     minMax: Slice[T]
     percentage: float32
-    backgroundColor: Vec4
     onValueChange*: proc(a: T){.closure.}
 
   LayoutGroup* = ref object of UiElement
@@ -75,7 +76,7 @@ void main() {
 out vec4 frag_color;
 
 uniform sampler2D tex;
-uniform sampler2D nineSlice;
+uniform sampler2D backgroundTex;
 uniform float nineSliceSize;
 
 
@@ -88,9 +89,8 @@ uniform vec2 size;
 in vec2 fuv;
 
 void main() {
-  frag_color.a = 0;
   if(nineSliceSize > 0){
-    ivec2 texSize = textureSize(nineSlice, 0);
+    ivec2 texSize = textureSize(backgroundTex, 0);
     vec2 realUv = size * fuv;
     vec2 myUv = fuv;
     if(realUv.x < nineSliceSize){
@@ -105,9 +105,9 @@ void main() {
     if(realUv.y > size.y - nineSliceSize){
       myUv.y = (realUv.y - size.y) / (texSize.x - nineSliceSize);
     }
-    frag_color = texture(nineSlice, myUv) * backgroundColor;
+    frag_color = texture(backgroundTex, myUv) * backgroundColor;
   }
-  if(hasTex > 0){
+  else if(hasTex > 0){
     vec4 newCol = texture(tex, fuv);
     frag_color = mix(frag_color, newCol * color, newCol.a);
   }else{
@@ -121,7 +121,6 @@ var
   uiShader: Shader
   uiQuad: Model
   overGui*: bool
-  nineSlice: Texture
 
 proc init*() =
   uiShader = loadShader(vertShader, fragShader)
@@ -130,8 +129,6 @@ proc init*() =
   meshData.append([0u32, 1, 2, 0, 2, 3].items)
   meshData.appendUv([vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items)
   uiQuad = meshData.uploadData()
-  nineSlice = genTexture()
-  readImage("assets/uiframe.png").copyTo nineSlice
 
 proc shouldRender(ui: UiElement): bool =
  ui.visibleCond.isNil or ui.visibleCond()
@@ -171,6 +168,25 @@ proc calculateAnchorMatrix(ui: UiElement, size = none(Vec2), offset = ivec2(0)):
   pos.y *= -1
   translate(vec3(pos * 2 + vec2(-1, 1 - scale.y), 0f)) * scale(vec3(scale, 0))
 
+template withBlend*(body: untyped) =
+  glEnable(GlBlend)
+  glBlendFunc(GlOne, GlOneMinusSrcAlpha)
+  body
+  glDisable(GlBlend)
+
+proc setupUniforms*(ui: UiElement, shader: Shader) =
+  uishader.setUniform("color", ui.color)
+  uishader.setUniform("tex", ui.texture)
+  uiShader.setUniform("size", ui.size.vec2)
+  uishader.setUniform("hasTex", ui.texture.int)
+  uiShader.setUniform("backgroundTex", ui.backgroundTex)
+  uiShader.setUniform("backgroundColor", ui.backgroundColor)
+  if ui.isNineSliced:
+    uiShader.setUniform("nineSliceSize", ui.nineSliceSize)
+  else:
+    uiShader.setUniform("nineSliceSize", 0f)
+
+
 method update*(ui: UiElement, dt: float32, offset = ivec2(0)) {.base.} = discard
 method draw*(ui: UiElement, offset = ivec2(0)) {.base.} = discard
 
@@ -193,30 +209,39 @@ method update*(label: Label, dt: float32, offset = ivec2(0)) = discard
 method draw*(label: Label, offset = ivec2(0)) =
   if label.shouldRender:
     with uishader:
-      glEnable(GlBlend)
-      glBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha)
+      label.setupUniforms(uiShader)
       uiShader.setUniform("modelMatrix", label.calculateAnchorMatrix(offset = offset))
-      uishader.setUniform("color", label.color)
-      uishader.setUniform("tex", label.texture)
-      uishader.setUniform("hasTex", label.texture.int)
+      withBlend:
+        render(uiQuad)
 
-      render(uiQuad)
-      uishader.setUniform("hasTex", 0)
+proc new*(
+  _: typedesc[Button];
+  pos, size: IVec2;
+  text: string;
+  color = vec4(1);
+  nineSliceSize = 0f;
+  backgroundTex: Texture or string = Texture(0);
+  backgroundColor = vec4(0.3, 0.3, 0.3, 1);
+  fontColor = vec4(1);
+  anchor = {left, top};
+  onClick = (proc(){.closure.})(nil)
+): Button =
+  result = Button(
+    pos: pos,
+    size: size,
+    color: color,
+    anchor: anchor,
+    onClick: onClick,
+    isNineSliced: nineSliceSize > 0,
+    nineSliceSize: nineSliceSize,
+    backgroundColor: backgroundColor)
+  result.label = Label.new(pos, size, text, fontColor, anchor)
+  when backgroundTex is string:
+    result.backgroundTex = genTexture()
+    readImage(backgroundTex).copyTo result.backgroundTex
+  else:
+    result.backgroundTex = backgroundTex
 
-      glDisable(GlBlend)
-
-
-
-
-proc new*(_: typedesc[Button], pos, size: IVec2, text: string, color: Vec4 = vec4(1), anchor = {left, top}, onClick = (proc(){.closure.})(nil)): Button =
-  result = Button(pos: pos, size: size, color: color, anchor: anchor, onClick: onClick)
-  if text.len > 0:
-    result.textureId = genTexture()
-    result.textureId.renderTextTo(size, text)
-
-proc new*(_: typedesc[Button], pos, size: IVec2, image: Image, anchor = {left, top}): Button =
-  result = Button(pos: pos, size: size, color: color, anchor: anchor, textureId: genTexture())
-  image.copyTo(result.textureId)
 
 method update*(button: Button, dt: float32, offset = ivec2(0)) =
   if button.isOver(offset = offset) and button.shouldRender:
@@ -226,32 +251,28 @@ method update*(button: Button, dt: float32, offset = ivec2(0)) =
 
 method draw*(button: Button, offset = ivec2(0)) =
   if button.shouldRender:
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     with uiShader:
+      glDisable(GlDepthTest)
+      button.setupUniforms(uiShader)
       uiShader.setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset))
       uiShader.setUniform("color"):
         if button.isOver(offset = offset):
-          vec4(button.color.xyz * 0.5, 1)
+          vec4(button.color.xyz * 0.5, button.color.w)
         else:
           button.color
-      uishader.setUniform("tex", button.textureId)
-      uishader.setUniform("hasTex", button.textureId.int)
-      uishader.setUniform("screenSize", screenSize().vec2)
-      uiShader.setUniform("size", button.size.vec2)
-      uiShader.setUniform("nineSlice", nineSlice)
-      uiShader.setUniform("nineSliceSize", 28f)
+
 
       uiShader.setUniform("backgroundColor"):
         if button.isOver(offset = offset):
-          vec4(button.color.xyz * 0.5 * 0.3, 1)
+          vec4(button.backgroundColor.xyz * 0.5, 1)
         else:
-          vec4(button.color.xyz * 0.3, 1)
-
-      render(uiQuad)
-      uishader.setUniform("hasTex", 0)
-      uiShader.setUniform("nineSliceSize", -1000f)
-      glDisable(GL_BLEND)
+          vec4(button.backgroundColor.xyz, 1)
+      withBlend:
+        render(uiQuad)
+      button.label.draw(offset)
+  button.label.pos = button.pos
+  button.label.size = button.size
+  button.label.anchor = button.anchor
 
 
 
@@ -265,19 +286,39 @@ proc new*[T](
   anchor = {left, top},
   onValueChange: proc(a: T){.closure.} = nil
 ): ScrollBar[T] =
-  result = ScrollBar[T](pos: pos, size: size, minMax: minMax, direction: direction, color: color, backgroundColor: backgroundColor, anchor: anchor, onValueChange: onValueChange)
+  result = ScrollBar[T](
+    pos: pos,
+    size: size,
+    minMax: minMax,
+    direction: direction,
+    color: color,
+    backgroundColor: backgroundColor,
+    anchor: anchor,
+    onValueChange: onValueChange
+    )
 
 proc new*[T](
-  _: typedesc[ScrollBar[T]],
-  pos, size: IVec2,
-  minMax: Slice[T],
-  color, backgroundColor: Vec4,
-  startPercentage: float32,
-  direction = InteractDirection.horizontal,
-  anchor = {left, top},
+  _: typedesc[ScrollBar[T]];
+  pos, size: IVec2;
+  minMax: Slice[T];
+  color = vec4(1);
+  backgroundColor = vec4(0.1, 0.1, 0.1, 1);
+  startPercentage: float32;
+  direction = InteractDirection.horizontal;
+  anchor = {left, top};
   onValueChange: proc(a: T){.closure.} = nil
 ): ScrollBar[T] =
-  result = ScrollBar[T](pos: pos, size: size, minMax: minMax, direction: direction, color: color, backgroundColor: backgroundColor, anchor: anchor, onValueChange: onValueChange, percentage: startPercentage)
+  result = ScrollBar[T](
+    pos: pos,
+    size: size,
+    minMax: minMax,
+    direction: direction,
+    color: color,
+    backgroundColor: backgroundColor,
+    anchor: anchor,
+    onValueChange: onValueChange,
+    percentage: startPercentage
+    )
 
 template emitScrollbarMethods*(t: typedesc) =
   mixin lerp
@@ -301,30 +342,38 @@ template emitScrollbarMethods*(t: typedesc) =
     if shouldRender(scrollBar):
       with uiShader:
         let isOver = isOver(scrollBar, offset = offset)
+        glDisable(GlDepthTest)
+        scrollBar.setupUniforms(uiShader)
+        uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, offset = offset))
+        uiShader.setUniform("color"):
+          if isOver:
+            vec4(scrollBar.backgroundColor.xyz / 2, scrollBar.backgroundColor.w)
+          else:
+            scrollBar.backgroundColor
+        withBlend:
+          render(uiQuad)
 
         let sliderScale = scrollBar.size.vec2 * vec2(clamp(scrollbar.percentage, 0, 1), 1)
-        glEnable(GlDepthTest)
-        uishader.setUniform("screenSize", screenSize().vec2)
+        scrollBar.setupUniforms(uiShader)
         uiShader.setUniform("size", vec2(float32(scrollBar.size.x) * scrollBar.percentage, scrollBar.size.y.float32))
         uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, some(sliderScale), offset))
         uiShader.setUniform("color"):
           if isOver:
-            scrollBar.color * 2
+            vec4(scrollBar.color.xyz * 2, scrollBar.color.w)
           else:
             scrollBar.color
-        render(uiQuad)
-
-        uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, offset = offset))
-        uiShader.setUniform("color"):
-          if isOver:
-            scrollBar.backgroundColor / 2
-          else:
-            scrollBar.backgroundColor
-        render(uiQuad)
-        glDisable(GlDepthTest)
+        withBlend:
+          render(uiQuad)
 
 
-proc new*(_: typedesc[LayoutGroup], pos, size: IVec2, anchor = {top, left}, margin = 10, layoutDirection = InteractDirection.horizontal, centre = true): LayoutGroup =
+proc new*(
+  _: typedesc[LayoutGroup];
+  pos, size: IVec2;
+  anchor = {top, left};
+  margin = 10;
+  layoutDirection = InteractDirection.horizontal;
+  centre = true
+  ): LayoutGroup =
   LayoutGroup(pos: pos, size: size, anchor: anchor, margin: margin, layoutDirection: layoutDirection, centre: centre)
 
 proc calculateStart(layoutGroup: LayoutGroup, offset = ivec2(0)): IVec2 =
@@ -386,42 +435,68 @@ proc clear*(layoutGroup: LayoutGroup) =
   layoutGroup.children.setLen(0)
 
 
-proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[(string, T)], margin = 10, anchor = {top, left}, onValueChange = (proc(a: T){.closure.})(nil)): DropDown[T] =
+proc new*[T](
+  _: typedesc[DropDown[T]];
+  pos, size: IVec2;
+  values: openarray[(string, T)];
+  color = vec4(0.5, 0.5, 0.5, 1);
+  fontColor = vec4(1);
+  backgroundColor = vec4(0.5, 0.5, 0.5, 1);
+  backgroundTex: Texture or string = Texture(0);
+  nineSliceSize = 0f32;
+  margin = 10;
+  anchor = {top, left};
+  onValueChange = (proc(a: T){.closure.})(nil)
+  ): DropDown[T] =
   result = DropDown[T](pos: pos, size: size, anchor: anchor, onValueChange: onValueChange, margin: margin)
 
   let res = result # Hack to get around `result` outliving the closure
   for i, iterVal in values:
     let
       (name, value) = iterVal
-      color =
-        if i > 0:
-          vec4(0.5, 0.5, 0.5, 1)
+      thisColor =
+        if i == 0:
+          color
         else:
-          vec4(1)
-    result.buttons.add Button.new(ivec2(0), size, name, color = color)
+          vec4(color.xyz / 2, 1)
+    result.buttons.add Button.new(ivec2(0), size, name, thisColor, nineSliceSize, backgroundTex, backgroundColor, fontColor)
     result.values.add value
     capture(name, value, i):
       Button(res.buttons[^1]).onClick = proc() =
         res.opened = false
-        res.button.textureid.renderTextTo(size, name)
+        res.button.label.texture.renderTextTo(size, name)
         if res.selected != i and res.onvalueChange != nil:
           res.onValueChange(res.values[i])
         res.selected = i
         for ind, child in res[].buttons:
           if ind == i:
-            child.color = vec4(1) # TODO: Dont hard code these
+            child.backgroundColor = color
+            child.color = color
           else:
-            child.color = vec4(0.5, 0.5, 0.5, 1)
+            child.backgroundColor = vec4(color.xyz / 2, 1)
+            child.color = vec4(color.xyz / 2, 1)
 
-  result.button = Button.new(pos, size, values[0][0], anchor = anchor)
+  result.button = Button.new(pos, size, values[0][0], color, nineSliceSize, backgroundTex, backgroundColor, fontColor)
   result.button.onClick = proc() =
     res.opened = not res.opened
 
-proc new*[T](_: typedesc[DropDown[T]], pos, size: IVec2, values: openarray[T], margin = 10, anchor = {top, left}, onValueChange: proc(a: T){.closure.} = nil): DropDown[T] =
+proc new*[T](
+  _: typedesc[DropDown[T]];
+  pos, size: IVec2;
+  values: openarray[T];
+  color = vec4(0.5, 0.5, 0.5, 1);
+  fontColor = vec4(1);
+  backgroundColor = vec4(0.5, 0.5, 0.5, 1);
+  backgroundTex: Texture or string = Texture(0);
+  nineSliceSize = 0f32;
+  margin = 10;
+  anchor = {top, left};
+  onValueChange: proc(a: T){.closure.} = nil
+  ): DropDown[T] =
   var vals = newSeqOfCap[(string, T)](values.len)
   for x in values:
     vals.add ($x, x)
-  DropDown[T].new(pos, size, vals, margin, anchor, onValueChange)
+  DropDown[T].new(pos, size, vals, color, fontColor, backgroundColor, backgroundTex, nineSliceSize, margin, anchor, onValueChange)
 
 iterator offsetElement(dropDown: DropDown, offset: IVec2): (IVec2, UiElement) =
   ## Iterates over `dropDown`s children yielding offset and element in proper order
@@ -496,5 +571,3 @@ macro makeUi*(t: typedesc, body: untyped): untyped =
         uiName.visibleCond = visCond
       childrenAdd
       uiName
-
-  echo result.repr

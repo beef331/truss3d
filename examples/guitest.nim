@@ -26,7 +26,9 @@ proc init =
       pos = ivec2(10, 10)
       size = ivec2(200, 100)
       text = "Hmm"
-      color = vec4(0.5)
+      backgroundColor = vec4(0.6, 0.6, 0.6, 1)
+      backgroundTex = "assets/uiframe.png"
+      nineSliceSize = 56f
       anchor = {left, top}
       onClick = proc() = echo "Hello World"
 
@@ -101,21 +103,23 @@ proc init =
         size = ivec2(100, 20)
         minMax = 0f..4f
         color = vec4(0, 0, 0.6, 1)
-        backgroundColor = vec4(0.1, 0.1, 0, 1)
+        backgroundColor = vec4(0, 0, 0.3, 1)
       makeUi(ScrollBar[float32]):
         size = ivec2(400, 20)
         minMax = 0f..4f
         color = vec4(0.6, 0, 0, 1)
-        backgroundColor = vec4(0.1, 0.1, 0.3, 1)
+        backgroundColor = vec4(0.3, 0.0, 0.0, 1)
       makeUi(ScrollBar[float32]):
         size = ivec2(300, 20)
         minMax = 0f..4f
         color = vec4(0.6, 0, 0.6, 1)
-        backgroundColor = vec4(0.1, 0.1, 0.1, 1)
+        backgroundColor = vec4(0.3, 0, 0.3, 1)
 
   myDropDown = makeUi(DropDown[MyEnum]):
     pos = ivec2(10)
     size = ivec2(200, 45)
+    fontColor = vec4(0, 0, 0, 1)
+    color = vec4(0.75, 0.6, 0.75, 1)
     values = MyEnum.toSeq
     anchor = {right}
     onValueChange = proc(a: MyEnum) = myVal = a
