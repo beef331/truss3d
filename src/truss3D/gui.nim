@@ -446,7 +446,7 @@ proc new*[T](
   nineSliceSize = 0f32;
   margin = 10;
   anchor = {top, left};
-  onValueChange = (proc(a: T){.closure.})(nil)
+  onValueChange: proc(a: T){.closure.} = nil
   ): DropDown[T] =
   result = DropDown[T](pos: pos, size: size, anchor: anchor, onValueChange: onValueChange, margin: margin)
 
@@ -491,7 +491,7 @@ proc new*[T](
   nineSliceSize = 0f32;
   margin = 10;
   anchor = {top, left};
-  onValueChange: proc(a: T){.closure.} = nil
+  onValueChange : proc(a: T){.closure.} = nil
   ): DropDown[T] =
   var vals = newSeqOfCap[(string, T)](values.len)
   for x in values:
