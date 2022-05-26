@@ -10,17 +10,21 @@ type
   AnchorDirection* = enum
     left, right, top, bottom
 
+  GuiState* = enum
+    nothing, over, interacted
+
   UiElement* = ref object of RootObj
     pos*: IVec2
     size*: IVec2
     color*: Vec4
     anchor*: set[AnchorDirection]
     visibleCond*: proc(): bool {.closure.}
-    isNineSliced: bool
-    nineSliceSize: float32
-    backgroundTex: Texture
-    texture: Texture
-    backgroundColor: Vec4
+    isNineSliced*: bool
+    nineSliceSize*: float32
+    backgroundTex*: Texture
+    texture*: Texture
+    backgroundColor*: Vec4
+    zDepth*: float32
 
   Label* = ref object of UiElement
 
@@ -120,7 +124,7 @@ void main() {
 var
   uiShader: Shader
   uiQuad: Model
-  overGui*: bool
+  guiState* = GuiState.nothing
 
 proc init*() =
   uiShader = loadShader(vertShader, fragShader)
@@ -154,7 +158,7 @@ proc calculatePos(ui: UiElement, offset = ivec2(0)): IVec2 =
 
 proc isOver(ui: UiElement, pos = getMousePos(), offset = ivec2(0)): bool =
   let realUiPos = ui.calculatePos(offset)
-  pos.x in realUiPos.x .. realUiPos.x + ui.size.x and pos.y in realUiPos.y .. realUiPos.y + ui.size.y
+  pos.x in realUiPos.x .. realUiPos.x + ui.size.x and pos.y in realUiPos.y .. realUiPos.y + ui.size.y and guiState == nothing
 
 proc calculateAnchorMatrix(ui: UiElement, size = none(Vec2), offset = ivec2(0)): Mat4 =
   let
@@ -166,7 +170,7 @@ proc calculateAnchorMatrix(ui: UiElement, size = none(Vec2), offset = ivec2(0)):
         size.get * 2 / scrSize.vec2
   var pos = ui.calculatePos(offset).vec2 / scrSize.vec2
   pos.y *= -1
-  translate(vec3(pos * 2 + vec2(-1, 1 - scale.y), 0f)) * scale(vec3(scale, 0))
+  translate(vec3(pos * 2 + vec2(-1, 1 - scale.y), ui.zDepth)) * scale(vec3(scale, 0))
 
 template withBlend*(body: untyped) =
   glEnable(GlBlend)
@@ -245,14 +249,16 @@ proc new*(
 
 method update*(button: Button, dt: float32, offset = ivec2(0)) =
   if button.isOver(offset = offset) and button.shouldRender:
-    overGui = true
+    guiState = over
     if leftMb.isDown and button.onClick != nil:
+      guiState = interacted
       button.onClick()
+  button.label.zDepth = button.zDepth - 1
 
 method draw*(button: Button, offset = ivec2(0)) =
   if button.shouldRender:
+    glEnable(GlDepthTest)
     with uiShader:
-      glDisable(GlDepthTest)
       button.setupUniforms(uiShader)
       uiShader.setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset))
       uiShader.setUniform("color"):
@@ -324,8 +330,9 @@ template emitScrollbarMethods*(t: typedesc) =
   mixin lerp
   method update*(scrollbar: ScrollBar[t], dt: float32, offset = ivec2(0)) =
     if isOver(scrollBar, offset = offset) and shouldRender(scrollBar):
-      overGui = true
+      guiState = over
       if leftMb.isPressed():
+        guiState = interacted
         let pos = calculatePos(scrollBar, offset)
         case scrollbar.direction
         of horizontal:
@@ -365,7 +372,6 @@ template emitScrollbarMethods*(t: typedesc) =
         withBlend:
           render(uiQuad)
 
-
 proc new*(
   _: typedesc[LayoutGroup];
   pos, size: IVec2;
@@ -394,15 +400,16 @@ iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2): (IVec2, UiEleme
   ## Iterates over `layoutGroup`s children yielding offset and element
   var pos = layoutGroup.calculateStart(offset)
   for item in layoutGroup.children:
-    case layoutGroup.layoutDirection
-    of horizontal:
-      yield (pos, item)
-      pos.x += item.size.x + layoutGroup.margin
+    if item.shouldRender():
+      case layoutGroup.layoutDirection
+      of horizontal:
+        yield (pos, item)
+        pos.x += item.size.x + layoutGroup.margin
 
-    of vertical:
-      let renderPos = ivec2(pos.x + (layoutGroup.size.x - item.size.x) div 2, pos.y)
-      yield (renderPos, item)
-      pos.y += item.size.y + layoutGroup.margin
+      of vertical:
+        let renderPos = ivec2(pos.x + (layoutGroup.size.x - item.size.x) div 2, pos.y)
+        yield (renderPos, item)
+        pos.y += item.size.y + layoutGroup.margin
 
 
 

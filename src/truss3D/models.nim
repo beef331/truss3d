@@ -27,9 +27,9 @@ type
 var modelPath* = ""
 
 proc loadModel*(path: string): Model =
-  var scene = aiImportFile(path, TargetRealtimeQuality)
+  var scene = aiImportFile(path, {})
   if scene == nil:
-    scene = aiImportFile(cstring(modelPath / path), TargetRealtimeQuality)
+    scene = aiImportFile(cstring(modelPath / path), {})
     if scene == nil:
       raise newException(IOError, path & " invalid model file")
   for mesh in scene.imeshes:
