@@ -455,22 +455,29 @@ iterator renderOrder(layoutGroup: LayoutGroup): UiElement =
     else:
       defaultIter()
 
+proc largestSize(layoutGroup: LayoutGroup): IVec2 =
+  for item in layoutGroup.children:
+    result.x = max(item.size.x, result.x)
+    result.y = max(item.size.y, result.y)
 
 iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2, relativeTo = false): (IVec2, UiElement) =
   ## Iterates over `layoutGroup`s children yielding pos and element
   var pos = layoutGroup.calculateStart(offset, relativeTo)
+  let largestSize = layoutGroup.largestSize()
   for item in layoutGroup.renderOrder:
     if item.shouldRender():
       case layoutGroup.layoutDirection
       of horizontal:
-
+        var tempPos = pos
+        tempPos.y += (largestSize.y - item.size.y) div 2
         if bottom in layoutGroup.anchor:
-          yield (pos - ivec2(0, item.size.y), item)
+          yield (tempPos - ivec2(0, item.size.y), item)
         elif right in layoutGroup.anchor:
           pos.x -= item.size.x + layoutGroup.margin
-          yield (pos, item)
+          tempPos.x = pos.x
+          yield (tempPos, item)
         else:
-          yield (pos, item)
+          yield (tempPos, item)
         if right notin layoutGroup.anchor:
           pos.x += item.size.x + layoutGroup.margin
 
