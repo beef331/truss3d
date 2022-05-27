@@ -137,7 +137,7 @@ proc update(dt: float32) =
   horzLayout.update(dt)
   vertLayout.update(dt)
   myDropDown.update(dt)
-
+  guistate = GuiState.nothing
 
 proc draw() =
   for btn in btns:

@@ -137,30 +137,38 @@ proc init*() =
 proc shouldRender(ui: UiElement): bool =
  ui.visibleCond.isNil or ui.visibleCond()
 
-proc calculatePos(ui: UiElement, offset = ivec2(0)): IVec2 =
-  let scrSize = screenSize()
+proc calculatePos(ui: UiElement, offset = ivec2(0), relativeTo = false): IVec2 =
+  ## `relativeTo` controls whether we draw from offset or with offset added to the screenpos
+  if not relativeTo:
+    let scrSize = screenSize()
 
-  if left in ui.anchor:
-    result.x = ui.pos.x
-  elif right in ui.anchor:
-    result.x = scrSize.x - ui.pos.x - ui.size.x
+    if left in ui.anchor:
+      result.x = ui.pos.x
+    elif right in ui.anchor:
+      result.x = scrSize.x - ui.pos.x - ui.size.x
+    else:
+      result.x = scrSize.x div 2 - ui.size.x div 2 + ui.pos.x
+
+    if top in ui.anchor:
+      result.y = ui.pos.y
+    elif bottom in ui.anchor:
+      result.y = scrSize.y - ui.pos.y - ui.size.y
+    else:
+      result.y = scrSize.y div 2 - ui.size.y div 2 + ui.pos.y
+    result += offset
   else:
-    result.x = scrSize.x div 2 - ui.size.x div 2 + ui.pos.x
+    result = offset
+    if right in ui.anchor:
+      result.x -= ui.pos.x
 
-  if top in ui.anchor:
-    result.y = ui.pos.y
-  elif bottom in ui.anchor:
-    result.y = scrSize.y - ui.pos.y - ui.size.y
-  else:
-    result.y = scrSize.y div 2 - ui.size.y div 2 + ui.pos.y
-  result += offset
+    if bottom in ui.anchor:
+      result.y -=  ui.pos.y
 
-
-proc isOver(ui: UiElement, pos = getMousePos(), offset = ivec2(0)): bool =
-  let realUiPos = ui.calculatePos(offset)
+proc isOver(ui: UiElement, pos = getMousePos(), offset = ivec2(0), relativeTo = false): bool =
+  let realUiPos = ui.calculatePos(offset, relativeTo)
   pos.x in realUiPos.x .. realUiPos.x + ui.size.x and pos.y in realUiPos.y .. realUiPos.y + ui.size.y and guiState == nothing
 
-proc calculateAnchorMatrix(ui: UiElement, size = none(Vec2), offset = ivec2(0)): Mat4 =
+proc calculateAnchorMatrix(ui: UiElement, size = none(Vec2), offset = ivec2(0), relativeTo = false): Mat4 =
   let
     scrSize = screenSize()
     scale =
@@ -168,7 +176,7 @@ proc calculateAnchorMatrix(ui: UiElement, size = none(Vec2), offset = ivec2(0)):
         ui.size.vec2 * 2 / scrSize.vec2
       else:
         size.get * 2 / scrSize.vec2
-  var pos = ui.calculatePos(offset).vec2 / scrSize.vec2
+  var pos = ui.calculatePos(offset, relativeTo).vec2 / scrSize.vec2
   pos.y *= -1
   translate(vec3(pos * 2 + vec2(-1, 1 - scale.y), ui.zDepth)) * scale(vec3(scale, 0))
 
@@ -191,8 +199,8 @@ proc setupUniforms*(ui: UiElement, shader: Shader) =
     uiShader.setUniform("nineSliceSize", 0f)
 
 
-method update*(ui: UiElement, dt: float32, offset = ivec2(0)) {.base.} = discard
-method draw*(ui: UiElement, offset = ivec2(0)) {.base.} = discard
+method update*(ui: UiElement, dt: float32, offset = ivec2(0), relativeTo = false) {.base.} = discard
+method draw*(ui: UiElement, offset = ivec2(0), relativeTo = false) {.base.} = discard
 
 
 proc renderTextTo(tex: Texture, size: IVec2, message: string) =
@@ -209,12 +217,12 @@ proc new*(_: typedesc[Label], pos, size: IVec2, text: string, color = vec4(1), a
   result.texture = genTexture()
   result.texture.renderTextTo(size, text)
 
-method update*(label: Label, dt: float32, offset = ivec2(0)) = discard
-method draw*(label: Label, offset = ivec2(0)) =
+method update*(label: Label, dt: float32, offset = ivec2(0), relativeTo = false) = discard
+method draw*(label: Label, offset = ivec2(0), relativeTo = false) =
   if label.shouldRender:
     with uishader:
       label.setupUniforms(uiShader)
-      uiShader.setUniform("modelMatrix", label.calculateAnchorMatrix(offset = offset))
+      uiShader.setUniform("modelMatrix", label.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
       withBlend:
         render(uiQuad)
 
@@ -247,20 +255,20 @@ proc new*(
     result.backgroundTex = backgroundTex
 
 
-method update*(button: Button, dt: float32, offset = ivec2(0)) =
-  if button.isOver(offset = offset) and button.shouldRender:
+method update*(button: Button, dt: float32, offset = ivec2(0), relativeTo = false) =
+  if button.isOver(offset = offset, relativeTo = relativeTo) and button.shouldRender:
     guiState = over
     if leftMb.isDown and button.onClick != nil:
       guiState = interacted
       button.onClick()
-  button.label.zDepth = button.zDepth - 1
 
-method draw*(button: Button, offset = ivec2(0)) =
+
+method draw*(button: Button, offset = ivec2(0), relativeTo = false) =
   if button.shouldRender:
     glEnable(GlDepthTest)
     with uiShader:
       button.setupUniforms(uiShader)
-      uiShader.setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset))
+      uiShader.setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
       uiShader.setUniform("color"):
         if button.isOver(offset = offset):
           vec4(button.color.xyz * 0.5, button.color.w)
@@ -269,16 +277,17 @@ method draw*(button: Button, offset = ivec2(0)) =
 
 
       uiShader.setUniform("backgroundColor"):
-        if button.isOver(offset = offset):
+        if button.isOver(offset = offset, relativeTo = relativeTo):
           vec4(button.backgroundColor.xyz * 0.5, 1)
         else:
           vec4(button.backgroundColor.xyz, 1)
       withBlend:
         render(uiQuad)
-      button.label.draw(offset)
+      button.label.draw(offset, relativeTo)
   button.label.pos = button.pos
   button.label.size = button.size
   button.label.anchor = button.anchor
+  button.label.zDepth = button.zDepth - 1
 
 
 
@@ -328,12 +337,12 @@ proc new*[T](
 
 template emitScrollbarMethods*(t: typedesc) =
   mixin lerp
-  method update*(scrollbar: ScrollBar[t], dt: float32, offset = ivec2(0)) =
-    if isOver(scrollBar, offset = offset) and shouldRender(scrollBar):
+  method update*(scrollbar: ScrollBar[t], dt: float32, offset = ivec2(0), relativeTo = false) =
+    if isOver(scrollBar, offset = offset, relativeTo = relativeTo) and shouldRender(scrollBar):
       guiState = over
       if leftMb.isPressed():
         guiState = interacted
-        let pos = calculatePos(scrollBar, offset)
+        let pos = calculatePos(scrollBar, offset, relativeTo)
         case scrollbar.direction
         of horizontal:
           let oldPercentage = scrollbar.percentage
@@ -345,13 +354,13 @@ template emitScrollbarMethods*(t: typedesc) =
           assert false, "Unimplemented"
 
 
-  method draw*(scrollBar: ScrollBar[t], offset = ivec2(0)) =
+  method draw*(scrollBar: ScrollBar[t], offset = ivec2(0), relativeTo = false) =
     if shouldRender(scrollBar):
       with uiShader:
-        let isOver = isOver(scrollBar, offset = offset)
+        let isOver = isOver(scrollBar, offset = offset, relativeTo = relativeTo)
         glDisable(GlDepthTest)
         scrollBar.setupUniforms(uiShader)
-        uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, offset = offset))
+        uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, offset = offset, relativeTo = relativeTo))
         uiShader.setUniform("color"):
           if isOver:
             vec4(scrollBar.backgroundColor.xyz / 2, scrollBar.backgroundColor.w)
@@ -363,7 +372,7 @@ template emitScrollbarMethods*(t: typedesc) =
         let sliderScale = scrollBar.size.vec2 * vec2(clamp(scrollbar.percentage, 0, 1), 1)
         scrollBar.setupUniforms(uiShader)
         uiShader.setUniform("size", vec2(float32(scrollBar.size.x) * scrollBar.percentage, scrollBar.size.y.float32))
-        uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, some(sliderScale), offset))
+        uiShader.setUniform("modelMatrix", calculateAnchorMatrix(scrollBar, some(sliderScale), offset, relativeTo = relativeTo))
         uiShader.setUniform("color"):
           if isOver:
             vec4(scrollBar.color.xyz * 2, scrollBar.color.w)
@@ -382,29 +391,67 @@ proc new*(
   ): LayoutGroup =
   LayoutGroup(pos: pos, size: size, anchor: anchor, margin: margin, layoutDirection: layoutDirection, centre: centre)
 
-proc calculateStart(layoutGroup: LayoutGroup, offset = ivec2(0)): IVec2 =
+proc calculateStart(layoutGroup: LayoutGroup, offset = ivec2(0), relativeTo = false): IVec2 =
+  if not relativeTo:
+    let scrSize = screenSize()
+
+    if left in layoutGroup.anchor:
+      result.x = layoutGroup.pos.x
+    elif right in layoutGroup.anchor:
+      result.x = scrSize.x - layoutGroup.pos.x
+    else:
+      result.x = scrSize.x div 2 - layoutGroup.size.x div 2 + layoutGroup.pos.x
+
+    if top in layoutGroup.anchor:
+      result.y = layoutGroup.pos.y
+    elif bottom in layoutGroup.anchor:
+      result.y = scrSize.y - layoutGroup.pos.y
+    else:
+      result.y = scrSize.y div 2 - layoutGroup.size.y div 2 + layoutGroup.pos.y
+    result += offset
+  else:
+    result = offset
+    if right in layoutGroup.anchor:
+      result.x -= layoutGroup.pos.x
+
+    if bottom in layoutGroup.anchor:
+      result.y -= layoutGroup.pos.y
+
   if layoutGroup.centre:
+    var actualSize = ivec2(layoutGroup.margin * layoutGroup.children.high)
+    for item in layoutGroup.children:
+      actualSize += item.size
     case layoutGroup.layoutDirection
     of horizontal:
-      var totalWidth = 0
-      for i, item in layoutGroup.children:
-        totalWidth += item.size.x + layoutGroup.margin
-      result = ivec2((layoutGroup.size.x - totalWidth) div 2, 0) + layoutGroup.calculatePos(offset)
+      result.x += (layoutGroup.size.x - actualSize.x) div 2
     of vertical:
-      result =  layoutGroup.calculatePos(offset) # Assume top left?
+      ##result.y += (layoutGroup.size.y - actualSize.y) div 2
+
+iterator renderOrder(layoutGroup: LayoutGroup): UiElement =
+  if layoutGroup.anchor * {right, bottom} != {}:
+    for i in layoutGroup.children.high.countDown(0):
+      yield layoutGroup.children[i]
   else:
-    result = layoutGroup.calculatePos(offset)
+    for x in layoutGroup.children:
+      yield x
 
-
-iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2): (IVec2, UiElement) =
-  ## Iterates over `layoutGroup`s children yielding offset and element
-  var pos = layoutGroup.calculateStart(offset)
-  for item in layoutGroup.children:
+iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2, relativeTo = false): (IVec2, UiElement) =
+  ## Iterates over `layoutGroup`s children yielding pos and element
+  var pos = layoutGroup.calculateStart(offset, relativeTo)
+  for item in layoutGroup.renderOrder:
     if item.shouldRender():
       case layoutGroup.layoutDirection
       of horizontal:
-        yield (pos, item)
-        pos.x += item.size.x + layoutGroup.margin
+
+        if bottom in layoutGroup.anchor:
+          yield (pos - ivec2(0, item.size.y), item)
+        elif right in layoutGroup.anchor:
+          pos.x -= item.size.x + layoutGroup.margin
+          yield (pos, item)
+        else:
+          yield (pos, item)
+        if right notin layoutGroup.anchor:
+          pos.x += item.size.x + layoutGroup.margin
 
       of vertical:
         let renderPos = ivec2(pos.x + (layoutGroup.size.x - item.size.x) div 2, pos.y)
@@ -413,24 +460,24 @@ iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2): (IVec2, UiEleme
 
 
 
-method update*(layoutGroup: LayoutGroup, dt: float32, offset = ivec2(0)) =
+method update*(layoutGroup: LayoutGroup, dt: float32, offset = ivec2(0), relativeTo = false) =
   if layoutGroup.shouldRender:
-    for pos, item in layoutGroup.offsetElement(offset):
-      update(item, dt, pos)
+    for pos, item in layoutGroup.offsetElement(offset, relativeTo):
+      update(item, dt, pos, true)
 
 
-method draw*(layoutGroup: LayoutGroup, offset = ivec2(0)) =
+method draw*(layoutGroup: LayoutGroup, offset = ivec2(0), relativeTo = false) =
   if layoutGroup.shouldRender:
-    for pos, item in layoutGroup.offsetElement(offset):
-      draw(item, pos)
+    for pos, item in layoutGroup.offsetElement(offset, relativeTo):
+      draw(item, pos, true)
 
 proc add*(layoutGroup: LayoutGroup, ui: UiElement) =
-  ui.anchor = {top, left} # Layout groups require top left anchored elements
+  ui.anchor = layoutGroup.anchor
   layoutGroup.children.add ui
 
 proc add*[T: UiElement](layoutGroup: LayoutGroup, uis: openArray[T]) =
   for ui in uis:
-    ui.anchor = {top, left} # Layout groups require top left anchored elements
+    ui.anchor = layoutGroup.anchor
     layoutGroup.children.add ui
 
 proc remove*(layoutGroup: LayoutGroup, ui: UiElement) =
@@ -529,7 +576,7 @@ iterator offsetElement(dropDown: DropDown, offset: IVec2): (IVec2, UiElement) =
       pos.y += (item.size.y + dropDown.margin) * dir
 
 template emitDropDownMethods*(t: typedesc) =
-  method update*(dropDown: DropDown[t], dt: float32, offset = ivec2(0)) =
+  method update*(dropDown: DropDown[t], dt: float32, offset = ivec2(0), relativeTo = false) =
     if shouldRender(dropDown):
       if dropDown.opened:
         for (pos, item) in dropDown.offsetElement(offset):
@@ -540,7 +587,7 @@ template emitDropDownMethods*(t: typedesc) =
         dropdown.button.anchor = dropdown.anchor
         dropDown.button.update(dt, offset)
 
-  method draw*(dropDown: DropDown[t], offset = ivec2(0)) =
+  method draw*(dropDown: DropDown[t], offset = ivec2(0), relativeTo = false) =
     if shouldRender(dropDown):
       if dropDown.opened:
         for (pos, item) in dropDown.offsetElement(offset):
