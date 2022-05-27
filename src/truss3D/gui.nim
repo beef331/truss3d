@@ -1,7 +1,7 @@
 import vmath, pixie, truss3D
 import truss3D/[textures, shaders, inputs, models]
 import std/[options, sequtils, sugar, macros, genasts]
-
+export pixie
 
 type
   InteractDirection* = enum
@@ -205,7 +205,7 @@ method update*(ui: UiElement, dt: float32, offset = ivec2(0), relativeTo = false
 method draw*(ui: UiElement, offset = ivec2(0), relativeTo = false) {.base.} = discard
 
 
-proc renderTextTo*(tex: Texture, size: IVec2, message: string) =
+proc renderTextTo*(tex: Texture, size: IVec2, message: string, hAlign = CenterAlign, vAlign = MiddleAlign) =
   let
     font = readFont("assets/fonts/MarradaRegular-Yj0O.ttf")
     image = newImage(size.x, size.y)
@@ -216,13 +216,13 @@ proc renderTextTo*(tex: Texture, size: IVec2, message: string) =
     layout = font.layoutBounds(message)
 
   font.paint = rgb(255, 255, 255)
-  image.fillText(font, message, bounds = size.vec2, hAlign = CenterAlign, vAlign = MiddleAlign)
+  image.fillText(font, message, bounds = size.vec2, hAlign = hAlign, vAlign = vAlign)
   image.copyTo(tex)
 
-proc new*(_: typedesc[Label], pos, size: IVec2, text: string, color = vec4(1), anchor = {left, top}): Label =
+proc new*(_: typedesc[Label], pos, size: IVec2, text: string, color = vec4(1), anchor = {left, top}, horizontalAlignment = CenterAlign, verticalAlignment = MiddleAlign): Label =
   result = Label(pos: pos, size: size, color: color, anchor: anchor)
   result.texture = genTexture()
-  result.texture.renderTextTo(size, text)
+  result.texture.renderTextTo(size, text, horizontalAlignment, verticalAlignment)
 
 method update*(label: Label, dt: float32, offset = ivec2(0), relativeTo = false) = discard
 method draw*(label: Label, offset = ivec2(0), relativeTo = false) =
