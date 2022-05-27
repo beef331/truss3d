@@ -41,6 +41,7 @@ type
     minMax: Slice[T]
     percentage: float32
     onValueChange*: proc(a: T){.closure.}
+    watchValue*: proc(): T {.closure.}
 
   LayoutGroup* = ref object of UiElement
     layoutDirection: InteractDirection
@@ -49,13 +50,14 @@ type
     centre: bool
 
   DropDown*[T] = ref object of UiElement
-    values: seq[T]
+    values: seq[(string, T)]
     buttons: seq[UiElement]
     opened: bool
     selected: int
     button: Button
     margin: int
     onValueChange*: proc(a: T){.closure.}
+    watchValue*: proc(): T {.closure.}
 
 const
   vertShader = ShaderFile"""
@@ -203,7 +205,7 @@ method update*(ui: UiElement, dt: float32, offset = ivec2(0), relativeTo = false
 method draw*(ui: UiElement, offset = ivec2(0), relativeTo = false) {.base.} = discard
 
 
-proc renderTextTo(tex: Texture, size: IVec2, message: string) =
+proc renderTextTo*(tex: Texture, size: IVec2, message: string) =
   let
     font = readFont("assets/fonts/MarradaRegular-Yj0O.ttf")
     image = newImage(size.x, size.y)
@@ -326,7 +328,8 @@ proc new*[T](
   startPercentage: float32;
   direction = InteractDirection.horizontal;
   anchor = {left, top};
-  onValueChange: proc(a: T){.closure.} = nil
+  onValueChange: proc(a: T){.closure.} = nil;
+  watchValue: proc(): T {.closure.} = nil
 ): ScrollBar[T] =
   result = ScrollBar[T](
     pos: pos,
@@ -337,7 +340,8 @@ proc new*[T](
     backgroundColor: backgroundColor,
     anchor: anchor,
     onValueChange: onValueChange,
-    percentage: startPercentage
+    percentage: startPercentage,
+    watchValue: watchValue
     )
 
 template emitScrollbarMethods*(t: typedesc) =
@@ -433,12 +437,24 @@ proc calculateStart(layoutGroup: LayoutGroup, offset = ivec2(0), relativeTo = fa
       ##result.y += (layoutGroup.size.y - actualSize.y) div 2
 
 iterator renderOrder(layoutGroup: LayoutGroup): UiElement =
-  if layoutGroup.anchor * {right, bottom} != {}:
+  template defaultIter() =
+    for item in layoutGroup.children:
+      yield item
+  template invertedIter() =
     for i in layoutGroup.children.high.countDown(0):
       yield layoutGroup.children[i]
-  else:
-    for x in layoutGroup.children:
-      yield x
+  case layoutGroup.layoutDirection
+  of horizontal:
+    if right in layoutGroup.anchor:
+      invertedIter()
+    else:
+      defaultIter()
+  of vertical:
+    if bottom in layoutGroup.anchor:
+      invertedIter()
+    else:
+      defaultIter()
+
 
 iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2, relativeTo = false): (IVec2, UiElement) =
   ## Iterates over `layoutGroup`s children yielding pos and element
@@ -505,9 +521,10 @@ proc new*[T](
   nineSliceSize = 0f32;
   margin = 10;
   anchor = {top, left};
-  onValueChange: proc(a: T){.closure.} = nil
+  onValueChange: proc(a: T){.closure.} = nil;
+  watchValue: proc(): T {.closure.} = nil
   ): DropDown[T] =
-  result = DropDown[T](pos: pos, size: size, anchor: anchor, onValueChange: onValueChange, margin: margin)
+  result = DropDown[T](pos: pos, color: color, size: size, anchor: anchor, onValueChange: onValueChange, margin: margin, watchValue: watchValue)
 
   let res = result # Hack to get around `result` outliving the closure
   for i, iterVal in values:
@@ -519,13 +536,13 @@ proc new*[T](
         else:
           vec4(color.xyz / 2, color.w)
     result.buttons.add Button.new(ivec2(0), size, name, thisColor, nineSliceSize, backgroundTex, backgroundColor, fontColor)
-    result.values.add value
+    result.values.add iterVal
     capture(name, value, i):
       Button(res.buttons[^1]).onClick = proc() =
         res.opened = false
         res.button.label.texture.renderTextTo(size, name)
         if res.selected != i and res.onvalueChange != nil:
-          res.onValueChange(res.values[i])
+          res.onValueChange(res.values[i][1])
         res.selected = i
         for ind, child in res[].buttons:
           if ind == i:
@@ -550,12 +567,13 @@ proc new*[T](
   nineSliceSize = 0f32;
   margin = 10;
   anchor = {top, left};
-  onValueChange : proc(a: T){.closure.} = nil
+  onValueChange : proc(a: T){.closure.} = nil;
+  watchValue: proc(): T {.closure.} = nil
   ): DropDown[T] =
   var vals = newSeqOfCap[(string, T)](values.len)
   for x in values:
     vals.add ($x, x)
-  DropDown[T].new(pos, size, vals, color, fontColor, backgroundColor, backgroundTex, nineSliceSize, margin, anchor, onValueChange)
+  DropDown[T].new(pos, size, vals, color, fontColor, backgroundColor, backgroundTex, nineSliceSize, margin, anchor, onValueChange, watchValue)
 
 iterator offsetElement(dropDown: DropDown, offset: IVec2): (IVec2, UiElement) =
   ## Iterates over `dropDown`s children yielding offset and element in proper order
@@ -583,6 +601,19 @@ iterator offsetElement(dropDown: DropDown, offset: IVec2): (IVec2, UiElement) =
 template emitDropDownMethods*(t: typedesc) =
   method update*(dropDown: DropDown[t], dt: float32, offset = ivec2(0), relativeTo = false) =
     if shouldRender(dropDown):
+      if dropDown.watchValue != nil:
+        for i, (name, val) in dropDown.values:
+          if val == dropdown.watchValue() and i != dropDown.selected:
+            dropDown.selected = i
+            dropDown.button.label.texture.renderTextTo(dropDown.button.size, name)
+            for ind, child in dropDown.buttons:
+              if ind == i:
+                child.backgroundColor = dropDown.color
+                child.color = dropDown.color
+              else:
+                child.backgroundColor = vec4(dropDown.color.xyz / 2, dropDown.color.w)
+                child.color = vec4(dropDown.color.xyz / 2, dropDown.color.w)
+
       if dropDown.opened:
         for (pos, item) in dropDown.offsetElement(offset):
           item.update(dt, pos)
