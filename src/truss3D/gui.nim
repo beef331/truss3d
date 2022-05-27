@@ -208,6 +208,11 @@ proc renderTextTo(tex: Texture, size: IVec2, message: string) =
     font = readFont("assets/fonts/MarradaRegular-Yj0O.ttf")
     image = newImage(size.x, size.y)
   font.size = 30
+  var layout = font.layoutBounds(message)
+  while layout.x.int > size.x or layout.y.int > size.y:
+    font.size -= 1
+    layout = font.layoutBounds(message)
+
   font.paint = rgb(255, 255, 255)
   image.fillText(font, message, bounds = size.vec2, hAlign = CenterAlign, vAlign = MiddleAlign)
   image.copyTo(tex)
