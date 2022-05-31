@@ -48,7 +48,7 @@ proc renderTextBlock(tex: textures.Texture, size: IVec2, message: string, fontSi
 
 method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = false) =
   let lmbPressed = leftMb.isPressed
-  if textArea.shouldRender() and textArea.isOver():
+  if textArea.shouldRender() and textArea.isOver(offset = offset, relativeTo = relativeTo):
     if not textArea.active:
       textArea.active = true
       let pos = textArea.calculatePos(offset, relativeTo)
