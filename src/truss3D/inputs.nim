@@ -2,7 +2,7 @@ import sdl2_nim/sdl
 import opengl
 import std/[macros, tables, strutils]
 import vmath
-
+export Rect
 type
   KeyState* = enum
     nothing, pressed, held, released
@@ -136,6 +136,8 @@ proc startTextInput*(r: Rect) =
 
 export stopTextInput
 
+
+proc inputText*(): lent string = textInput.text
 
 proc pollInputs*(screenSize: var IVec2, dt: float32) =
   resetInputs(dt)

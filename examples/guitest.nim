@@ -16,6 +16,7 @@ var
   btns: seq[Button]
   horzLayout, vertLayout: LayoutGroup
   myDropDown: Dropdown[MyEnum]
+  textArea: TextArea
   myVal: MyEnum
 
 proc init =
@@ -130,6 +131,13 @@ proc init =
     anchor = {right}
     onValueChange = proc(a: MyEnum) = myVal = a
 
+  textArea = makeUi(TextArea):
+    anchor = {left}
+    size = ivec2(200, 300)
+    fontSize = 40
+    onTextChange = proc(s: string) =
+      echo s
+
 
 proc update(dt: float32) =
   for btn in btns:
@@ -137,7 +145,9 @@ proc update(dt: float32) =
   horzLayout.update(dt)
   vertLayout.update(dt)
   myDropDown.update(dt)
+  textArea.update(dt)
   guistate = GuiState.nothing
+
 
 proc draw() =
   for btn in btns:
@@ -145,5 +155,6 @@ proc draw() =
   horzLayout.draw()
   vertLayout.draw()
   myDropDown.draw()
+  textArea.draw()
 
 initTruss("Test", ivec2(1280, 720), guitest.init, update, draw)

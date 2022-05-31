@@ -92,11 +92,11 @@ proc setupUniforms*(ui: UiElement, shader: Shader) =
 method update*(ui: UiElement, dt: float32, offset = ivec2(0), relativeTo = false) {.base.} = discard
 method draw*(ui: UiElement, offset = ivec2(0), relativeTo = false) {.base.} = discard
 
-proc renderTextTo*(tex: Texture, size: IVec2, message: string, hAlign = CenterAlign, vAlign = MiddleAlign) =
+proc renderTextTo*(tex: Texture, size: IVec2, message: string, fontSize = 30f, hAlign = CenterAlign, vAlign = MiddleAlign) =
   let
     font = readFont("assets/fonts/MarradaRegular-Yj0O.ttf")
     image = newImage(size.x, size.y)
-  font.size = 30
+  font.size = fontSize
   var layout = font.layoutBounds(message)
   while layout.x.int > size.x or layout.y.int > size.y:
     font.size -= 1

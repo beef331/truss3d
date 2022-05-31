@@ -87,8 +87,8 @@ proc init*() =
   meshData.appendUv([vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items)
   uiQuad = meshData.uploadData()
 
-import guicomponents/[dropdowns, buttons, labels, scrollbar, uielements, layoutgroups]
-export dropdowns, buttons, labels, scrollbar, uielements, layoutgroups
+import guicomponents/[dropdowns, buttons, labels, scrollbar, uielements, layoutgroups, textareas]
+export dropdowns, buttons, labels, scrollbar, uielements, layoutgroups, textareas
 
 
 macro makeUi*(t: typedesc, body: untyped): untyped =
