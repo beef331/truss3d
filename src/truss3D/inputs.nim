@@ -72,6 +72,10 @@ type
 
   Events* = object
     keyEvents: array[EventPriority, Table[(TKeyCode, KeyState), seq[KeyEvent]]]
+  TextInput = object
+    text: string
+    pos: int
+    rect: Rect
 
 var
   keyState: array[TKeyCode, KeyState]
@@ -81,6 +85,7 @@ var
   mouseScroll: int32
   mouseMovement = MouseAbsolute
   events*: Events
+  textInput: TextInput
 
 
 proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
@@ -123,6 +128,15 @@ proc resetInputs(dt: float32) =
   mouseDelta = ivec2(0, 0)
   mouseScroll = 0
 
+proc startTextInput*(r: Rect) =
+  sdl.startTextInput()
+  sdl.setTextInputRect(r.unsafeaddr)
+  textInput.text.setLen(0)
+  textInput.pos = 0
+
+export stopTextInput
+
+
 proc pollInputs*(screenSize: var IVec2, dt: float32) =
   resetInputs(dt)
 
@@ -164,6 +178,12 @@ proc pollInputs*(screenSize: var IVec2, dt: float32) =
         screenSize.y = e.window.data2
         glViewport(0, 0, screenSize.x, screenSize.y)
       else: discard
+    of sdl.TextInput:
+      textInput.text.add $e.text.text
+    of TextEditing:
+      textInput.pos = e.edit.start
+      textInput.text = $e.edit.text
+
 
     else: discard
 
