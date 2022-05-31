@@ -1,11 +1,14 @@
 import uielements
 import sdl2_nim/sdl
 
+const timeToInteraction = 0.1f
+
 type TextArea* = ref object of UiElement
   fontSize: float32
   active: bool
   text: string
   onTextChange: proc(s: string)
+  timeToInteraction: float32
 
 proc new*(
   _: typedesc[TextArea];
@@ -19,6 +22,9 @@ proc new*(
   let res = result
   result = TextArea(pos: pos, size: size, fontSize: fontSize, color: color, anchor: anchor, backgroundColor: backgroundColor, onTextChange: onTextChange)
   result.texture = genTexture()
+  let img = newImage(size.x, size.y)
+  img.fill(rgba(0, 0, 0, 0))
+  img.copyTo(result.texture)
 
 proc renderTextBlock(tex: textures.Texture, size: IVec2, message: string, fontSize = 30f, hAlign = CenterAlign, vAlign = MiddleAlign) =
   let
@@ -46,12 +52,31 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
     if not textArea.active:
       textArea.active = true
       let pos = textArea.calculatePos(offset, relativeTo)
-      startTextInput(sdl.Rect(x: pos.x, y: pos.y, w: textArea.size.x, h: textArea.size.y))
+      startTextInput(sdl.Rect(x: pos.x, y: pos.y, w: textArea.size.x, h: textArea.size.y), textArea.text)
+
+    if textArea.timeToInteraction <= 0:
+      var interacted = false
+      if KeyCodeBackSpace.isPressed and textArea.text.len > 0:
+        textArea.text.setLen textArea.text.high
+        setInputText(textArea.text)
+        textArea.timeToInteraction = timeToInteraction
+      elif KeyCodeReturn.isPressed:
+        textArea.text.add "\n"
+        setInputText(textArea.text)
+        textArea.timeToInteraction = timeToInteraction
+
+      if textArea.timeToInteraction == timeToInteraction:
+        textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, LeftAlign, TopAlign)
+        if textArea.onTextChange != nil:
+          textArea.onTextChange(textArea.text)
+
     if textArea.text != inputText():
-      textArea.texture.renderTextBlock(textArea.size, inputText(), textArea.fontSize, LeftAlign, TopAlign)
-      textArea.onTextChange(inputText())
+      textArea.text = inputText()
+      textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, LeftAlign, TopAlign)
       if textArea.onTextChange != nil:
-        textArea.onTextChange(inputText())
+        textArea.onTextChange(textArea.text)
+    textArea.timeToInteraction -= dt
+
   else:
     textArea.active = false
     stopTextInput()
@@ -61,7 +86,16 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
 method draw*(textArea: TextArea, offset = ivec2(0), relativeTo = false) =
   if textArea.shouldRender:
     with uishader:
+      glDisable(GlDepthTest)
       textArea.setupUniforms(uiShader)
       uiShader.setUniform("modelMatrix", textArea.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
+      uiShader.setUniform("tex", textures.Texture(0))
+      uiShader.setUniform("hasTex", 0)
+      uiShader.setUniform("color", textarea.backgroundColor)
       withBlend:
         render(uiQuad)
+      textArea.setupUniforms(uiShader)
+      withBlend:
+        render(uiQuad)
+
+

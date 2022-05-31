@@ -133,8 +133,9 @@ proc init =
 
   textArea = makeUi(TextArea):
     anchor = {left}
-    size = ivec2(200, 300)
+    size = ivec2(100, 100)
     fontSize = 40
+    backgroundColor = vec4(0.3, 0.3, 0.3, 1)
     onTextChange = proc(s: string) =
       echo s
 

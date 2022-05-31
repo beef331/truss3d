@@ -128,13 +128,15 @@ proc resetInputs(dt: float32) =
   mouseDelta = ivec2(0, 0)
   mouseScroll = 0
 
-proc startTextInput*(r: Rect) =
+proc startTextInput*(r: Rect, text: sink string = "") =
   sdl.startTextInput()
-  sdl.setTextInputRect(r.unsafeaddr)
-  textInput.text.setLen(0)
+  textInput.text = text
   textInput.pos = 0
 
 export stopTextInput
+
+proc setInputText*(str: string) =
+  textInput.text = str
 
 
 proc inputText*(): lent string = textInput.text
@@ -184,7 +186,7 @@ proc pollInputs*(screenSize: var IVec2, dt: float32) =
       textInput.text.add $e.text.text
     of TextEditing:
       textInput.pos = e.edit.start
-      textInput.text = $e.edit.text
+      #textInput.text = $e.edit.text
 
 
     else: discard
