@@ -65,7 +65,9 @@ void main() {
   }
   else if(hasTex > 0){
     vec4 newCol = texture(tex, fuv);
+    vec4 oldCol = frag_color;
     frag_color = mix(frag_color, newCol * color, newCol.a);
+    frag_color = mix(frag_color, backgroundColor, 1.0 - frag_color.a);
   }else{
     frag_color = color;
   }

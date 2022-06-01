@@ -86,16 +86,11 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
 method draw*(textArea: TextArea, offset = ivec2(0), relativeTo = false) =
   if textArea.shouldRender:
     with uishader:
-      glDisable(GlDepthTest)
+      glEnable(GlDepthTest)
       textArea.setupUniforms(uiShader)
       uiShader.setUniform("modelMatrix", textArea.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
-      uiShader.setUniform("tex", textures.Texture(0))
-      uiShader.setUniform("hasTex", 0)
-      uiShader.setUniform("color", textarea.backgroundColor)
       withBlend:
         render(uiQuad)
-      textArea.setupUniforms(uiShader)
-      withBlend:
-        render(uiQuad)
+
 
 
