@@ -20,13 +20,14 @@ proc render*(instModel: InstancedModel) =
   instModel.ssbo.bindBuffer()
   for buf in instModel.model.buffers:
     glBindVertexArray(buf.vao)
-    glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, instModel.drawCount.GlSizei)
+    glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, GlSizei instModel.drawCount)
   glBindVertexArray(0)
 
 proc render*(instModel: InstancedModel, binding: int) =
-  instModel.ssbo.bindBuffer(binding)
-  for buf in instModel.model.buffers:
-    glBindVertexArray(buf.vao)
-    glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, instModel.drawCount.GlSizei)
-  glBindVertexArray(0)
-  unbindSsbo()
+  if instModel.drawCount > 0:
+    instModel.ssbo.bindBuffer(binding)
+    for buf in instModel.model.buffers:
+      glBindVertexArray(buf.vao)
+      glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, GlSizei instModel.drawCount)
+    glBindVertexArray(0)
+    unbindSsbo()

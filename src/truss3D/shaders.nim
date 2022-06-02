@@ -91,10 +91,10 @@ proc copyTo*[T](val: T, ubo: Ubo[T]) =
   glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
 
 proc bindBuffer*(ssbo: Ssbo) =
-  glBindBuffer(GlShaderStorageBuffer, ssbo.Gluint)
+  glBindBuffer(GlShaderStorageBuffer, Gluint(ssbo))
 
 proc bindBuffer*(ssbo: Ssbo, binding: int) =
-  glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), ssbo.Gluint)
+  glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), Gluint(ssbo))
 
 proc unbindSsbo*() =
   glBindBuffer(GlShaderStorageBuffer, 0)
@@ -112,7 +112,7 @@ proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
     else:
       sizeof(val)
   ssbo.bindBuffer()
-  glNamedBufferData(ssbo.Gluint, size.GLsizeiptr, val[0].unsafeAddr, GlDynamicDraw)
+  glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[0].unsafeAddr, GlDynamicDraw)
   unbindSsbo()
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
