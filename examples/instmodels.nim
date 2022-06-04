@@ -2,7 +2,7 @@ import truss3D, truss3D/[models, shaders, instancemodels, audio]
 import vmath, chroma, pixie
 import std/[random, enumerate, sugar]
 
-const count = 5
+const count = 100
 type
   InstanceBuffer {.packed.} = object
     pos: Vec4
@@ -55,7 +55,7 @@ void main() {
 """
 
 const
-  cameraPos = vec3(0, 4, 0)
+  cameraPos = vec3(0, 10, 0)
   lookPos = vec3(5, 0, 5)
 
 
@@ -66,7 +66,6 @@ var
   proj: Mat4
   texture: textures.Texture
   mySound: SoundEffect
-  hasExited: array[count, bool]
 
 addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
   echo "buh bye"
@@ -92,12 +91,14 @@ proc init() =
   randomizeSSBO()
   model.drawCount = model.ssboData.len
   audio.init()
-  mySound = loadSound("./assets/test.wav", true)
   setListeningPos(cameraPos)
   setListeningDir(normalize(lookPos - cameraPos))
+  mySound = loadSound("./assets/test.wav", true, true)
   for i, obj in model.ssboData.pairs:
     capture(i):
-      mySound.play(proc(): Vec3 = model.ssboData[i].pos.xyz)
+      let sound = mySound.play(proc(): Vec3 = model.ssboData[i].pos.xyz)
+      sound.volume = length(obj.scale)
+
 
 
 proc moveSSBO(dt: float32) =

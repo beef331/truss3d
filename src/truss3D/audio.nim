@@ -13,7 +13,7 @@ var
 
 
 proc init*() =
-  engine = AudioEngine.init()
+  engine = AudioEngine.new()
 
 proc loadSound*(path: string, looping, spatial = false): SoundEffect =
   result = SoundEffect(sound: engine.loadSoundFromFile(path))
@@ -21,26 +21,31 @@ proc loadSound*(path: string, looping, spatial = false): SoundEffect =
   result.sound.spatial = spatial
 
 proc setListeningPos*(pos: Vec3) =
-  for listener in engine.listeners:
+  for listener in engine.listenerIter:
     engine.setListenerPos(listener, pos)
 
 proc setListeningDir*(dir: Vec3) =
-  for listener in engine.listeners:
+  for listener in engine.listenerIter:
     engine.setListenerDir(listener, dir)
 
-proc play*(sound: SoundEffect, positionFunc: proc(): Vec3 = nil) =
+proc play*(sound: SoundEffect, positionFunc: proc(): Vec3 = nil): Sound {.discardable.} =
   soundEffects.add SoundEffect(positionFunc: positionFunc)
-  soundEffects[^1].sound = engine.duplicate(sound.sound)
-  soundEffects[^1].sound.looping = sound.sound.looping
-  soundEffects[^1].sound.start()
+  result = engine.duplicate(sound.sound)
+  soundEffects[^1].sound = result
+  result.looping = sound.sound.looping
+  result.volume = sound.sound.volume
+  result.spatial = sound.sound.spatial
+  result.start()
+
 
 
 proc update*() =
   if soundEffects.len > 0:
     for i in countdown(soundEffects.high, 0):
-      if soundEffects[i].positionFunc != nil:
-        soundEffects[i].sound.position = soundEffects[i].positionFunc()
       if soundEffects[i].sound.atEnd:
-        soundEffects[i].sound.stop()
         soundEffects[i].sound.maSoundUninit()
         soundEffects.del(i)
+        continue
+
+      if soundEffects[i].positionFunc != nil:
+        soundEffects[i].sound.position = soundEffects[i].positionFunc()
