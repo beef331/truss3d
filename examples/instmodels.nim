@@ -1,12 +1,13 @@
-import truss3D, truss3D/[models, shaders, instancemodels]
+import truss3D, truss3D/[models, shaders, instancemodels, audio]
 import vmath, chroma, pixie
-import std/random
+import std/[random, enumerate, sugar]
 
+const count = 5
 type
   InstanceBuffer {.packed.} = object
     pos: Vec4
     scale: Vec4
-  Buffer = array[100000, InstanceBuffer]
+  Buffer = array[count, InstanceBuffer]
 
 const
   vertShader = """
@@ -53,13 +54,19 @@ void main() {
 }
 """
 
+const
+  cameraPos = vec3(0, 4, 0)
+  lookPos = vec3(5, 0, 5)
+
 
 var
   model: InstancedModel[Buffer]
   shader: Shader
-  view = lookAt(vec3(0, 10, -5), vec3(0, 0, 0), vec3(0, 1, 0))
+  view = lookAt(cameraPos, lookPos, vec3(0, 1, 0))
   proj: Mat4
   texture: textures.Texture
+  mySound: SoundEffect
+  hasExited: array[count, bool]
 
 addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
   echo "buh bye"
@@ -84,22 +91,30 @@ proc init() =
   shader.setUniform "tex", texture
   randomizeSSBO()
   model.drawCount = model.ssboData.len
+  audio.init()
+  mySound = loadSound("./assets/test.wav", true)
+  setListeningPos(cameraPos)
+  setListeningDir(normalize(lookPos - cameraPos))
+  for i, obj in model.ssboData.pairs:
+    capture(i):
+      mySound.play(proc(): Vec3 = model.ssboData[i].pos.xyz)
+
 
 proc moveSSBO(dt: float32) =
   with shader:
-    for x in model.ssboData.mitems:
+    for i, x in enumerate model.ssboData.mitems:
       x.pos.y += (1 / length(x.scale)) * 0.1 * dt
     model.reuploadSsbo()
 
 proc update(dt: float32) =
   let screenSize = screenSize()
-  view = lookAt(vec3(0, 10, 0), vec3(5, 0, 5), vec3(0, 1, 0))
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
   moveSsbo(dt)
+  audio.update()
 
 proc draw() =
   with shader:
     glEnable(GlDepthTest)
     shader.setUniform("VP", proj * view)
     model.render()
-initTruss("Test", ivec2(1280, 720), init, update, draw)
+initTruss("Test", ivec2(1280, 720), instmodels.init, update, draw)

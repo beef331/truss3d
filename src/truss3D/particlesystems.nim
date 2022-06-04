@@ -1,6 +1,6 @@
 import truss3D/[shaders, instancemodels]
 import vmath
-import std/random
+import std/[random, options]
 
 type
   Particle* {.packed.}= object
@@ -37,9 +37,14 @@ proc initParticleSystem*(
       let scale = scale..scale
     ParticleSystem(pos: pos, model: model, color: color, scale: scale, updateProc: updateProc, lifeTime: lifeTime)
 
-proc generateParticle(ps: ParticleSystem): Particle =
+proc generateParticle(ps: ParticleSystem, startPos = none(Vec3)): Particle =
   Particle(
-    pos: ps.pos,
+    pos:
+      if startPos.isSome:
+        startPos.get
+      else:
+        ps.pos
+    ,
     color: ps.color.a,
     lifeTime: ps.lifeTime,
     scale: ps.scale.a,
@@ -47,9 +52,9 @@ proc generateParticle(ps: ParticleSystem): Particle =
     )
 
 
-proc spawn*(particleSystem: var ParticleSystem, count = 1) =
+proc spawn*(particleSystem: var ParticleSystem, count = 1, pos = none(Vec3)) =
   for x in 0..<count:
-    particleSystem.model.ssboData.add particleSystem.generateParticle()
+    particleSystem.model.ssboData.add particleSystem.generateParticle(pos)
 
   particleSystem.model.reuploadSsbo()
   particleSystem.model.drawCount = particleSystem.model.ssboData.len
@@ -71,6 +76,6 @@ proc update*(particleSystem: var ParticleSystem, dt: float32) =
   else:
     particleSystem.model.drawCount = 0
 
-proc render*(ps: ParticleSystem, binding = 0) =
+proc render*(ps: ParticleSystem, binding = 1) =
   render(ps.model, binding)
 
