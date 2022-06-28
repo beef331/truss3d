@@ -43,7 +43,6 @@ proc update*() =
   if soundEffects.len > 0:
     for i in countdown(soundEffects.high, 0):
       if soundEffects[i].sound.atEnd:
-        soundEffects[i].sound.maSoundUninit()
         soundEffects.del(i)
         continue
 

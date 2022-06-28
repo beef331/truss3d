@@ -20,6 +20,7 @@ var
   myVal: MyEnum
 
 proc init =
+  gui.fontPath = "assets/fonts/MarradaRegular-Yj0O.ttf"
   gui.init()
   glClearColor(0.1, 0.1, 0.1, 1)
   btns.add:
