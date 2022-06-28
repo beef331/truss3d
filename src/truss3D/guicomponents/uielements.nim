@@ -95,12 +95,15 @@ method draw*(ui: UiElement, offset = ivec2(0), relativeTo = false) {.base.} = di
 var
   lastUsedFontPath: string
   fontPath*: string
-  font: Font
+  font*: Font
 
-proc renderTextTo*(tex: Texture, size: IVec2, message: string, fontSize = 30f, hAlign = CenterAlign, vAlign = MiddleAlign) =
+proc loadFontIfNeedTo*() =
   if fontPath != lastUsedFontPath and fontPath.len > 0:
     font = readFont(fontPath)
     lastUsedFontPath = fontPath
+
+proc renderTextTo*(tex: Texture, size: IVec2, message: string, fontSize = 30f, hAlign = CenterAlign, vAlign = MiddleAlign) =
+  loadFontIfNeedTo()
 
   let image = newImage(size.x, size.y)
   font.size = fontSize

@@ -9,6 +9,8 @@ type TextArea* = ref object of UiElement
   text: string
   onTextChange: proc(s: string)
   timeToInteraction: float32
+  vAlign: VerticalAlignment
+  hAlign: HorizontalAlignment
 
 proc new*(
   _: typedesc[TextArea];
@@ -17,19 +19,29 @@ proc new*(
   backgroundColor = vec4(0.5, 0.5, 0.5, 1);
   color = vec4(1);
   anchor = {left, top};
-  onTextChange: proc(s: string) = nil
+  onTextChange: proc(s: string) = nil,
+  hAlign = CenterAlign,
+  vAlign = MiddleAlign
   ): TextArea =
   let res = result
-  result = TextArea(pos: pos, size: size, fontSize: fontSize, color: color, anchor: anchor, backgroundColor: backgroundColor, onTextChange: onTextChange)
+  result = TextArea(
+    pos: pos,
+    size: size,
+    fontSize: fontSize,
+    color: color,
+    anchor: anchor,
+    backgroundColor: backgroundColor,
+    onTextChange: onTextChange,
+    hAlign: hAlign,
+    vAlign: vAlign)
   result.texture = genTexture()
   let img = newImage(size.x, size.y)
   img.fill(rgba(0, 0, 0, 0))
   img.copyTo(result.texture)
 
 proc renderTextBlock(tex: textures.Texture, size: IVec2, message: string, fontSize = 30f, hAlign = CenterAlign, vAlign = MiddleAlign) =
-  let
-    font = readFont("assets/fonts/MarradaRegular-Yj0O.ttf")
-    image = newImage(size.x, size.y)
+  loadFontIfNeedTo()
+  let image = newImage(size.x, size.y)
   font.size = fontSize
 
   var
@@ -66,13 +78,13 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
         textArea.timeToInteraction = timeToInteraction
 
       if textArea.timeToInteraction == timeToInteraction:
-        textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, LeftAlign, TopAlign)
+        textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, textArea.hAlign, textArea.vAlign)
         if textArea.onTextChange != nil:
           textArea.onTextChange(textArea.text)
 
     if textArea.text != inputText():
       textArea.text = inputText()
-      textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, LeftAlign, TopAlign)
+      textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, textArea.hAlign, textArea.vAlign)
       if textArea.onTextChange != nil:
         textArea.onTextChange(textArea.text)
     textArea.timeToInteraction -= dt
