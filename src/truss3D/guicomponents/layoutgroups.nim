@@ -100,9 +100,16 @@ iterator offsetElement(layoutGroup: LayoutGroup, offset: IVec2, relativeTo = fal
           pos.x += item.size.x + layoutGroup.margin
 
       of vertical:
-        let renderPos = ivec2(pos.x + (layoutGroup.size.x - item.size.x) div 2, pos.y)
-        yield (renderPos, item)
-        pos.y += item.size.y + layoutGroup.margin
+        if bottom in layoutGroup.anchor:
+          var renderPos = ivec2(pos.x, pos.y)
+          if layoutGroup.centre:
+            renderPos.x = pos.x + (layoutGroup.size.x - item.size.x) div 2
+          yield (renderPos, item)
+          pos.y -= item.size.y + layoutGroup.margin
+        else:
+          let renderPos = ivec2(pos.x + (layoutGroup.size.x - item.size.x) div 2, pos.y)
+          yield (renderPos, item)
+          pos.y += item.size.y + layoutGroup.margin
 
 
 
