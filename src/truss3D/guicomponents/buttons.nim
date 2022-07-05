@@ -27,7 +27,7 @@ proc new*(
     isNineSliced: nineSliceSize > 0,
     nineSliceSize: nineSliceSize,
     backgroundColor: backgroundColor)
-  result.label = Label.new(pos, size, text, fontColor, anchor)
+  result.label = Label.new(pos, size, text, fontColor, vec4(0), anchor)
   when backgroundTex is string:
     result.backgroundTex = genTexture()
     readImage(backgroundTex).copyTo result.backgroundTex
