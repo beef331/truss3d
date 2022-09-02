@@ -103,7 +103,7 @@ proc init() =
 
 proc moveSSBO(dt: float32) =
   with shader:
-    for i, x in enumerate model.ssboData.mitems:
+    for x in model.ssboData.mitems:
       x.pos.y += (1 / length(x.scale)) * 0.1 * dt
     model.reuploadSsbo()
 
