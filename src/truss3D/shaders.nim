@@ -100,9 +100,9 @@ proc unbindSsbo*() =
   glBindBuffer(GlShaderStorageBuffer, 0)
 
 proc genSsbo*[T](binding: Natural): Ssbo[T] =
-  glCreateBuffers(1, result.Gluint.addr)
+  glCreateBuffers(1, Gluint(result).addr)
   result.bindBuffer()
-  glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), result.Gluint)
+  glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), Gluint result)
   unbindSsbo()
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T]) =

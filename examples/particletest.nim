@@ -56,8 +56,25 @@ void main() {
 """
 
 
+proc explosiveUpdate(particle: var Particle, dt: float32, ps: ParticleSystemBase) =
+  particle.pos += dt * particle.velocity * 20 * (1 - (particle.lifeTime / ps.lifeTime))
+  particle.scale = vec3((particle.lifeTime / ps.lifeTime))
+
+proc smokeEmitter(ps: ParticleSystemBase): Particle =
+  result.pos = ps.pos
+  let
+    xVelRot = rand (-Tau.float32 / 8f32)..(Tau.float32 / 8f32)
+    zVelRot = rand (-Tau.float32 / 8f32)..(Tau.float32 / 8f32)
+    vel = normalize(rotateZ(zVelRot) * rotateX(xVelRot) * ps.up) * mix(length ps.startVelocity.a, length ps.startVelocity.b, rand(0f32..1f32))
+  result.velocity = vel
+
+proc smokeUpdate(particle: var Particle, dt: float32, ps: ParticleSystemBase) =
+  particle.pos += dt * particle.velocity
+
+
 var
-  particleSystem: ParticleSystem
+  explosive: ParticleSystem[defaultEmitter, explosiveUpdate]
+  smoke: ParticleSystem[smokeEmitter, smokeUpdate]
   shader: Shader
   view = lookAt(vec3(0, 4, -5), vec3(0, 0, 0), vec3(0, 1, 0))
   proj: Mat4
@@ -67,19 +84,29 @@ addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
   echo "buh bye"
   quitTruss()
 
-proc myUpdate*(particle: var Particle, dt: float32, ps: ParticleSystem) =
-  particle.pos += dt * particle.velocity * 20 * (1 - (particle.lifeTime / ps.lifeTime))
-  particle.scale = vec3((particle.lifeTime / ps.lifeTime))
-
 
 proc init() =
-  particleSystem = initParticleSystem(
+  explosive = initParticleSystem(
     "assets/Cube.glb",
     vec3(5, 0, 5),
+    vec3(0, 1, 0),
     vec4(1)..vec4(1, 0, 0, 1),
     1f,
     vec3(0.3),
-    myUpdate
+    vec3(0),
+    defaultEmitter,
+    explosiveUpdate
+  )
+  smoke = initParticleSystem(
+    "assets/Cube.glb",
+    vec3(5, 0, 5),
+    vec3(0, 1, 0),
+    vec4(0.3, 0.3, 0, 1)..vec4(0.6, 0.6, 0.6, 0.3),
+    5f,
+    vec3(1)..vec3(0.1),
+    vec3(0.5) .. vec3(1),
+    smokeEmitter,
+    smokeUpdate
   )
   shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
   let screenSize = screenSize()
@@ -90,18 +117,27 @@ proc init() =
   shader.setUniform "tex", texture
 
 
+var lastSmokeSpawn = 0.1
+
 proc update(dt: float32) =
   let screenSize = screenSize()
   view = lookAt(vec3(0, 10, 0), vec3(5, 0, 5), vec3(0, 1, 0))
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
   if KeycodeSpace.isPressed():
-    particleSystem.spawn(100)
+    explosive.spawn(100)
+  if lastSmokeSpawn < 0:
+    smoke.spawn(1)
+    lastSmokeSpawn = 0.1
+  lastSmokeSpawn -= dt
 
-  particleSystem.update(dt)
+  explosive.update(dt)
+  smoke.update(dt)
 
 proc draw() =
   with shader:
     glEnable(GlDepthTest)
+    glEnable(GlBlend)
     shader.setUniform("VP", proj * view)
-    particleSystem.render()
+    explosive.render()
+    smoke.render()
 initTruss("Test", ivec2(1280, 720), init, update, draw)

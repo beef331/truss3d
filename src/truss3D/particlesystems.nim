@@ -10,51 +10,55 @@ type
     scale*: Vec3
     someReserved: float32
     velocity*: Vec3
-    someMoreReserved: float32
+    someMoreReserved: float32 # we need rotation...
 
-  ParticleSystem* = object
-    pos: Vec3
+  EmitProc* = proc(p: ParticleSystemBase): Particle
+  UpdateProc* = proc(particle: var Particle, dt: float32, ps: ParticleSystemBase) # One day I hope we can use `ParticleSystem`...
+
+  ParticleSystemBase* = object of RootObj
+    pos*, right*, up*: Vec3
     model: InstancedModel[seq[Particle]]
     color*: Slice[Vec4]
     lifeTime*: float32
     scale*: Slice[Vec3]
-    updateProc: proc(particle: var Particle, dt: float32, ps: ParticleSystem)
+    startVelocity*: Slice[Vec3]
+  ParticleSystem*[emitter: static EmitProc, updater: static UpdateProc] = object of ParticleSystemBase
 
+
+proc defaultEmitter*(ps: ParticleSystemBase): Particle =
+  Particle(
+    pos: ps.pos,
+    color: ps.color.a,
+    scale: ps.scale.a,
+    velocity: vec3(rand(-1f..1f), rand(-1f..1f), rand(-1f..1f)).normalize()
+    )
 
 proc initParticleSystem*(
   model: InstancedModel[seq[Particle]] or string;
-  pos: Vec3;
+  pos, up: Vec3;
   color: Slice[Vec4] or Vec4;
   lifeTime = 1f;
   scale: Slice[Vec3] or Vec3;
-  updateProc: proc(particle: var Particle, dt: float32, ps: ParticleSystem)
-  ): ParticleSystem =
+  startVelocity: Slice[Vec3] or Vec3;
+  emitProc: static EmitProc = defaultEmitter;
+  updateProc: static UpdateProc;
+  ): ParticleSystem[emitProc, updateProc] =
     when model is string:
       let model = loadInstancedModel[seq[Particle]](model)
     when color is Vec4:
       let color = color..color
     when scale is Vec3:
       let scale = scale..scale
-    ParticleSystem(pos: pos, model: model, color: color, scale: scale, updateProc: updateProc, lifeTime: lifeTime)
-
-proc generateParticle(ps: ParticleSystem, startPos = none(Vec3)): Particle =
-  Particle(
-    pos:
-      if startPos.isSome:
-        startPos.get
-      else:
-        ps.pos
-    ,
-    color: ps.color.a,
-    lifeTime: ps.lifeTime,
-    scale: ps.scale.a,
-    velocity: vec3(rand(-1f..1f), rand(-1f..1f), rand(-1f..1f)).normalize()
-    )
-
+    when startVelocity is Vec3:
+      let startVelocity = startVelocity..startVelocity
+    ParticleSystem[emitProc, updateProc](up: up, pos: pos, model: model, color: color, scale: scale, lifeTime: lifeTime, startVelocity: startVelocity)
 
 proc spawn*(particleSystem: var ParticleSystem, count = 1, pos = none(Vec3)) =
   for x in 0..<count:
-    particleSystem.model.ssboData.add particleSystem.generateParticle(pos)
+    var particle = particleSystem.emitter(particleSystem)
+    particle.lifeTime = particleSystem.lifeTime
+    particleSystem.model.ssboData.add particle
+
 
   particleSystem.model.reuploadSsbo()
   particleSystem.model.drawCount = particleSystem.model.ssboData.len
@@ -67,7 +71,7 @@ proc update*(particleSystem: var ParticleSystem, dt: float32) =
     if particle.lifeTime > 0:
       particle.color = mix(particleSystem.color.b, particleSystem.color.a, particle.lifeTime / particleSystem.lifeTime)
       particle.scale = mix(particleSystem.scale.b, particleSystem.scale.a, particle.lifeTime / particleSystem.lifeTime)
-      particleSystem.updateProc(particle, dt, particleSystem)
+      particleSystem.updater(particle, dt, particleSystem)
     else:
       particleSystem.model.ssboData.del(i)
   if particleSystem.model.ssboData.len > 0:
