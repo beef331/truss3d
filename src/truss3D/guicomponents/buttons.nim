@@ -16,6 +16,7 @@ proc new*(
   backgroundColor = vec4(0.3, 0.3, 0.3, 1);
   fontColor = vec4(1);
   anchor = {left, top};
+  fontSize = 30f;
   onClick = (proc(){.closure.})(nil)
 ): Button =
   result = Button(
@@ -27,7 +28,7 @@ proc new*(
     isNineSliced: nineSliceSize > 0,
     nineSliceSize: nineSliceSize,
     backgroundColor: backgroundColor)
-  result.label = Label.new(pos, size, text, fontColor, vec4(0), anchor)
+  result.label = Label.new(pos, size, text, fontColor, vec4(0), anchor, fontSize = float32(fontSize))
   when backgroundTex is string:
     result.backgroundTex = genTexture()
     readImage(backgroundTex).copyTo result.backgroundTex
