@@ -4,7 +4,7 @@ import truss3D/gui
 type Button* = ref object of UiElement
     onClick*: proc(){.closure.}
     label*: Label
-
+    labelProc: proc(): string{.closure.}
 
 proc new*(
   _: typedesc[Button];
@@ -17,7 +17,8 @@ proc new*(
   fontColor = vec4(1);
   anchor = {left, top};
   fontSize = 30f;
-  onClick = (proc(){.closure.})(nil)
+  onClick = (proc(){.closure.})(nil);
+  labelProc = (proc(): string {.closure.})(nil)
 ): Button =
   result = Button(
     pos: pos,
@@ -27,7 +28,8 @@ proc new*(
     onClick: onClick,
     isNineSliced: nineSliceSize > 0,
     nineSliceSize: nineSliceSize,
-    backgroundColor: backgroundColor)
+    backgroundColor: backgroundColor,
+    labelProc: labelProc)
   result.label = Label.new(pos, size, text, fontColor, vec4(0), anchor, fontSize = float32(fontSize))
   when backgroundTex is string:
     result.backgroundTex = genTexture()
@@ -42,6 +44,8 @@ method update*(button: Button, dt: float32, offset = ivec2(0), relativeTo = fals
     if leftMb.isDown and button.onClick != nil:
       guiState = interacted
       button.onClick()
+  if button.labelProc != nil:
+    button.label.updateText(button.labelProc())
 
 
 method draw*(button: Button, offset = ivec2(0), relativeTo = false) =
