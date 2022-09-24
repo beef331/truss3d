@@ -30,7 +30,7 @@ proc new*(
     nineSliceSize: nineSliceSize,
     backgroundColor: backgroundColor,
     labelProc: labelProc)
-  result.label = Label.new(pos, size, text, fontColor, vec4(0), anchor, fontSize = float32(fontSize))
+  result.label = Label.new(pos + ivec2(int32 nineSliceSize), size - ivec2(int32 nineSliceSize), text, fontColor, vec4(0), anchor, fontSize = float32(fontSize))
   when backgroundTex is string:
     result.backgroundTex = genTexture()
     readImage(backgroundTex).copyTo result.backgroundTex
@@ -69,7 +69,7 @@ method draw*(button: Button, offset = ivec2(0), relativeTo = false) =
       withBlend:
         render(uiQuad)
       button.label.draw(offset, relativeTo)
-  button.label.pos = button.pos
-  button.label.size = button.size
+  button.label.pos = button.pos + ivec2(int32 button.nineSliceSize / 2, int32 button.nineSliceSize / 2)
+  button.label.size = button.size - iVec2(int32 button.nineSliceSize)
   button.label.anchor = button.anchor
   button.label.zDepth = button.zDepth - 1

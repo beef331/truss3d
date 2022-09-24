@@ -48,11 +48,19 @@ proc calculatePos*(ui: UiElement, offset = ivec2(0), relativeTo = false): IVec2 
     result += offset
   else:
     result = offset
-    if right in ui.anchor:
-      result.x -= ui.pos.x + ui.size.x
-
     if bottom in ui.anchor:
-      result.y -=  ui.pos.y + ui.size.y
+      result.y -= ui.pos.y + ui.size.y
+      if right in ui.anchor:
+        result.x -= ui.pos.x + ui.size.x
+      else:
+        result.x += ui.pos.x
+    else:
+      result.y -= ui.pos.y
+      if right in ui.anchor:
+        result.x -= ui.pos.x + ui.size.x
+      else:
+        result.x += ui.pos.x
+
 
 proc isOver*(ui: UiElement, pos = getMousePos(), offset = ivec2(0), relativeTo = false): bool =
   let realUiPos = ui.calculatePos(offset, relativeTo)
