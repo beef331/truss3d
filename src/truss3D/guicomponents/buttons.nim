@@ -17,6 +17,7 @@ proc new*(
   fontColor = vec4(1);
   anchor = {left, top};
   fontSize = 30f;
+  labelLimit = 10;
   onClick = (proc(){.closure.})(nil);
   labelProc = (proc(): string {.closure.})(nil)
 ): Button =
