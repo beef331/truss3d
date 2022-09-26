@@ -24,8 +24,13 @@ var shaderPath* = ""
 proc makeActive*(shader: Shader) = glUseProgram(Gluint(shader))
 
 template with*(shader: Shader, body: untyped) =
-  shader.makeActive
-  body
+  var activeProgram: Gluint
+  glGetIntegerv(GlCurrentProgram, cast[ptr Glint](addr activeProgram))
+  try:
+    shader.makeActive
+    body
+  finally:
+    Shader(activeProgram).makeActive
 
 
 proc loadShader*(shader: string, kind: ShaderKind): Gluint =
