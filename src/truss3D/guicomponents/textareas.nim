@@ -79,6 +79,7 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
 
       if textArea.timeToInteraction == timeToInteraction:
         textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, textArea.hAlign, textArea.vAlign)
+        echo "inputed"
         if textArea.onTextChange != nil:
           textArea.onTextChange(textArea.text)
 
@@ -88,12 +89,10 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
       if textArea.onTextChange != nil:
         textArea.onTextChange(textArea.text)
     textArea.timeToInteraction -= dt
-
   else:
+    if textArea.active: # We were over text last frame and now are not
+      stopTextInput()
     textArea.active = false
-    stopTextInput()
-
-
 
 method draw*(textArea: TextArea, offset = ivec2(0), relativeTo = false) =
   if textArea.shouldRender:
