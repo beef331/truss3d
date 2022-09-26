@@ -1,5 +1,5 @@
 import opengl, vmath, pixie
-import std/[monotimes, times]
+import std/[monotimes, times, os]
 import truss3D/[inputs, models, shaders, textures]
 import sdl2_nim/sdl except Keycode
 export models, shaders, textures, inputs, opengl
@@ -64,6 +64,7 @@ proc openGlDebug(source: GLenum,
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc) =
   if init(INIT_VIDEO) == 0:
+    setCurrentDir(getAppDir())
     app.isRunning = true
     discard glSetAttribute(GL_CONTEXT_MAJOR_VERSION, 4)
     discard glSetAttribute(GL_CONTEXT_MINOR_VERSION, 3)
