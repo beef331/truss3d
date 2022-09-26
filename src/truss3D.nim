@@ -113,11 +113,11 @@ when isMainModule:
     quitTruss()
 
   proc init() =
-    model = loadModel("assets/Cube.glb")
-    shader = loadShader(ShaderPath"assets/vert.glsl", ShaderPath"assets/frag.glsl")
+    model = loadModel("../assets/Cube.glb")
+    shader = loadShader(ShaderPath"../assets/vert.glsl", ShaderPath"../assets/frag.glsl")
     proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
     shader.setUniform "mvp", proj * view * mat4()
-    let sam = readImage"assets/Sam.jpg"
+    let sam = readImage"../assets/Sam.jpg"
     texture = genTexture()
     sam.copyTo texture
     shader.setUniform "tex", texture

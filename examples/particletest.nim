@@ -74,7 +74,7 @@ proc myUpdate*(particle: var Particle, dt: float32, ps: ParticleSystem) =
 
 proc init() =
   particleSystem = initParticleSystem(
-    "assets/Cube.glb",
+    "../assets/Cube.glb",
     vec3(5, 0, 5),
     vec4(1)..vec4(1, 0, 0, 1),
     1f,
@@ -84,7 +84,7 @@ proc init() =
   shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
   let screenSize = screenSize()
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
-  let sam = readImage"assets/Sam.jpg"
+  let sam = readImage"../assets/Sam.jpg"
   texture = genTexture()
   sam.copyTo texture
   shader.setUniform "tex", texture

@@ -80,11 +80,11 @@ proc randomizeSSBO() =
 
 
 proc init() =
-  model = loadInstancedModel[Buffer]("assets/Cube.glb")
+  model = loadInstancedModel[Buffer]("../assets/Cube.glb")
   shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
   let screenSize = screenSize()
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
-  let sam = readImage"assets/Sam.jpg"
+  let sam = readImage"../assets/Sam.jpg"
   texture = genTexture()
   sam.copyTo texture
   shader.setUniform "tex", texture
@@ -93,7 +93,7 @@ proc init() =
   audio.init()
   setListeningPos(cameraPos)
   setListeningDir(normalize(lookPos - cameraPos))
-  mySound = loadSound("./assets/test.wav", true, true)
+  mySound = loadSound("../assets/test.wav", true, true)
   for i, obj in model.ssboData.pairs:
     capture(i):
       let sound = mySound.play(proc(): Vec3 = model.ssboData[i].pos.xyz)

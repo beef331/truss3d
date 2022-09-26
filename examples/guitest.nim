@@ -20,16 +20,18 @@ var
   myVal: MyEnum
 
 proc init =
-  gui.fontPath = "assets/fonts/MarradaRegular-Yj0O.ttf"
+  gui.fontPath = "../assets/fonts/MarradaRegular-Yj0O.ttf"
   gui.init()
   glClearColor(0.1, 0.1, 0.1, 1)
+  let backgroundTex = genTexture()
+  readImage("../assets/uiframe.png").copyTo(backgroundTex)
   btns.add:
     makeUi(Button):
       pos = ivec2(10, 10)
       size = ivec2(200, 100)
       text = "Hmm"
       backgroundColor = vec4(0.6, 0.6, 0.6, 1)
-      backgroundTex = "assets/uiframe.png"
+      backgroundTex = backgroundTex
       nineSliceSize = 28f
       anchor = {left, top}
       onClick = proc() = echo "Hello World"
@@ -79,7 +81,7 @@ proc init =
         size = ivec2(100, 75)
         text = "Red"
         backgroundColor = vec4(1, 0, 0, 1)
-        backgroundTex = "assets/uiframe.png"
+        backgroundTex = backgroundTex
         nineSliceSize = 28f
         onClick = proc() =
           echo "Red"
@@ -87,7 +89,7 @@ proc init =
         size = ivec2(100, 75)
         text = "Green"
         backgroundColor = vec4(0, 1, 0, 1)
-        backgroundTex = "assets/uiframe.png"
+        backgroundTex = backgroundTex
         nineSliceSize = 28f
         onClick = proc() =
           echo "Green"
@@ -95,7 +97,7 @@ proc init =
         size = ivec2(100, 75)
         text = "Blue"
         backgroundColor = vec4(0, 0, 1, 1)
-        backgroundTex = "assets/uiframe.png"
+        backgroundTex = backgroundTex
         nineSliceSize = 28f
         onClick = proc() =
           echo "Blue"
