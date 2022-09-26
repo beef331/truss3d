@@ -79,7 +79,6 @@ method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = 
 
       if textArea.timeToInteraction == timeToInteraction:
         textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, textArea.hAlign, textArea.vAlign)
-        echo "inputed"
         if textArea.onTextChange != nil:
           textArea.onTextChange(textArea.text)
 
