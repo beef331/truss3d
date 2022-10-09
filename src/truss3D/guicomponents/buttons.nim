@@ -54,15 +54,15 @@ method draw*(button: Button, offset = ivec2(0), relativeTo = false) =
     glEnable(GlDepthTest)
     with uiShader:
       button.setupUniforms(uiShader)
-      uiShader.setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
-      uiShader.setUniform("color"):
+      setUniform("modelMatrix", button.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
+      setUniform("color"):
         if button.isOver(offset = offset):
           vec4(button.color.xyz * 0.5, button.color.w)
         else:
           button.color
 
 
-      uiShader.setUniform("backgroundColor"):
+      setUniform("backgroundColor"):
         if button.isOver(offset = offset, relativeTo = relativeTo):
           vec4(button.backgroundColor.xyz * 0.5, 1)
         else:

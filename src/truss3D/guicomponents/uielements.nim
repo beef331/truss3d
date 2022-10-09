@@ -85,16 +85,16 @@ template withBlend*(body: untyped) =
   glDisable(GlBlend)
 
 proc setupUniforms*(ui: UiElement, shader: Shader) =
-  uishader.setUniform("color", ui.color)
-  uishader.setUniform("tex", ui.texture)
-  uiShader.setUniform("size", ui.size.vec2)
-  uishader.setUniform("hasTex", ui.texture.int)
-  uiShader.setUniform("backgroundTex", ui.backgroundTex)
-  uiShader.setUniform("backgroundColor", ui.backgroundColor)
+  setUniform("color", ui.color)
+  setUniform("tex", ui.texture)
+  setUniform("size", ui.size.vec2)
+  setUniform("hasTex", ui.texture.int)
+  setUniform("backgroundTex", ui.backgroundTex)
+  setUniform("backgroundColor", ui.backgroundColor)
   if ui.isNineSliced:
-    uiShader.setUniform("nineSliceSize", ui.nineSliceSize)
+    setUniform("nineSliceSize", ui.nineSliceSize)
   else:
-    uiShader.setUniform("nineSliceSize", 0f)
+    setUniform("nineSliceSize", 0f)
 
 
 method update*(ui: UiElement, dt: float32, offset = ivec2(0), relativeTo = false) {.base.} = discard

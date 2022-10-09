@@ -102,6 +102,6 @@ proc update(dt: float32) =
 proc draw() =
   with shader:
     glEnable(GlDepthTest)
-    shader.setUniform("VP", proj * view)
+    setUniform("VP", proj * view)
     particleSystem.render()
 initTruss("Test", ivec2(1280, 720), init, update, draw)

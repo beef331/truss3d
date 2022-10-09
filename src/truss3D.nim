@@ -116,20 +116,20 @@ when isMainModule:
     model = loadModel("../assets/Cube.glb")
     shader = loadShader(ShaderPath"../assets/vert.glsl", ShaderPath"../assets/frag.glsl")
     proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
-    shader.setUniform "mvp", proj * view * mat4()
     let sam = readImage"../assets/Sam.jpg"
     texture = genTexture()
     sam.copyTo texture
+    shader.setUniform "mvp", proj * view * mat4()
     shader.setUniform "tex", texture
 
-  proc update(dt: float32) =
-    view = lookAt(vec3(sin(time) * 4, 1, -3), vec3(0, 0, 0), vec3(0, 1, 0))
-    proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
-    shader.setUniform "mvp", proj * view * mat4()
+  proc update(dt: float32) = discard
 
 
   proc draw() =
     with shader:
+      view = lookAt(vec3(sin(time) * 4, 1, -3), vec3(0, 0, 0), vec3(0, 1, 0))
+      proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
+      setUniform "mvp", proj * view * mat4()
       glEnable(GlDepthTest)
       model.render
   initTruss("Test", ivec2(1280, 720), init, update, draw)

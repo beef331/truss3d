@@ -98,7 +98,7 @@ method draw*(textArea: TextArea, offset = ivec2(0), relativeTo = false) =
     with uishader:
       glEnable(GlDepthTest)
       textArea.setupUniforms(uiShader)
-      uiShader.setUniform("modelMatrix", textArea.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
+      setUniform("modelMatrix", textArea.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
       withBlend:
         render(uiQuad)
 

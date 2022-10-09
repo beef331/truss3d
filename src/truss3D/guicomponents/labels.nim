@@ -65,6 +65,6 @@ method draw*(label: Label, offset = ivec2(0), relativeTo = false) =
   if label.shouldRender:
     with uishader:
       label.setupUniforms(uiShader)
-      uiShader.setUniform("modelMatrix", label.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
+      setUniform("modelMatrix", label.calculateAnchorMatrix(offset = offset, relativeTo = relativeTo))
       withBlend:
         render(uiQuad)

@@ -32,7 +32,6 @@ template with*(shader: Shader, body: untyped) =
   finally:
     Shader(activeProgram).makeActive
 
-
 proc loadShader*(shader: string, kind: ShaderKind): Gluint =
   let
     shaderProg = shader.cstring
@@ -171,3 +170,13 @@ proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
     if loc != -1:
       glBindTextureUnit(loc.Gluint, tex.GLuint);
       glUniform1i(loc, loc)
+
+
+type Uniform* = concept u
+  var s: Shader
+  s.setUniform("", u)
+
+proc setUniform*(name: string, uniform: Uniform) =
+  var activeProgram: Gluint
+  glGetIntegerv(GlCurrentProgram, cast[ptr Glint](addr activeProgram))
+  Shader(activeProgram).setUniform(name, uniform)
