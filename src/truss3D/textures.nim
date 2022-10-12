@@ -108,7 +108,9 @@ proc resize*(fb: var FrameBuffer, size: IVec2) =
 
 template with*(fb: FrameBuffer, body: untyped) = 
   block:
+    var currentBuffer: FrameBuffer
+    glGetIntegerv(GlDrawFrameBuffer, cast[ptr Glint](addr Gluint(currentBuffer.id)))
     fb.bindBuffer()
     body
-    unbindFrameBuffer()
+    currentBuffer.bindBuffer()
     #glClear(GLDepthbufferBit or GlColorBufferBit)

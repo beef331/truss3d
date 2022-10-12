@@ -1,4 +1,4 @@
-import opengl, vmath, pixie
+import opengl
 import std/[tables, typetraits, os]
 import textures
 
@@ -22,6 +22,9 @@ const KindLut = [
 var shaderPath* = ""
 
 proc makeActive*(shader: Shader) = glUseProgram(Gluint(shader))
+
+proc getActiveShader*(): Shader =
+  glGetIntegerv(GlCurrentProgram, cast[ptr Glint](addr result))
 
 template with*(shader: Shader, body: untyped) =
   var activeProgram: Gluint
@@ -125,58 +128,88 @@ proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
   glNamedBufferData(GlShaderStorageBuffer, slice.a * sizeof(int16), (slice.b - slice.a) * sizeOf(
       int16), newData)
   unbindSsbo()
+type
+  Vec2 = concept v
+    v.x is float32
+    v.y is float32
+    not compiles(v.z)
+  Vec3 = concept v
+    v.x is float32
+    v.y is float32
+    v.z is float32
+    not compiles(v.w)
+  Vec4 = concept v
+    v.x is float32
+    v.y is float32
+    v.z is float32
+    v.w is float32
+  Mat = concept type M
+    supportsCopyMem(M)
+  Mat2V = concept m, type M
+    m[0] is Vec2
+  Mat3V = concept m, type M
+    m[0] is Vec3
+  Mat4v = concept m, type M
+    m[0] is Vec4
 
+  Matf[Comps: static int] = concept m, type M
+    m[0] is float32
+    sizeof(M) == (Comps * Comps) * sizeof(float32)
 
+  Mat2 = Mat and (Mat2V or Matf[2]) and not (Vec2 or Vec3 or Vec4)
+  Mat3 = Mat and (Mat3V or Matf[3]) and not (Vec2 or Vec3 or Vec4)
+  Mat4 = Mat and (Mat4V or Matf[4]) and not (Vec2 or Vec3 or Vec4)
 
-proc setUniform*(shader: Shader, uniform: string, value: float32) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
+template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
+  bind glGetUniformLocation, Gluint
+  when declared(shader):
+    with shader:
+      let loc = glGetUniformLocation(Gluint(shader), uniform)
+      if loc != -1:
+        body
+  else:
+    let
+      shader = getActiveShader()
+      loc = glGetUniformLocation(Gluint(shader), uniform)
     if loc != -1:
-      glUniform1f(loc, value.GlFloat)
+      body
 
-proc setUniform*(shader: Shader, uniform: string, value: int32) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
-    if loc != -1:
-      glUniform1i(loc, value.Glint)
-
-proc setUniform*(shader: Shader, uniform: string, value: Vec4) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
-    if loc != -1:
-      glUniform4f(loc, value.x, value.y, value.z, value.w)
-
-proc setUniform*(shader: Shader, uniform: string, value: Vec2) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
-    if loc != -1:
-      glUniform2f(loc, value.x, value.y)
-
-proc setUniform*(shader: Shader, uniform: string, value: Color) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
-    if loc != -1:
-      glUniform4f(loc, value.r, value.g, value.b, value.a)
-
-proc setUniform*(shader: Shader, uniform: string, value: Mat4) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
-    if loc != -1:
-      glUniformMatrix4fv(loc, 1, GlFalse, value[0, 0].unsafeAddr)
-
-proc setUniform*(shader: Shader, uniform: string, tex: Texture) =
-  with shader:
-    let loc = glGetUniformLocation(shader.Gluint, uniform)
-    if loc != -1:
-      glBindTextureUnit(loc.Gluint, tex.GLuint);
-      glUniform1i(loc, loc)
+template makeSetter(T: typedesc, body: untyped) {.dirty.} =
+  proc setUniform*(uniform: string, value: T) =
+    insideUniform(uniform, value):
+      body
+  proc setUniform*(shader: Shader, uniform: string, value: T) =
+    insideUniform(uniform, value):
+      body
 
 
-type Uniform* = concept u
-  var s: Shader
-  s.setUniform("", u)
+makeSetter(float32):
+  glUniform1f(loc, value.GlFloat)
 
-proc setUniform*(name: string, uniform: Uniform) =
-  var activeProgram: Gluint
-  glGetIntegerv(GlCurrentProgram, cast[ptr Glint](addr activeProgram))
-  Shader(activeProgram).setUniform(name, uniform)
+makeSetter(int32):
+  glUniform1i(loc, value.Glint)
+
+makeSetter(Vec2):
+  mixin x, y, z, w
+  glUniform2f(loc, value.x, value.y)
+
+makeSetter(Vec3):
+  mixin x, y, z, w
+  glUniform3f(loc, value.x, value.y, value.z)
+
+makeSetter(Vec4):
+  mixin x, y, z, w
+  glUniform4f(loc, value.x, value.y, value.z, value.w)
+
+makeSetter(Mat2):
+  glUniformMatrix2fv(loc, 1, GlFalse,cast[ptr float32](value.unsafeAddr))
+
+makeSetter(Mat3):
+  glUniformMatrix3fv(loc, 1, GlFalse, cast[ptr float32](value.unsafeAddr))
+
+makeSetter(Mat4):
+  glUniformMatrix4fv(loc, 1, GlFalse, cast[ptr float32](value.unsafeaddr))
+
+makeSetter(Texture):
+  glBindTextureUnit(loc.Gluint, value.GLuint);
+  glUniform1i(loc, loc)
