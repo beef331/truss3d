@@ -128,6 +128,7 @@ proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
   glNamedBufferData(GlShaderStorageBuffer, slice.a * sizeof(int16), (slice.b - slice.a) * sizeOf(
       int16), newData)
   unbindSsbo()
+
 type
   Vec2 = concept v
     v.x is float32
@@ -152,13 +153,19 @@ type
   Mat4v = concept m, type M
     m[0] is Vec4
 
-  Matf[Comps: static int] = concept m, type M
+  Mat2f = concept m, type M
     m[0] is float32
-    sizeof(M) == (Comps * Comps) * sizeof(float32)
+    sizeof(M) == 4 * sizeof(float32)
+  Mat3f = concept m, type M
+    m[0] is float32
+    sizeof(M) == 9 * sizeof(float32)
+  Mat4f = concept m, type M
+    m[0] is float32
+    sizeof(M) == 16 * sizeof(float32)
 
-  Mat2 = Mat and (Mat2V or Matf[2]) and not (Vec2 or Vec3 or Vec4)
-  Mat3 = Mat and (Mat3V or Matf[3]) and not (Vec2 or Vec3 or Vec4)
-  Mat4 = Mat and (Mat4V or Matf[4]) and not (Vec2 or Vec3 or Vec4)
+  Mat2 = Mat and (Mat2V or Mat2f) and not (Vec2 or Vec3 or Vec4)
+  Mat3 = Mat and (Mat3V or Mat3f) and not (Vec2 or Vec3 or Vec4)
+  Mat4 = Mat and (Mat4V or Mat4f) and not (Vec2 or Vec3 or Vec4)
 
 template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
   bind glGetUniformLocation, Gluint
