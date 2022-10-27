@@ -21,7 +21,7 @@ layout(std430) struct data{
   float reserved; // Not needed but here to match the CPU side
 };
 
-layout(std430, binding = 1) buffer instanceData{
+layout(std430, binding = 0) buffer instanceData{
   data instData[];
 };
 

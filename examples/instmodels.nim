@@ -24,7 +24,7 @@ struct data{
   vec4 scale;
 };
 
-layout(std430, binding = 1) buffer instanceData{
+layout(std430, binding = 0) buffer instanceData{
   data instData[];
 };
 
