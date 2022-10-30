@@ -219,3 +219,8 @@ makeSetter(Mat4):
 makeSetter(Texture):
   glBindTextureUnit(loc.Gluint, value.GLuint);
   glUniform1i(loc, loc)
+
+makeSetter(TextureArray):
+  glBindTextureUnit(loc.Gluint, value.GLuint);
+  glUniform1i(loc, loc)
+

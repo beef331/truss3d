@@ -8,6 +8,7 @@ type
     tfR
 
   Texture* = distinct Gluint
+  TextureArray* = distinct Gluint
   RenderBuffer* = distinct GLuint
   FrameBufferId* = distinct Gluint
 
@@ -43,6 +44,16 @@ const
 proc genTexture*(): Texture =
   glCreateTextures(GlTexture2D, 1, result.Gluint.addr)
 
+
+proc genTextureArray*(width, height, depth: int, mipMapLevel = 1): TextureArray =
+  glCreateTextures(GlTexture2dArray, 1, result.Gluint.addr)
+  glTextureStorage3D(Gluint(result), GlSizei mipMapLevel, GlRgba8, GlSizei width, GlSizei height, GlSizei depth)
+  glBindTexture(GlTexture2dArray, Gluint(result))
+  glTexParameteri(GlTexture2dArray, GlTextureMinFilter, GL_NEAREST);
+  glTexParameteri(GlTexture2dArray, GlTextureMagFilter, GL_NEAREST);
+  glTexParameteri(GlTexture2dArray, GlTextureWrapS, GlClampToEdge);
+  glTexParameteri(GlTexture2dArray, GlTextureWrapT, GlClampToEdge);
+
 proc delete*(tex: var Texture) =
   glDeleteTextures(1, tex.Gluint.addr)
 
@@ -57,6 +68,21 @@ proc copyTo*(img: Image, tex: Texture) =
                       GlRgba,
                       GlUnsignedByte,
                       img.data[0].unsafeAddr)
+
+proc copyTo*(img: Image, tex: TextureArray, depth: int) =
+  glTextureSubImage3D(
+    tex.Gluint,
+    0,
+    0,
+    0,
+    0,
+    img.width.GlSizei,
+    img.height.GlSizei,
+    GlSizei depth,
+    GlRgba,
+    GlUnsignedByte,
+    img.data[0].unsafeAddr
+  )
 
 template with*(fb: FrameBuffer, body: untyped) =
   block:
