@@ -47,12 +47,13 @@ proc genTexture*(): Texture =
 
 proc genTextureArray*(width, height, depth: int, mipMapLevel = 1): TextureArray =
   glCreateTextures(GlTexture2dArray, 1, result.Gluint.addr)
-  glTextureStorage3D(Gluint(result), GlSizei mipMapLevel, GlRgba8, GlSizei width, GlSizei height, GlSizei depth)
   glBindTexture(GlTexture2dArray, Gluint(result))
+  glTextureStorage3D(Gluint(result), GlSizei mipMapLevel, GlRgba8, GlSizei width, GlSizei height, GlSizei depth)
   glTexParameteri(GlTexture2dArray, GlTextureMinFilter, GL_NEAREST);
   glTexParameteri(GlTexture2dArray, GlTextureMagFilter, GL_NEAREST);
   glTexParameteri(GlTexture2dArray, GlTextureWrapS, GlClampToEdge);
   glTexParameteri(GlTexture2dArray, GlTextureWrapT, GlClampToEdge);
+  glBindTexture(GlTexture2dArray, 0)
 
 proc delete*(tex: var Texture) =
   glDeleteTextures(1, tex.Gluint.addr)
@@ -75,10 +76,10 @@ proc copyTo*(img: Image, tex: TextureArray, depth: int) =
     0,
     0,
     0,
-    0,
+    GlSizei depth,
     img.width.GlSizei,
     img.height.GlSizei,
-    GlSizei depth,
+    GlSizei 1,
     GlRgba,
     GlUnsignedByte,
     img.data[0].unsafeAddr
