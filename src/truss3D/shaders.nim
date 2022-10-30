@@ -119,7 +119,7 @@ proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
     else:
       sizeof(val)
   ssbo.bindBuffer()
-  glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[0].unsafeAddr, GlDynamicDraw)
+  glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[val.low].unsafeAddr, GlDynamicDraw)
   unbindSsbo()
 
 proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
@@ -188,7 +188,6 @@ template makeSetter(T: typedesc, body: untyped) {.dirty.} =
   proc setUniform*(shader: Shader, uniform: string, value: T) =
     insideUniform(uniform, value):
       body
-
 
 makeSetter(float32):
   glUniform1f(loc, value.GlFloat)
