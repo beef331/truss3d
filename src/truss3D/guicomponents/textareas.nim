@@ -57,6 +57,10 @@ proc renderTextBlock(tex: textures.Texture, size: IVec2, message: string, fontSi
   image.copyTo(tex)
 
 
+proc setMessage*(textArea: TextArea, s: string) =
+  textArea.text = s
+  textArea.texture.renderTextBlock(textArea.size, textArea.text, textArea.fontSize, textArea.hAlign, textArea.vAlign)
+
 
 method update*(textArea: TextArea, dt: float32, offset = ivec2(0), relativeTo = false) =
   let lmbPressed = leftMb.isPressed
