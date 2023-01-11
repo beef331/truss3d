@@ -62,7 +62,7 @@ proc openGlDebug(source: GLenum,
     echo str
 
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
-    drawProc: DrawProc) =
+    drawProc: DrawProc; vsync = false) =
   if init(INIT_VIDEO) == 0:
     setCurrentDir(getAppDir())
     app.isRunning = true
@@ -75,7 +75,7 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     glClearColor(0.0, 0.0, 0.0, 1)
     glClearDepth(1)
     enableAutoGLerrorCheck(false)
-    discard glSetSwapInterval(0.cint)
+    discard glSetSwapInterval(cint(ord(vSync)))
     when defined(debug):
       glEnable(GlDebugOutput)
       glDebugMessageCallback(openGlDebug, nil)

@@ -1,6 +1,6 @@
 import opengl
 import std/[tables, typetraits, os]
-import textures
+import textures, mathtypes
 
 type
   ShaderKind* = enum
