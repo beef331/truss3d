@@ -141,7 +141,7 @@ proc setInputText*(str: string) =
 
 proc inputText*(): lent string = textInput.text
 
-proc pollInputs*(screenSize: var IVec2, dt: float32) =
+proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
   resetInputs(dt)
 
   var e: Event
@@ -181,6 +181,8 @@ proc pollInputs*(screenSize: var IVec2, dt: float32) =
         screenSize.x = e.window.data1
         screenSize.y = e.window.data2
         glViewport(0, 0, screenSize.x, screenSize.y)
+      of WindowEventClose:
+        isRunning = false
       else: discard
     of sdl.TextInput:
       textInput.text.add $e.text.text

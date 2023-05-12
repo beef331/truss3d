@@ -37,7 +37,7 @@ proc update =
     let dt = (getMonoTime() - lastFrame).inNanoseconds.float / 1000000000
     time += dt
     lastFrame = getMonoTime()
-    pollInputs(app.windowSize, dt)
+    pollInputs(app.windowSize, dt, app.isRunning)
     gupdateProc(dt)
     glBindFramebuffer(GlFrameBuffer, 0)
     glClear(GlColorBufferBit or GlDepthBufferBit)
