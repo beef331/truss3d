@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.2"
+version       = "0.1.3"
 author        = "Jason"
 description   = "Simple 2D/3D framework"
 license       = "MIT"
