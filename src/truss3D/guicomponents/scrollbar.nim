@@ -18,7 +18,7 @@ proc new*[T](
   minMax: Slice[T],
   color, backgroundColor: Vec4,
   direction = InteractDirection.horizontal,
-  anchor = {left, top},
+  anchor = {AnchorDirection.left, top},
   onValueChange: proc(a: T){.closure.} = nil
 ): ScrollBar[T] =
   result = ScrollBar[T](
@@ -40,7 +40,7 @@ proc new*[T](
   backgroundColor = vec4(0.1, 0.1, 0.1, 1);
   startPercentage: float32;
   direction = InteractDirection.horizontal;
-  anchor = {left, top};
+  anchor = {AnchorDirection.left, top};
   onValueChange: proc(a: T){.closure.} = nil;
   watchValue: proc(): T {.closure.} = nil
 ): ScrollBar[T] =

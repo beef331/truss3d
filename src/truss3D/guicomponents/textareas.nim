@@ -18,7 +18,7 @@ proc new*(
   fontSize = 11f;
   backgroundColor = vec4(0.5, 0.5, 0.5, 1);
   color = vec4(1);
-  anchor = {left, top};
+  anchor = {AnchorDirection.left, top};
   onTextChange: proc(s: string) = nil,
   hAlign = CenterAlign,
   vAlign = MiddleAlign

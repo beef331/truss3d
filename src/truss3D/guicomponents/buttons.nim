@@ -15,7 +15,7 @@ proc new*(
   backgroundTex: Texture or string = Texture(0);
   backgroundColor = vec4(0.3, 0.3, 0.3, 1);
   fontColor = vec4(1);
-  anchor = {left, top};
+  anchor = {AnchorDirection.left, top};
   fontSize = 30f;
   labelLimit = 10;
   onClick = (proc(){.closure.})(nil);

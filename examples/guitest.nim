@@ -33,7 +33,7 @@ proc init =
       backgroundColor = vec4(0.6, 0.6, 0.6, 1)
       backgroundTex = backgroundTex
       nineSliceSize = 28f
-      anchor = {left, top}
+      anchor = {AnchorDirection.left, top}
       onClick = proc() = echo "Hello World"
 
   btns.add:
@@ -42,7 +42,7 @@ proc init =
       size = ivec2(200, 100)
       text = "Is this text?!"
       color = vec4(0.5)
-      anchor = {left, bottom}
+      anchor = {AnchorDirection.left, bottom}
       onClick = proc() = echo "Hello World"
 
   btns.add:
@@ -51,7 +51,7 @@ proc init =
       size = ivec2(200, 100)
       text = "So much memory being wasted."
       color = vec4(0.5)
-      anchor = {bottom, right}
+      anchor = {AnchorDirection.bottom, right}
       onClick = proc() = echo "Hello World"
 
   btns.add:
@@ -68,7 +68,7 @@ proc init =
       size = ivec2(200, 100)
       text = "Swap dropdown pos"
       color = vec4(0.5)
-      anchor = {top, right}
+      anchor = {AnchorDirection.top, right}
       onClick = proc() =
         swap(myDropDown.anchor, btns[2].anchor)
 
@@ -131,11 +131,11 @@ proc init =
     fontColor = vec4(0, 0, 0, 1)
     color = vec4(0.75, 0.6, 0.75, 1)
     values = MyEnum.toSeq
-    anchor = {right}
+    anchor = {AnchorDirection.right}
     onValueChange = proc(a: MyEnum) = myVal = a
 
   textArea = makeUi(TextArea):
-    anchor = {left}
+    anchor = {AnchorDirection.left}
     size = ivec2(100, 100)
     fontSize = 40
     backgroundColor = vec4(0.3, 0.3, 0.3, 1)

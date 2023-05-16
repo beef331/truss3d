@@ -11,7 +11,7 @@ type LayoutGroup* = ref object of UiElement
 proc new*(
   _: typedesc[LayoutGroup];
   pos, size: IVec2;
-  anchor = {top, left};
+  anchor = {AnchorDirection.top, left};
   margin = 10;
   layoutDirection = InteractDirection.horizontal;
   centre = true

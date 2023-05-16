@@ -24,7 +24,7 @@ proc new*[T](
   backgroundTex: Texture or string = Texture(0);
   nineSliceSize = 0f32;
   margin = 10;
-  anchor = {top, left};
+  anchor = {AnchorDirection.top, left};
   onValueChange: proc(a: T){.closure.} = nil;
   watchValue: proc(): T {.closure.} = nil
   ): DropDown[T] =
@@ -70,7 +70,7 @@ proc new*[T](
   backgroundTex: Texture or string = Texture(0);
   nineSliceSize = 0f32;
   margin = 10;
-  anchor = {top, left};
+  anchor = {AnchorDirection.top, left};
   onValueChange : proc(a: T){.closure.} = nil;
   watchValue: proc(): T {.closure.} = nil
   ): DropDown[T] =

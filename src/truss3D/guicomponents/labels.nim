@@ -13,7 +13,7 @@ proc new*(
   text: string;
   color = vec4(1);
   backgroundColor = vec4(0);
-  anchor = {left, top};
+  anchor = {AnchorDirection.left, top};
   horizontalAlignment = CenterAlign;
   verticalAlignment = MiddleAlign;
   fontsize = 30f;
