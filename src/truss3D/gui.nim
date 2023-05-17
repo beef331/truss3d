@@ -1,124 +1,130 @@
-import vmath, pixie, truss3D
-import truss3D/[textures, shaders, inputs, models]
-import std/[options, sequtils, sugar, macros, genasts]
-export pixie
+import std/typetraits
+import oopsie
 
 type
-  GuiState* = enum
-    nothing, over, interacted
+  InteractDirection* = enum
+    horizontal, vertical
+
+  AnchorDirection* = enum
+    left, right, top, bottom
+
+  Vec3 = concept vec, type V
+    vec.x is float32
+    vec.y is float32
+    vec.z is float32
+    not compiles(vec.w)
+    V.init(float32, float32, float32)
+    vec + vec is V
 
 
+  Vec2 = concept vec, type V
+    vec.x is float32
+    vec.y is float32
+    not compiles(vec.z)
+    V.init(float32, float32)
+    vec + vec is V
 
-const
-  vertShader = ShaderFile"""
-#version 430
-
-layout(location = 0) in vec3 vertex_position;
-layout(location = 2) in vec2 uv;
-
-
-uniform mat4 modelMatrix;
-
-out vec2 fuv;
+  UiFlag = enum
+    interactable
+    enabled
 
 
-void main() {
-  gl_Position = modelMatrix * vec4(vertex_position, 1.0);
-  fuv = uv;
-}
-"""
-  fragShader = ShaderFile"""
-#version 430
-out vec4 frag_color;
+  UiElement*[SizeVec: Vec2, PosVec: Vec3] = ref object of RootObj # refs allow closures to work
+    size*, layoutSize*: SizeVec
+    pos*, layoutPos*: PosVec
+    flags*: set[UiFlag]
+    anchor*: set[AnchorDirection]
 
-uniform sampler2D tex;
-uniform sampler2D backgroundTex;
-uniform float nineSliceSize;
+  UiAction* = enum
+    nothing
+    overElement
+    interacted
+    inputing
 
+  UiInputKind* = enum
+    textInput
+    leftClick
+    rightClick
 
-uniform int hasTex;
-uniform vec4 color;
-uniform vec4 backgroundColor;
+  UiInput* = object
+    case kind*: UiInputKind
+    of textInput:
+      str*: string
+    of leftClick, rightClick:
+      discard
 
-uniform vec2 size;
+  UiState* = object
+    action*: UiAction
+    overElement*: int
+    currentId*: int
+    input*: UiInput
 
-in vec2 fuv;
-
-void main() {
-  if(nineSliceSize > 0){
-    ivec2 texSize = textureSize(backgroundTex, 0);
-    vec2 realUv = size * fuv;
-    vec2 myUv = fuv;
-    if(realUv.x < nineSliceSize){
-      myUv.x = realUv.x / (texSize.x - nineSliceSize);
-    }
-    if(realUv.x > size.x - nineSliceSize){
-      myUv.x = (realUv.x - size.x) / (texSize.x - nineSliceSize);
-    }
-    if(realUv.y < nineSliceSize){
-      myUv.y = realUv.y / (texSize.x - nineSliceSize);
-    }
-    if(realUv.y > size.y - nineSliceSize){
-      myUv.y = (realUv.y - size.y) / (texSize.x - nineSliceSize);
-    }
-    frag_color = texture(backgroundTex, myUv) * backgroundColor;
-  }
-  else if(hasTex > 0){
-    vec4 newCol = texture(tex, fuv);
-    vec4 oldCol = frag_color;
-    frag_color = mix(frag_color, newCol * color, newCol.a);
-    frag_color = mix(frag_color, backgroundColor, 1.0 - frag_color.a);
-  }else{
-    frag_color = color;
-  }
-}
-"""
-
-
-var
-  uiShader*: Shader
-  uiQuad*: Model
-  guiState* = GuiState.nothing
-
-
-proc init*() =
-  uiShader = loadShader(vertShader, fragShader)
-  var meshData: MeshData[Vec2]
-  meshData.appendVerts([vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items)
-  meshData.append([0u32, 1, 2, 0, 2, 3].items)
-  meshData.appendUv([vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items)
-  uiQuad = meshData.uploadData()
-
-import guicomponents/[dropdowns, buttons, labels, scrollbar, uielements, layoutgroups, textareas]
-export dropdowns, buttons, labels, scrollbar, uielements, layoutgroups, textareas
-
-
-macro makeUi*(t: typedesc, body: untyped): untyped =
-  ## Nice DSL to make life less of a chore
-  let
-    constr = newCall("new", t)
-    childrenAdd = newStmtList()
-    uiName = genSym(nskVar, "ui")
-  var visCond: NimNode
-  var gotPos = false
-
-  for statement in body:
-    if statement[0].eqIdent"children":
-      for child in statement[1]:
-        childrenAdd.add newCall("add", uiName, child)
+proc onlyUiElems*(t: typedesc[tuple]): bool =
+  var val: t
+  for field in fields(val):
+    when field is tuple:
+      when not onlyUiElems(field):
+        return false
     else:
-      if statement[0].eqIdent"pos":
-        gotPos = true
-      if statement[0].eqIdent"visibleCond":
-        visCond = statement[1]
+      when rootSuper(field) isnot UiElement:
+        return false
+  true
+
+type UiElements* = concept ui, type UI
+  onlyUiElems(Ui)
+
+
+proc isOver[S, P](ui: UiElement[S, P], pos: Vec2): bool =
+  pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
+  pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
+
+proc layouter[S, P](ui: UiElement[S, P], parent: UiElement[S, P], hasParent: bool, offset: P) =
+  if hasParent:
+    ui.layoutPos = ui.pos + parent.pos + offset
+    ui.layoutSize = ui.size
+  else:
+    ui.layoutPos = ui.pos + offset
+    ui.layoutSize = ui.size
+
+
+proc layout*[S, P](ui: UIElement[S, P], parent: UiElement[S, P], hasParent: bool, offset: P) =
+  mixin layouter
+  layouter(ui, parent, hasParent, offset)
+
+proc layout*[T: UiElements; Y: UiElement](ui: T, parent: Y, hasParent: bool, offset: Y.PosVec) =
+  mixin layouter
+  for field in ui.fields:
+    layouter(field, default(Y), false, offset)
+
+
+proc onClick[S, P](ui: UiElement[S, P], state: var UiState) = discard
+proc onEnter[S, P](ui: UiElement[S, P], state: var UiState) = discard
+proc onHover[S, P](ui: UiElement[S, P], state: var UiState) = discard
+proc onExit[S, P](ui: UiElement[S, P], state: var UiState) = discard
+
+proc interacter*(ui: auto, ind: var int, state: var UiState, inputPos: Vec2) =
+  mixin onClick, onEnter, onHover, onExit
+  if interactable in ui.flags:
+    if state.action == nothing:
+      if isOver(ui, inputPos):
+        onEnter(ui, state)
+        state.action = overElement
+        state.currentId = ind
+    if state.currentId == ind:
+      if isOver(ui, inputPos):
+        if state.input.kind == leftClick:
+          onClick(ui, state)
+        onHover(ui, state)
       else:
-        constr.add nnkExprEqExpr.newTree(statement[0], statement[1])
-  if not gotPos:
-    constr.add nnkExprEqExpr.newTree(ident"pos", newCall("ivec2", newLit 0))
-  result = genast(uiName, childrenAdd, constr, visCond):
-    block:
-      var uiName = constr
-      when visCond != nil:
-        uiName.visibleCond = visCond
-      childrenAdd
-      uiName
+        onExit(ui, state)
+        state.action = nothing
+  inc ind
+
+proc interact*[T: UiElements](ui: T, ind: var int, state: var UiState, inputPos: Vec2) =
+  mixin interacter
+  for field in ui.fields:
+    interacter(field, ind, state, inputPos)
+
+proc upload*[T](ui: UiElements, ind: var int, state: var UiState, target: T) =
+  for field in ui.fields:
+    upload(field, ind, state, target)
