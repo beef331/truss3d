@@ -1,8 +1,9 @@
-import vmath, pixie, truss3D, opengl
-import truss3D/[textures, shaders, inputs, models, gui]
+import vmath, pixie, opengl
+import ../../truss3D
+import ../[textures, shaders, inputs, models, instancemodels]
 import std/options
 
-export vmath, textures, shaders, options, shaders, inputs, options, pixie, gui, models, opengl, truss3D
+export vmath, textures, shaders, options, shaders, inputs, options, pixie, models, opengl, truss3D
 type
   InteractDirection* = enum
     horizontal, vertical
@@ -10,116 +11,105 @@ type
   AnchorDirection* = enum
     left, right, top, bottom
 
-  UiElement* = ref object of RootObj
-    pos*: IVec2
+  UiRenderObj* = object
+    color*: Vec4
+    foreground*: Texture
+    background*: Texture
+    matrix*: Mat4
+
+  UiRenderInstance* = object
+    shader: int
+    instance: InstancedModel[UiRenderObj]
+
+  UiRenderList* = object
+    shaders: seq[Shader]
+    instances: seq[UiRenderInstance]
+
+  UiElement* = object of RootObj
+    layoutPos*: IVec3
+    layoutSize*: IVec2
+    pos*: IVec3
     size*: IVec2
     color*: Vec4
+    tex*: Texture
     anchor*: set[AnchorDirection]
-    visibleCond*: proc(): bool {.closure.}
-    isNineSliced*: bool
-    nineSliceSize*: float32
-    backgroundTex*: Texture
-    texture*: Texture
-    backgroundColor*: Vec4
-    zDepth*: float32
 
 
-proc shouldRender*(ui: UiElement): bool =
- ui.visibleCond.isNil or ui.visibleCond()
+  UiAction = enum
+    nothing
+    overElement
+    interacted
+    inputing
 
-proc calculatePos*(ui: UiElement, offset = ivec2(0), relativeTo = false): IVec2 =
-  ## `relativeTo` controls whether we draw from offset or with offset added to the screenpos
-  if not relativeTo:
-    let scrSize = screenSize()
+  UiState = object
+    action: UiAction
+    overElement: int
+    currentId: int
 
-    if left in ui.anchor:
-      result.x = ui.pos.x
-    elif right in ui.anchor:
-      result.x = scrSize.x - ui.pos.x - ui.size.x
+proc onlyUiElems(t: tuple): bool =
+  for x in fields(t):
+    when x is tuple:
+      if not onlyUiElems(x):
+        return false
     else:
-      result.x = scrSize.x div 2 - ui.size.x div 2 + ui.pos.x
-
-    if top in ui.anchor:
-      result.y = ui.pos.y
-    elif bottom in ui.anchor:
-      result.y = scrSize.y - ui.pos.y - ui.size.y
-    else:
-      result.y = scrSize.y div 2 - ui.size.y div 2 + ui.pos.y
-    result += offset
-  else:
-    result = offset
-    if bottom in ui.anchor:
-      result.y -= ui.pos.y + ui.size.y
-      if right in ui.anchor:
-        result.x -= ui.pos.x + ui.size.x
-      else:
-        result.x += ui.pos.x
-    elif top in ui.anchor:
-      result.y += ui.pos.y
-      if right in ui.anchor:
-        result.x -= ui.pos.x + ui.size.x
-      else:
-        result.x += ui.pos.x
+      if x isnot UiElement:
+        return false
+  true
 
 
-proc isOver*(ui: UiElement, pos = getMousePos(), offset = ivec2(0), relativeTo = false): bool =
-  let realUiPos = ui.calculatePos(offset, relativeTo)
-  pos.x in realUiPos.x .. realUiPos.x + ui.size.x and pos.y in realUiPos.y .. realUiPos.y + ui.size.y and guiState == GuiState.nothing
+type UiElements* = concept ui
+  onlyUiElems(ui)
 
-proc calculateAnchorMatrix*(ui: UiElement, size = none(Vec2), offset = ivec2(0), relativeTo = false): Mat4 =
+proc calculateAnchorMatrix*(ui: UiElement): Mat4 =
   let
     scrSize = screenSize()
-    scale =
-      if size.isNone:
-        ui.size.vec2 * 2 / scrSize.vec2
-      else:
-        size.get * 2 / scrSize.vec2
-  var pos = ui.calculatePos(offset, relativeTo).vec2 / scrSize.vec2
+    scale = vec2(ui.layoutSize.xy) * 2 / scrSize.vec2
+  var pos = vec2(ui.layoutPos.xy) / scrSize.vec2
   pos.y *= -1
-  translate(vec3(pos * 2 + vec2(-1, 1 - scale.y), ui.zDepth)) * scale(vec3(scale, 0))
+  translate(vec3(pos * 2 + vec2(-1, 1 - scale.y), float32 ui.pos.z)) * scale(vec3(scale, 0))
 
-template withBlend*(body: untyped) =
-  glEnable(GlBlend)
-  glBlendFunc(GlOne, GlOneMinusSrcAlpha)
-  body
-  glDisable(GlBlend)
 
-proc setupUniforms*(ui: UiElement, shader: Shader) =
-  setUniform("color", ui.color)
-  setUniform("tex", ui.texture)
-  setUniform("size", ui.size.vec2)
-  setUniform("hasTex", ui.texture.int)
-  setUniform("backgroundTex", ui.backgroundTex)
-  setUniform("backgroundColor", ui.backgroundColor)
-  if ui.isNineSliced:
-    setUniform("nineSliceSize", ui.nineSliceSize)
+proc isOver(ui: UiElement, pos = getMousePos()): bool =
+  pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
+  pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
+
+proc onClick(ui: var UiElement, state: var UiState) = discard
+proc onEnter(ui: var UiElement, state: var UiState) = discard
+proc onHover(ui: var UiElement, state: var UiState) = discard
+proc onExit(ui: var UiElement, state: var UiState) = discard
+
+
+proc layouter(ui: var UiElement, parent: UiElement, hasParent: bool, offset: IVec2) =
+  if hasParent:
+    ui.layoutPos = ui.pos + parent.pos + ivec3(offset, 0)
+    ui.layoutSize = ui.size
   else:
-    setUniform("nineSliceSize", 0f)
+    ui.layoutPos = ui.pos + ivec3(offset, 0)
+    ui.layoutSize = ui.size
 
 
-method update*(ui: UiElement, dt: float32, offset = ivec2(0), relativeTo = false) {.base.} = discard
-method draw*(ui: UiElement, offset = ivec2(0), relativeTo = false) {.base.} = discard
+proc layout*[T: UiElement](ui: var T, parent: UiElement, hasParent: bool, offset: IVec2) =
+  mixin layouter
+  layouter(ui, parent, hasParent, offset)
 
-var
-  lastUsedFontPath: string
-  fontPath*: string
-  font*: Font
 
-proc loadFontIfNeedTo*() =
-  if fontPath != lastUsedFontPath and fontPath.len > 0:
-    font = readFont(fontPath)
-    lastUsedFontPath = fontPath
+proc interact[T: UiElement](ui: T, ind: var int, state: var UiState) =
+  mixin onClick, onEnter, onHover, onExit
+  if state.action == nothing:
+    if isOver(ui):
+      onEnter(ui, state)
+      state.action = overElement
+      state.ind = ind
+  elif state.ind == ind:
+    if isOver(ui):
+      if leftMb.isPressed:
+        onClick(ui, state)
+      onHover(ui, state)
+    else:
+      onExit(ui, state)
+  inc ind
 
-proc renderTextTo*(tex: Texture, size: IVec2, message: string, fontSize = 30f, hAlign = CenterAlign, vAlign = MiddleAlign) =
-  loadFontIfNeedTo()
+proc interact(ui: UiElements, ind: var int, state: var UiState) =
+  for field in ui.fields:
+    interact(ui, ind, state)
 
-  let image = newImage(size.x, size.y)
-  font.size = fontSize
-  var layout = font.layoutBounds(message)
-  while layout.x.int > size.x or layout.y.int > size.y:
-    font.size -= 1
-    layout = font.layoutBounds(message)
-
-  font.paint = rgb(255, 255, 255)
-  image.fillText(font, message, bounds = size.vec2, hAlign = hAlign, vAlign = vAlign)
-  image.copyTo(tex)
