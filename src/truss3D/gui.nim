@@ -82,32 +82,41 @@ proc isOver[S, P](ui: UiElement[S, P], pos: Vec2): bool =
   pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
 
-proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset: P) =
+proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset, screenSize: P) =
   let offset =
     if parent != nil:
       parent.layoutPos + offset
     else:
       offset
 
-  ui.layoutPos = ui.pos + offset
   ui.layoutSize = ui.size
 
+
   if bottom in ui.anchor:
-    ui.layoutPos.x -= ui.layoutSize.x
+    ui.layoutPos.y = screenSize.y - ui.layoutSize.y - ui.pos.y + offset.y
+  elif top in ui.anchor:
+    ui.layoutPos.y = ui.pos.y + offset.y
 
   if right in ui.anchor:
-    ui.layoutPos.y -= ui.layoutSize.y
+    ui.layoutPos.x = screenSize.x - ui.layoutSize.x - ui.pos.x + offset.x
+
+  elif left in ui.anchor:
+    ui.layoutPos.x = ui.pos.x + offset.x
 
 
-proc layout*[T: UiElements; Y: UiElement](ui: T, parent: Y, offset: Vec3) =
+  if ui.anchor == {}:
+    ui.layoutPos = ui.pos + offset
+
+
+proc layout*[T: UiElements; Y: UiElement](ui: T, parent: Y, offset, screenSize: Vec3) =
   mixin layout
   for field in ui.fields:
     layout(field, parent, offset)
 
-proc layout*[T: UiElements](ui: T, offset: Vec3) =
+proc layout*[T: UiElements](ui: T, offset, screenSize: Vec3) =
   mixin layout
   for field in ui.fields:
-    layout(field, default(typeof(field)), offset)
+    layout(field, default(typeof(field)), offset, screenSize)
 
 proc onClick[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
 proc onEnter[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard

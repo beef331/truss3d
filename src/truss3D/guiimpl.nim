@@ -44,27 +44,27 @@ type
     label: Label
     clickCb: proc()
 
-proc layout[T](horiz: HorizontalLayout[T], parent: MyUiElement, offset: Vec3) =
-  MyUiElement(horiz).layout(parent, offset)
+proc layout[T](horiz: HorizontalLayout[T], parent: MyUiElement, offset, screenSize: Vec3) =
+  MyUiElement(horiz).layout(parent, offset, screenSize)
   var offset = vec3(0)
   for child in horiz.children:
-    child.layout(horiz, offset)
+    child.layout(horiz, offset, screenSize)
     offset.x += horiz.margin + child.layoutSize.x
 
-proc layout[T](vert: VerticalLayout[T], parent: MyUiElement, offset: Vec3) =
-  MyUiElement(vert).layout(parent, offset)
+proc layout[T](vert: VerticalLayout[T], parent: MyUiElement, offset, screenSize: Vec3) =
+  MyUiElement(vert).layout(parent, offset, screenSize)
   var offset = vec3(0)
   for child in vert.children:
-    child.layout(vert, offset)
+    child.layout(vert, offset, screenSize)
     offset.y += vert.margin + child.layoutSize.y
 
 proc interact*[S, P; T: HorizontalLayout or VerticalLayout](ui: T, state: var UiState[S, P], inputPos: Vec2) =
   for x in ui.children:
     interact(x, state, inputPos)
 
-proc layout(button: Button, parent: MyUiElement, offset: Vec3) =
-  MyUiElement(button).layout(parent, offset)
-  button.label.layout(button, vec3(0))
+proc layout(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
+  MyUiElement(button).layout(parent, offset, screenSize)
+  button.label.layout(button, vec3(0), screenSize)
 
 
 const vertShader = ShaderFile"""
@@ -150,19 +150,22 @@ proc defineGui(): auto =
 
   (
     Label(
-      pos: vec3(50, 50, 0),
+      anchor: {top, left},
+      pos: vec3(20, 20, 0),
       size: vec2(300, 200),
     ).named(test),
     Button(
       anchor: {bottom, right},
-      pos: vec3(vec2 screenSize() - 10, 0),
+      pos: vec3(10, 10, 0),
       size: vec2(50, 50),
       label: Label(),
       clickCb: proc() =
         echo test.pos
     ),
     HorizontalLayout[Button](
-      pos: vec3(300, 500, 0),
+      size: vec2(0, 30),
+      pos: vec3(10, 10, 0),
+      anchor: {bottom, left},
       margin: 10,
       children: @[
         Button(
@@ -193,7 +196,7 @@ var
 proc init() =
   guiModel = uploadInstancedModel[RenderInstance](modelData)
   myUi = defineGui()
-  myUi.layout(vec3(0))
+  myUi.layout(vec3(0), vec3(vec2 screenSize()))
   uiShader = loadShader(vertShader, fragShader)
 
 proc update(dt: float32) =
@@ -201,6 +204,7 @@ proc update(dt: float32) =
     uiState.input = UiInput(kind: leftClick)
   else:
     uiState.input = UiInput(kind: UiInputKind.nothing)
+  myUi.layout(vec3(0), vec3(vec2 screenSize(), 0))
   myUi.interact(uiState, vec2 getMousePos())
 
 proc draw() =
