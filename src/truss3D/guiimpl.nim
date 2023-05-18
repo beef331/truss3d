@@ -9,11 +9,9 @@ proc init(_: typedesc[Vec3], x, y, z: float32): Vec3 = vec3(x, y, z)
 
 type
   UiRenderObj* = object
-    #foreground*: Texture
-    #background*: Texture
-    #nineSliceSize* {.align(16).}: float32
-    #color*: Vec4
-    #backgroundColor*: Vec4
+    nineSliceSize* {.align(16).}: float32
+    color*: Vec4
+    backgroundColor*: Vec4
     matrix* {.align: 16.}: Mat4
 
   RenderInstance = seq[UiRenderObj]
@@ -26,7 +24,7 @@ type
     shaders: seq[Shader]
     instances: seq[UiRenderInstance]
 
-  MyUiElement = UiElement[Vec2, Vec3]
+  MyUiElement = ref object of UiElement[Vec2, Vec3]
 
   HorizontalLayout[T] = ref object of MyUiElement # Probably can be in own module and can take [S, P, T]?
     children: seq[T]
@@ -46,14 +44,12 @@ type
     label: Label
     clickCb: proc()
 
-
 proc layout[T](horiz: HorizontalLayout[T], parent: MyUiElement, offset: Vec3) =
   MyUiElement(horiz).layout(parent, offset)
   var offset = vec3(0)
   for child in horiz.children:
     child.layout(horiz, offset)
     offset.x += horiz.margin + child.layoutSize.x
-
 
 proc layout[T](vert: VerticalLayout[T], parent: MyUiElement, offset: Vec3) =
   MyUiElement(vert).layout(parent, offset)
@@ -62,7 +58,7 @@ proc layout[T](vert: VerticalLayout[T], parent: MyUiElement, offset: Vec3) =
     child.layout(vert, offset)
     offset.y += vert.margin + child.layoutSize.y
 
-proc interactImpl*[S, P; T: HorizontalLayout or VerticalLayout](ui: T, state: var UiState[S, P], inputPos: Vec2) =
+proc interact*[S, P; T: HorizontalLayout or VerticalLayout](ui: T, state: var UiState[S, P], inputPos: Vec2) =
   for x in ui.children:
     interact(x, state, inputPos)
 
@@ -77,11 +73,9 @@ layout(location = 0) in vec2 vertex_position;
 layout(location = 2) in vec2 uv;
 
 layout(std430) struct data{
-//  sampler2D foregroundTex;
-//  sampler2D backgroundTex;
-//  float nineSliceSize;
-//  vec4 color;
-//  vec4 backgroundColor;
+  float nineSliceSize;
+  vec4 color;
+  vec4 backgroundColor;
   mat4 matrix;
 };
 
@@ -156,39 +150,33 @@ proc defineGui(): auto =
 
   (
     Label(
-      anchor: {top, left},
       pos: vec3(50, 50, 0),
       size: vec2(300, 200),
-      flags: {onlyVisual}
     ).named(test),
     Button(
-      anchor: {top, left},
-      size: vec2(100, 100),
-      pos: vec3(1180, 620, 0),
-      label: Label(
-        flags: {onlyVisual},
-        size: vec2(300, 400)
-      ),
+      anchor: {bottom, right},
+      pos: vec3(vec2 screenSize() - 10, 0),
+      size: vec2(50, 50),
+      label: Label(),
       clickCb: proc() =
         echo test.pos
     ),
     HorizontalLayout[Button](
       pos: vec3(300, 500, 0),
       margin: 10,
-      flags: {onlyVisual},
       children: @[
         Button(
           clickCb: (proc() = echo "huh", 1),
           size: vec2(30, 30),
-          label: Label(flags: {onlyVisual})),
+          label: Label()),
         Button(
           clickCb: (proc() = echo "huh", 2),
           size: vec2(30, 30),
-          label: Label(flags: {onlyVisual})),
+          label: Label()),
         Button(
           clickCb: (proc() = echo "huh", 3),
           size: vec2(30, 30),
-          label: Label(flags: {onlyVisual}))
+          label: Label())
       ]
     ),
     grid
@@ -209,7 +197,7 @@ proc init() =
   uiShader = loadShader(vertShader, fragShader)
 
 proc update(dt: float32) =
-  if leftMb.isPressed:
+  if leftMb.isDown:
     uiState.input = UiInput(kind: leftClick)
   else:
     uiState.input = UiInput(kind: UiInputKind.nothing)

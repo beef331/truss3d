@@ -83,12 +83,20 @@ proc isOver[S, P](ui: UiElement[S, P], pos: Vec2): bool =
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
 
 proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset: P) =
-  if parent != nil:
-    ui.layoutPos = ui.pos + parent.layoutPos + offset
-    ui.layoutSize = ui.size
-  else:
-    ui.layoutPos = ui.pos + offset
-    ui.layoutSize = ui.size
+  let offset =
+    if parent != nil:
+      parent.layoutPos + offset
+    else:
+      offset
+
+  ui.layoutPos = ui.pos + offset
+  ui.layoutSize = ui.size
+
+  if bottom in ui.anchor:
+    ui.layoutPos.x -= ui.layoutSize.x
+
+  if right in ui.anchor:
+    ui.layoutPos.y -= ui.layoutSize.y
 
 
 proc layout*[T: UiElements; Y: UiElement](ui: T, parent: Y, offset: Vec3) =
@@ -106,11 +114,8 @@ proc onEnter[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
 proc onHover[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
 proc onExit[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
 
-proc interactImpl*[S, P](ui: UiElement[S, P], state: var UiState[S, P], inputPos: S) = discard
-
 proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState[S, P], inputPos: S) =
   mixin onClick, onEnter, onHover, onExit, interactImpl
-  interactImpl(ui, state, inputPos)
   if state.action == nothing:
     if isOver(ui, inputPos):
       onEnter(ui, state)
@@ -130,7 +135,11 @@ proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState[S, P], inpu
 proc interact*[S; P; Ui: UiElements](ui: Ui, state: var UiState[S, P], inputPos: S) =
   mixin interact
   for field in ui.fields:
-    interact(field, state, inputPos)
+    when compiles(interact(field, state, inputPos)):
+      interact(field, state, inputPos)
+    else:
+      interact(UiElement[S, P](field), state, inputPos)
+
 
 proc upload*[S; P; T; Ui: UiElements](ui: Ui, state: UiState[S, P], target: var T) =
   mixin upload
