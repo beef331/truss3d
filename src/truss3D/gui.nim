@@ -1,5 +1,4 @@
 import std/typetraits
-import oopsie
 
 type
   InteractDirection* = enum
