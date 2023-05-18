@@ -25,7 +25,7 @@ type
     vec + vec is V
 
   UiFlag = enum
-    interactable
+    onlyVisual
     enabled
 
 
@@ -42,6 +42,7 @@ type
     inputing
 
   UiInputKind* = enum
+    nothing
     textInput
     leftClick
     rightClick
@@ -50,13 +51,12 @@ type
     case kind*: UiInputKind
     of textInput:
       str*: string
-    of leftClick, rightClick:
+    of leftClick, rightClick, nothing:
       discard
 
-  UiState* = object
+  UiState*[SizeVec: Vec2, PosVec: Vec3] = object
     action*: UiAction
-    overElement*: int
-    currentId*: int
+    currentElement*: UiElement[SizeVec, PosVec]
     input*: UiInput
 
 proc onlyUiElems*(t: typedesc[tuple]): bool =
@@ -73,58 +73,66 @@ proc onlyUiElems*(t: typedesc[tuple]): bool =
 type UiElements* = concept ui, type UI
   onlyUiElems(Ui)
 
+template named*[S, P](ui: UiElement[S, P], name: untyped): untyped =
+  ## Template to allow aliasing constructor for an ergonomic API
+  let name = ui
+  name
 
 proc isOver[S, P](ui: UiElement[S, P], pos: Vec2): bool =
   pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
 
-proc layouter[S, P](ui: UiElement[S, P], parent: UiElement[S, P], hasParent: bool, offset: P) =
-  if hasParent:
-    ui.layoutPos = ui.pos + parent.pos + offset
+proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset: P) =
+  if parent != nil:
+    ui.layoutPos = ui.pos + parent.layoutPos + offset
     ui.layoutSize = ui.size
   else:
     ui.layoutPos = ui.pos + offset
     ui.layoutSize = ui.size
 
 
-proc layout*[S, P](ui: UIElement[S, P], parent: UiElement[S, P], hasParent: bool, offset: P) =
-  mixin layouter
-  layouter(ui, parent, hasParent, offset)
-
-proc layout*[T: UiElements; Y: UiElement](ui: T, parent: Y, hasParent: bool, offset: Y.PosVec) =
-  mixin layouter
+proc layout*[T: UiElements; Y: UiElement](ui: T, parent: Y, offset: Vec3) =
+  mixin layout
   for field in ui.fields:
-    layouter(field, default(Y), false, offset)
+    layout(field, parent, offset)
 
-
-proc onClick[S, P](ui: UiElement[S, P], state: var UiState) = discard
-proc onEnter[S, P](ui: UiElement[S, P], state: var UiState) = discard
-proc onHover[S, P](ui: UiElement[S, P], state: var UiState) = discard
-proc onExit[S, P](ui: UiElement[S, P], state: var UiState) = discard
-
-proc interacter*(ui: auto, ind: var int, state: var UiState, inputPos: Vec2) =
-  mixin onClick, onEnter, onHover, onExit
-  if interactable in ui.flags:
-    if state.action == nothing:
-      if isOver(ui, inputPos):
-        onEnter(ui, state)
-        state.action = overElement
-        state.currentId = ind
-    if state.currentId == ind:
-      if isOver(ui, inputPos):
-        if state.input.kind == leftClick:
-          onClick(ui, state)
-        onHover(ui, state)
-      else:
-        onExit(ui, state)
-        state.action = nothing
-  inc ind
-
-proc interact*[T: UiElements](ui: T, ind: var int, state: var UiState, inputPos: Vec2) =
-  mixin interacter
+proc layout*[T: UiElements](ui: T, offset: Vec3) =
+  mixin layout
   for field in ui.fields:
-    interacter(field, ind, state, inputPos)
+    layout(field, default(typeof(field)), offset)
 
-proc upload*[T](ui: UiElements, ind: var int, state: var UiState, target: T) =
+proc onClick[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
+proc onEnter[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
+proc onHover[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
+proc onExit[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
+
+proc interactImpl*[S, P](ui: UiElement[S, P], state: var UiState[S, P], inputPos: S) = discard
+
+proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState[S, P], inputPos: S) =
+  mixin onClick, onEnter, onHover, onExit, interactImpl
+  interactImpl(ui, state, inputPos)
+  if state.action == nothing:
+    if isOver(ui, inputPos):
+      onEnter(ui, state)
+      state.action = overElement
+      state.currentElement = ui
+  if state.currentElement == ui:
+    if isOver(ui, inputPos):
+      if state.input.kind == leftClick:
+        onClick(ui, state)
+        reset state.input  # Consume it
+      onHover(ui, state)
+    else:
+      onExit(ui, state)
+      state.action = nothing
+      state.currentElement = nil
+
+proc interact*[S; P; Ui: UiElements](ui: Ui, state: var UiState[S, P], inputPos: S) =
+  mixin interact
   for field in ui.fields:
-    upload(field, ind, state, target)
+    interact(field, state, inputPos)
+
+proc upload*[S; P; T; Ui: UiElements](ui: Ui, state: UiState[S, P], target: var T) =
+  mixin upload
+  for field in ui.fields:
+    upload(field, state, target)

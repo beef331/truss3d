@@ -9,8 +9,14 @@ type
     drawCount*: int
     binding: int
 
+
 proc loadInstancedModel*[T](path: string, binding: int = 0): InstancedModel[T] =
   result.model = loadModel(path)
+  result.ssbo = genSsbo[T](binding)
+  result.binding = binding
+
+proc uploadInstancedModel*[T](data: MeshData, binding: int = 0): InstancedModel[T] =
+  result.model = uploadData(data)
   result.ssbo = genSsbo[T](binding)
   result.binding = binding
 
