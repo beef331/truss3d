@@ -24,10 +24,10 @@ type
     V.init(float32, float32)
     vec + vec is V
 
-  UiFlag = enum
+  UiFlag* = enum
     onlyVisual
     enabled
-
+    hovered
 
   UiElement*[SizeVec: Vec2, PosVec: Vec3] = ref object of RootObj # refs allow closures to work
     size*, layoutSize*: SizeVec
@@ -81,6 +81,9 @@ template named*[S, P](ui: UiElement[S, P], name: untyped): untyped =
 proc isOver[S, P](ui: UiElement[S, P], pos: Vec2): bool =
   pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
+
+proc usedSize*[S, P](ui: UiElement[S, P]): S = ui.size
+
 
 proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset, screenSize: P) =
   let offset =
