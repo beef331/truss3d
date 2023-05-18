@@ -70,8 +70,7 @@ proc onlyUiElems*(t: typedesc[tuple]): bool =
         return false
   true
 
-type UiElements* = concept ui, type UI
-  onlyUiElems(Ui)
+type UiElements* = (tuple)
 
 template named*[S, P](ui: UiElement[S, P], name: untyped): untyped =
   ## Template to allow aliasing constructor for an ergonomic API

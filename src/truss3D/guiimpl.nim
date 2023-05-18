@@ -1,5 +1,6 @@
 import vmath
 import shaders, gui, textures, instancemodels, models
+import gui/layouts
 import ../truss3D
 import std/sugar
 
@@ -27,15 +28,9 @@ type
     color: Vec4
     backgroundColor: Vec4
 
-  HorizontalLayout[T] = ref object of MyUiElement # Probably can be in own module and can take [S, P, T]?
-    children: seq[T]
-    margin: float32
-    rightToLeft: bool
+  HLayout[T] = HorizontalLayout[MyUiElement, T]# Probably can be in own module and can take [S, P, T]?
 
-  VerticalLayout[T] = ref object of MyUiElement # Probably can be in own module and can take [S, P, T]?
-    children: seq[T]
-    margin: float32
-    bottomToTop: bool
+  VLayout[T] = VerticalLayout[MyUiElement, T]
 
   Label = ref object of MyUiElement
     texture: Texture
@@ -46,40 +41,6 @@ type
     hoveredColor: Vec4
     label: Label
     clickCb: proc()
-
-proc usedSize[T](horz: HorizontalLayout[T]): Vec2 =
-  result.x = horz.margin * float32 horz.children.high
-  for child in horz.children:
-    let size = child.usedSize()
-    result.x += size.x
-    result.y = max(size.y, result.y)
-
-proc usedSize[T](vert: VerticalLayout[T]): Vec2 =
-  result.y = vert.margin * float32 vert.children.high
-  for child in vert.children:
-    let size = child.usedSize()
-    result.x = max(size.x, result.x)
-    result.y += size.y
-
-proc layout[T](horz: HorizontalLayout[T], parent: MyUiElement, offset, screenSize: Vec3) =
-  horz.size = usedSize(horz)
-  MyUiElement(horz).layout(parent, offset, screenSize)
-  var offset = vec3(0)
-  for child in horz.children:
-    child.layout(horz, offset, screenSize)
-    offset.x += horz.margin + child.layoutSize.x
-
-proc layout[T](vert: VerticalLayout[T], parent: MyUiElement, offset, screenSize: Vec3) =
-  vert.size = usedSize(vert)
-  MyUiElement(vert).layout(parent, offset, screenSize)
-  var offset = vec3(0)
-  for child in vert.children:
-    child.layout(vert, offset, screenSize)
-    offset.y += vert.margin + child.layoutSize.y
-
-proc interact*[S, P; T: HorizontalLayout or VerticalLayout](ui: T, state: var UiState[S, P], inputPos: Vec2) =
-  for x in ui.children:
-    interact(x, state, inputPos)
 
 proc layout(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
   MyUiElement(button).layout(parent, offset, screenSize)
@@ -141,7 +102,7 @@ proc onExit(button: Button, uiState: var UiState[Vec2, Vec3]) =
   button.flags.excl hovered
   button.color = button.baseColor
 
-proc upload[T;S;P;](horz: HorizontalLayout[T] or VerticalLayout[T], state: UiState[S, P], target: var InstancedModel[RenderInstance]) =
+proc upload[T;S;P;](horz: HLayout[T] or VLayout[T], state: UiState[S, P], target: var InstancedModel[RenderInstance]) =
   for child in horz.children:
     upload(child, state, target)
 
@@ -168,9 +129,9 @@ modelData.append [0u32, 1, 2, 0, 2, 3].items
 modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
 
 proc defineGui(): auto =
-  let grid = VerticalLayout[HorizontalLayout[Button]](pos: vec3(10, 10, 0), margin: 10, anchor: {top, right})
+  let grid = VLayout[HLayout[Button]](pos: vec3(10, 10, 0), margin: 10, anchor: {top, right})
   for y in 0..<3:
-    let horz =  HorizontalLayout[Button](margin: 10)
+    let horz =  HLayout[Button](margin: 10)
     for x in 0..<3:
       capture x, y:
         horz.children.add:
@@ -200,7 +161,7 @@ proc defineGui(): auto =
       clickCb: proc() =
         test.pos.x += 10
     ),
-    HorizontalLayout[Button](
+    HLayout[Button](
       pos: vec3(10, 10, 0),
       anchor: {bottom, left},
       margin: 10,
