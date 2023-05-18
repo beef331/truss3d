@@ -1,6 +1,6 @@
 import vmath
 import shaders, gui, textures, instancemodels, models
-import gui/layouts
+import gui/[layouts, buttons]
 import ../truss3D
 import std/sugar
 
@@ -28,24 +28,18 @@ type
     color: Vec4
     backgroundColor: Vec4
 
-  HLayout[T] = HorizontalLayout[MyUiElement, T]# Probably can be in own module and can take [S, P, T]?
+  HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
 
-  VLayout[T] = VerticalLayout[MyUiElement, T]
+  VLayout[T] = VerticalLayoutBase[MyUiElement, T]
 
   Label = ref object of MyUiElement
     texture: Texture
 
-  Button = ref object of MyUiElement
+  Button = ref object of ButtonBase[MyUiElement]
     background: Texture
     baseColor: Vec4
     hoveredColor: Vec4
     label: Label
-    clickCb: proc()
-
-proc layout(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
-  MyUiElement(button).layout(parent, offset, screenSize)
-  button.label.layout(button, vec3(0), screenSize)
-
 
 const vertShader = ShaderFile"""
 #version 430
@@ -88,9 +82,6 @@ void main() {
 
 """
 
-proc onClick(button: Button, uiState: var UiState[Vec2, Vec3]) =
-  button.clickCb()
-
 proc onEnter(button: Button, uiState: var UiState[Vec2, Vec3]) =
   button.baseColor = button.color
 
@@ -120,7 +111,7 @@ proc upload[S;P](ui: MyUiElement, state: UiState[S, P], target: var InstancedMod
 
 proc upload[S;P;](button: Button, state: UiState[S, P], target: var InstancedModel[RenderInstance]) =
   MyUiElement(button).upload(state, target)
-  button.label.upload(state, target)
+  #button.label.upload(state, target)
 
 
 var modelData: MeshData[Vec2]
@@ -188,7 +179,6 @@ proc defineGui(): auto =
     ),
     grid
   )
-
 
 var
   guiModel: InstancedModel[RenderInstance]

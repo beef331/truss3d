@@ -120,28 +120,28 @@ proc layout*[T: UiElements](ui: T, offset, screenSize: Vec3) =
   for field in ui.fields:
     layout(field, default(typeof(field)), offset, screenSize)
 
-proc onClick[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
-proc onEnter[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
-proc onHover[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
-proc onExit[S, P](ui: UiElement[S, P], state: var UiState[S, P]) = discard
-
 proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState[S, P], inputPos: S) =
   mixin onClick, onEnter, onHover, onExit, interactImpl
   if state.action == nothing:
-    if isOver(ui, inputPos):
-      onEnter(ui, state)
-      state.action = overElement
-      state.currentElement = ui
+    when compiles(onEnter(ui, state)):
+      if isOver(ui, inputPos):
+        onEnter(ui, state)
+        state.action = overElement
+        state.currentElement = ui
   if state.currentElement == ui:
     if isOver(ui, inputPos):
       if state.input.kind == leftClick:
-        onClick(ui, state)
-        reset state.input  # Consume it
-      onHover(ui, state)
+        when compiles(onClick(ui, state)):
+          onClick(ui, state)
+          reset state.input  # Consume it
+      when compiles(onHover(ui, state)):
+        onHover(ui, state)
     else:
-      onExit(ui, state)
-      state.action = nothing
-      state.currentElement = nil
+      when compiles(onExit(ui, state)):
+        onExit(ui, state)
+      when compiles(onEnter(ui, state)):
+        state.action = nothing
+        state.currentElement = nil
 
 proc interact*[S; P; Ui: UiElements](ui: Ui, state: var UiState[S, P], inputPos: S) =
   mixin interact
