@@ -28,6 +28,8 @@ type
     color: Vec4
     backgroundColor: Vec4
 
+  MyUiState = UiState[Vec2, Vec3]
+
   HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
 
   VLayout[T] = VerticalLayoutBase[MyUiElement, T]
@@ -82,22 +84,22 @@ void main() {
 
 """
 
-proc onEnter(button: Button, uiState: var UiState[Vec2, Vec3]) =
+proc onEnter(button: Button, uiState: var MyUiState) =
   button.baseColor = button.color
 
-proc onHover(button: Button, uiState: var UiState[Vec2, Vec3]) =
+proc onHover(button: Button, uiState: var MyUiState) =
   button.flags.incl hovered
   button.color = button.hoveredColor
 
-proc onExit(button: Button, uiState: var UiState[Vec2, Vec3]) =
+proc onExit(button: Button, uiState: var MyUiState) =
   button.flags.excl hovered
   button.color = button.baseColor
 
-proc upload[T;S;P;](horz: HLayout[T] or VLayout[T], state: UiState[S, P], target: var InstancedModel[RenderInstance]) =
-  for child in horz.children:
-    upload(child, state, target)
+proc upload[T;](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var InstancedModel[RenderInstance]) =
+  # This should not be required, why it's not calling the exact version is beyond me
+  layouts.upload(layout, state, target)
 
-proc upload[S;P](ui: MyUiElement, state: UiState[S, P], target: var InstancedModel[RenderInstance]) =
+proc upload(ui: MyUiElement, state: MyUiState, target: var InstancedModel[RenderInstance]) =
   let
     scrSize = vec2 screenSize()
     size = ui.layoutSize * 2 / scrSize
@@ -109,7 +111,7 @@ proc upload[S;P](ui: MyUiElement, state: UiState[S, P], target: var InstancedMod
   target.push UiRenderObj(matrix: mat, color: ui.color)
 
 
-proc upload[S;P;](button: Button, state: UiState[S, P], target: var InstancedModel[RenderInstance]) =
+proc upload(button: Button, state: MyUiState, target: var InstancedModel[RenderInstance]) =
   MyUiElement(button).upload(state, target)
   #button.label.upload(state, target)
 

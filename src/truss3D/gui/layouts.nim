@@ -12,6 +12,8 @@ type
     margin*: float32
     bottomToTop: bool
 
+  LayoutBase*[Base, T] = VerticalLayoutBase[Base, T] or HorizontalLayoutBase[Base, T]
+
 
 proc usedSize*[Base, T](horz: HorizontalLayoutBase[Base, T]): Vec2 =
   result = typeof(horz.size).init(horz.margin * float32 horz.children.high, 0)
@@ -49,3 +51,8 @@ proc interact*[Base, T, S, P](horz: HorizontalLayoutBase[Base, T] or VerticalLay
   for x in horz.children:
     interact(x, state, inputPos)
 
+
+proc upload*[Base;T;S;P;](horz: LayoutBase[Base, T], state: UiState[S, P], target: var auto) =
+  mixin upload
+  for child in horz.children:
+    upload(child, state, target)
