@@ -55,7 +55,7 @@ type
 
   UiState* {.explain.} = concept s
     s.action is UiAction
-    s.currentElement is ref object
+    s.currentElement is UiElement[auto, auto]
     s.input is UiInput
 
 proc onlyUiElems*(t: typedesc[tuple]): bool =
@@ -65,11 +65,12 @@ proc onlyUiElems*(t: typedesc[tuple]): bool =
       when not onlyUiElems(field):
         return false
     else:
-      when rootSuper(field) isnot UiElement:
+      when field isnot UiElement[auto, auto]:
         return false
   true
 
-type UiElements* = (tuple)
+type UiElements* = concept type Ui
+  onlyUiElems(Ui)
 
 template named*[S, P](ui: UiElement[S, P], name: untyped): untyped =
   ## Template to allow aliasing constructor for an ergonomic API
@@ -141,16 +142,16 @@ proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState, inputPos: 
         state.action = nothing
         state.currentElement = nil
 
-proc interact*[T](ui: UiElements, state: var UiState, inputPos: T) =
+proc interact*[Ui: UiElements; T](ui: Ui, state: var UiState, inputPos: T) =
   mixin interact
   for field in ui.fields:
     when compiles(interact(field, state, inputPos)):
       interact(field, state, inputPos)
     else:
-      interact(UiElement[S, P](field), state, inputPos)
+      interact(UiElement[typeof(field.size), typeof(field.pos)](field), state, inputPos)
 
 
-proc upload*[T](ui: UiElements, state: UiState, target: var T) =
+proc upload*[Ui: UiElements; T](ui: Ui, state: UiState, target: var T) =
   mixin upload
   for field in ui.fields:
     upload(field, state, target)

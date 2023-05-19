@@ -89,6 +89,7 @@ void main() {
 
 proc onEnter(button: Button, uiState: var MyUiState) =
   button.baseColor = button.color
+  button.size *= 2
 
 proc onHover(button: Button, uiState: var MyUiState) =
   button.flags.incl hovered
@@ -97,6 +98,7 @@ proc onHover(button: Button, uiState: var MyUiState) =
 proc onExit(button: Button, uiState: var MyUiState) =
   button.flags.excl hovered
   button.color = button.baseColor
+  button.size /= 2
 
 
 proc upload[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var InstancedModel[RenderInstance]) =
