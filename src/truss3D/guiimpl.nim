@@ -28,7 +28,10 @@ type
     color: Vec4
     backgroundColor: Vec4
 
-  MyUiState = UiState[Vec2, Vec3]
+  MyUiState = object
+    action: UiAction
+    currentElement: MyUiElement
+    input: UiInput
 
   HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
 
@@ -94,6 +97,7 @@ proc onHover(button: Button, uiState: var MyUiState) =
 proc onExit(button: Button, uiState: var MyUiState) =
   button.flags.excl hovered
   button.color = button.baseColor
+
 
 proc upload[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var InstancedModel[RenderInstance]) =
   # This should not be required, why it's not calling the exact version is beyond me
@@ -184,7 +188,7 @@ proc defineGui(): auto =
 var
   guiModel: InstancedModel[RenderInstance]
   myUi: typeof(defineGui())
-  uiState = UiState[Vec2, Vec3]()
+  uiState = MyUiState()
   uiShader: Shader
 
 

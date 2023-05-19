@@ -8,5 +8,5 @@ proc layout*[Base](button: ButtonBase[Base], parent: Base, offset, screenSize: V
   mixin layout
   Base(button).layout(parent, offset, screenSize)
 
-proc onClick*[Base;S;P](button: ButtonBase[Base], uiState: var UiState[S, P]) =
+proc onClick*[Base](button: ButtonBase[Base], uiState: var UiState) =
   button.clickCb()
