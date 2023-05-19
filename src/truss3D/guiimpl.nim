@@ -95,7 +95,7 @@ proc onExit(button: Button, uiState: var MyUiState) =
   button.flags.excl hovered
   button.color = button.baseColor
 
-proc upload[T;](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var InstancedModel[RenderInstance]) =
+proc upload[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var InstancedModel[RenderInstance]) =
   # This should not be required, why it's not calling the exact version is beyond me
   layouts.upload(layout, state, target)
 
@@ -115,7 +115,6 @@ proc upload(button: Button, state: MyUiState, target: var InstancedModel[RenderI
   MyUiElement(button).upload(state, target)
   #button.label.upload(state, target)
 
-
 var modelData: MeshData[Vec2]
 modelData.appendVerts [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items
 modelData.append [0u32, 1, 2, 0, 2, 3].items
@@ -132,7 +131,7 @@ proc defineGui(): auto =
             color: vec4(1),
             hoveredColor: vec4(0.5, 0.5, 0.5, 1),
             clickCb: (proc() = echo x, " ", y),
-            size: vec2(30, 30),
+            size: vec2(40, 40),
             label: Label(flags: {onlyVisual})
           )
     grid.children.add horz
@@ -163,19 +162,19 @@ proc defineGui(): auto =
           color: vec4(1, 0, 0, 1),
           hoveredColor: vec4(0.5, 0, 0, 1),
           clickCb: (proc() = echo "huh", 1),
-          size: vec2(30, 30),
+          size: vec2(60, 30),
           label: Label()),
         Button(
           color: vec4(0, 1, 0, 1),
           hoveredColor: vec4(0, 0.5, 0, 1),
           clickCb: (proc() = echo "huh", 2),
-          size: vec2(30, 30),
+          size: vec2(60, 30),
           label: Label()),
         Button(
           color: vec4(0, 0, 1, 1),
           hoveredColor: vec4(0, 0, 0.5, 1),
           clickCb: (proc() = echo "huh", 3),
-          size: vec2(30, 30),
+          size: vec2(60, 30),
           label: Label())
       ]
     ),

@@ -92,7 +92,6 @@ proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset, screenS
 
   ui.layoutSize = ui.size
 
-
   if bottom in ui.anchor:
     ui.layoutPos.y = screenSize.y - ui.layoutSize.y - ui.pos.y + offset.y
   elif top in ui.anchor:
