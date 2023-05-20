@@ -22,7 +22,7 @@ type
     model: InstancedModel[RenderInstance]
     shader: Shader
 
-  MyUiElement = ref object of UiElement[Vec2, Vec3]
+  MyUiElement {.acyclic.} = ref object of UiElement[Vec2, Vec3]
     color: Vec4 = vec4(1, 1, 1, 1)
     backgroundColor: Vec4
     texture: Texture
@@ -33,19 +33,29 @@ type
     input: UiInput
     inputPos: Vec2
 
-  HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
-  VLayout[T] = VerticalLayoutBase[MyUiElement, T]
-  HSlider[T] = HorziontalSliderBase[MyUiElement, T]
+  HLayout[T] {.acyclic.} = HorizontalLayoutBase[MyUiElement, T]
+  VLayout[T] {.acyclic.} = VerticalLayoutBase[MyUiElement, T]
 
-  Label = ref object of MyUiElement
+  HSlider[T] {.acyclic.} = ref object of MyUiElement
+    value: T
+    rng: Slice[T]
+    percentage: float32
+    slideBar: MyUiElement
+    onChange: proc(a: T)
+
+  Label {.acyclic.} = ref object of MyUiElement
     text: string
 
-  Button = ref object of ButtonBase[MyUiElement]
+  NamedSlider[T] {.acyclic.} = ref object of MyUiElement
+    name: Label
+    slider: HSlider[T]
+
+  Button {.acyclic.} = ref object of ButtonBase[MyUiElement]
     baseColor: Vec4
     hoveredColor: Vec4
     label: Label
 
-  FontProps= object
+  FontProps = object
     size: Vec2
     text: string
     font: Font
@@ -73,7 +83,7 @@ proc makeTexture(s: string, size: Vec2): Texture =
       font = defaultFont
     font.size = size.y
     var layout = font.layoutBounds(s)
-    while layout.x > size.x or layout.y> size.y:
+    while layout.x > size.x or layout.y > size.y:
       font.size -= 1
       layout = font.layoutBounds(s)
 
@@ -93,6 +103,56 @@ proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
     button.label.pos = vec3(0, 0, button.pos.z + 0.1)
     button.label.size = button.size
     button.label.layout(button, vec3(0), screenSize)
+
+proc upload[T](slider: HSlider[T], state: MyUiState, target: var UiRenderTarget) =
+  MyUiElement(slider).upload(state, target)
+  slider.slideBar.upload(state, target)
+
+proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
+  mixin layout
+  MyUiElement(slider).layout(parent, offset, screenSize)
+  if slider.slideBar.isNil:
+    new slider.slideBar
+    slider.slideBar.color = vec4(1, 0, 0, 1)
+  slider.slideBar.pos = slider.pos + vec3(0, 0, 0.1)
+  slider.slideBar.size.x = max(slider.percentage * slider.size.x, 0)
+  slider.slideBar.size.y = slider.size.y
+  slider.slideBar.layout(parent, offset, screenSize)
+
+proc onEnter*[T](slider: HSlider[T], uiState: var UiState) = discard
+
+proc onDrag*[T](slider: HSlider[T], uiState: var UiState) =
+  mixin lerp
+  slider.percentage = (uiState.inputPos.x - slider.layoutPos.x) / slider.size.x
+  let newVal = lerp(slider.rng.a, slider.rng.b, slider.percentage)
+  if slider.value != newVal:
+    slider.value = newVal
+    if slider.onChange != nil:
+      slider.onChange(slider.value)
+
+proc usedSize*[T](slider: NamedSlider[T]): Vec2 =
+  result.x += slider.name.size.x + slider.slider.size.x
+  result.y = max(slider.name.size.y, slider.slider.size.y)
+
+proc layout*[T](slider: NamedSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
+  slider.size = usedSize(slider)
+  MyUiElement(slider).layout(parent, offset, screenSize)
+  var offset = vec3(0)
+  slider.name.layout(slider, offset, screenSize)
+  offset.x += slider.name.layoutSize.x
+
+  slider.slider.layout(slider, offset, screenSize)
+
+proc upload[T](slider: NamedSlider[T], uiState: MyUiState, target: var UiRenderTarget) =
+  slider.name.upload(uiState, target)
+  slider.slider.upload(uiState, target)
+
+proc interact*[T](slider: NamedSlider[T], uiState: var MyUiState) =
+  let sliderStart = slider.slider.value
+  interact(slider.slider, uiState)
+  if slider.slider.value != sliderStart:
+    slider.name.text = $slider.slider.value
+    slider.name.texture = makeTexture(slider.name.text, slider.name.size)
 
 const vertShader = ShaderFile"""
 #version 430
@@ -254,7 +314,13 @@ proc defineGui(): auto =
         )
       ]
     ),
-    grid
+    grid,
+    HSlider[int](pos: vec3(10, 10, 0), size: vec2(200, 25), rng: 0..10),
+    NamedSlider[int](
+      pos: vec3(10, 500, 0),
+      name: Label(size: vec2(50, 25)),
+      slider: HSLider[int](rng: 0..30, size: vec2(100, 25))
+      )
   )
 
 var
@@ -272,6 +338,8 @@ proc init() =
 proc update(dt: float32) =
   if leftMb.isDown:
     uiState.input = UiInput(kind: leftClick)
+  elif leftMb.isPressed:
+    uiState.input = UiInput(kind: leftClick, isHeld: true)
   else:
     uiState.input = UiInput(kind: UiInputKind.nothing)
   uiState.inputPos = vec2 getMousePos()

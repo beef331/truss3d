@@ -16,7 +16,7 @@ type
   Vert[Base, T] = VerticalLayoutBase[Base, T]
 
 
-  Layout[Base, T] = VerticalLayoutBase[Base, T] or HorizontalLayoutBase[Base, T]
+  Layout[Base, T] = Vert[Base, T] or Horz[Base, T]
 
 
 proc usedSize*[Base, T](horz: Horz[Base, T]): Vec2 =
@@ -50,11 +50,15 @@ proc layout*[Base, T](vert: Vert[Base, T], parent: Base, offset, screenSize: Vec
     child.layout(vert, offset, screenSize)
     offset.y += vert.margin + child.layoutSize.y
 
-proc interact*[Base, T](horz: Layout[Base, T], state: var UiState) =
+proc interact*[Base, T](horz: HorizontalLayoutBase[Base, T], state: var UiState) =
   mixin interact
   for x in horz.children:
     interact(x, state)
 
+proc interact*[Base, T](vert: VerticalLayoutBase[Base, T], state: var UiState) =
+  mixin interact
+  for x in vert.children:
+    interact(x, state)
 
 proc upload*[Base, T](horz: Layout[Base, T], state: UiState, target: var auto) =
   mixin upload

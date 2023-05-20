@@ -15,7 +15,6 @@ type
     V.init(float32, float32, float32)
     vec + vec is V
 
-
   Vec2 = concept vec, type V
     vec.x is float32
     vec.y is float32
@@ -34,6 +33,10 @@ type
     flags*: set[UiFlag]
     anchor*: set[AnchorDirection]
 
+  Element* = concept e
+    e is UiElement[auto, auto]
+
+
   UiAction* = enum
     nothing
     overElement
@@ -47,6 +50,7 @@ type
     rightClick
 
   UiInput* = object
+    isHeld*: bool
     case kind*: UiInputKind
     of textInput:
       str*: string
@@ -120,20 +124,25 @@ proc layout*[T: UiElements](ui: T, offset, screenSize: Vec3) =
   for field in ui.fields:
     layout(field, default(typeof(field)), offset, screenSize)
 
-proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState) =
+proc interact*(ui: Element, state: var UiState) = # `auto` is bad, but the lesser of evils
   mixin onClick, onEnter, onHover, onExit, interactImpl
+  type Base = UiElement[typeof(ui.size), typeof(ui.pos)]
   if state.action == nothing:
     when compiles(onEnter(ui, state)):
-      if isOver(ui, state.inputPos):
+      if isOver(Base ui, state.inputPos):
         onEnter(ui, state)
         state.action = overElement
         state.currentElement = ui
-  if state.currentElement == ui:
-    if isOver(ui, state.inputPos):
+  if state.currentElement == typeof(state.currentElement)(ui):
+    if isOver(Base ui, state.inputPos):
       if state.input.kind == leftClick:
-        when compiles(onClick(ui, state)):
-          onClick(ui, state)
-          reset state.input  # Consume it
+        if state.input.isHeld:
+          when compiles(onDrag(ui, state)):
+            onDrag(ui, state)
+        else:
+          when compiles(onClick(ui, state)):
+            onClick(ui, state)
+            reset state.input  # Consume it
       when compiles(onHover(ui, state)):
         onHover(ui, state)
     else:
@@ -146,10 +155,7 @@ proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState) =
 proc interact*[Ui: UiElements](ui: Ui, state: var UiState) =
   mixin interact
   for field in ui.fields:
-    when compiles(interact(field, state)):
-      interact(field, state)
-    else:
-      interact(UiElement[typeof(field.size), typeof(field.pos)](field), state)
+    interact(field, state)
 
 
 proc upload*[Ui: UiElements; T](ui: Ui, state: UiState, target: var T) =
