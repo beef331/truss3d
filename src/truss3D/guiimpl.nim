@@ -315,7 +315,8 @@ proc defineGui(): auto =
     grid,
     HSlider[int](pos: vec3(10, 10, 0), size: vec2(200, 25), rng: 0..10),
     NamedSlider[int](
-      pos: vec3(10, 500, 0),
+      pos: vec3(10, 100, 0),
+      anchor: {bottom, left},
       formatter: "Size: $#",
       name: Label(text: "Size: $#" % $test.size.x, size: vec2(100, 25)),
       slider: HSlider[int](
