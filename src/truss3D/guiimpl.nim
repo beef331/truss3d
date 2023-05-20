@@ -12,14 +12,14 @@ type
   UiRenderObj* = object
     color*: Vec4
     backgroundColor*: Vec4
-    texture*: uint32
+    texture*: uint64
+    hasTex*: uint32
     matrix* {.align: 16.}: Mat4
 
   RenderInstance = seq[UiRenderObj]
 
   UiRenderTarget* = object
     model: InstancedModel[RenderInstance]
-    loadedTextures: Table[Texture, uint64]
     shader: Shader
 
   MyUiElement = ref object of UiElement[Vec2, Vec3]
@@ -93,13 +93,15 @@ proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
 
 const vertShader = ShaderFile"""
 #version 430
+#extension GL_ARB_bindless_texture : require
 layout(location = 0) in vec2 vertex_position;
 layout(location = 2) in vec2 uv;
 
 layout(std430) struct data{
   vec4 color;
   vec4 backgroundColor;
-  uint texId;
+  sampler2D tex;
+  uint hasTex;
   mat4 matrix;
 };
 
@@ -109,31 +111,34 @@ layout(std430, binding = 0) buffer instanceData{
 
 out vec2 fUv;
 out vec4 color;
-flat out uint texId;
+flat out sampler2D tex;
+flat out uint hasTex;
 
 void main(){
   data theData = instData[gl_InstanceID];
   gl_Position = theData.matrix * vec4(vertex_position, 0, 1);
   fUv = uv;
   color = theData.color;
-  texId = theData.texId;
+  hasTex = theData.hasTex;
+  tex = theData.tex;
 }
 """
 
 const fragShader = ShaderFile"""
 #version 430
+#extension GL_ARB_bindless_texture : require
 
 out vec4 frag_color;
 in vec3 fNormal;
 in vec4 color;
 in vec2 fUv;
-flat in uint texId;
 
-uniform sampler2D textures[32];
+flat in sampler2D tex;
+flat in uint hasTex;
 
 void main() {
-  if(texId > 0){
-    frag_color = texture(textures[texId - 1], fUv) * color;
+  if(hasTex > 0){
+    frag_color = texture(tex, fUv) * color;
   }else{
     frag_color = color;
   }
@@ -167,17 +172,12 @@ proc upload(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
   let
     mat = translate(pos) * scale(vec3(size, 0))
     tex =
-      if ui.texture in target.loadedTextures:
-        target.loadedTextures[ui.texture]
-      elif Gluint(ui.texture) > 0:
-        let val = uint64(target.loadedTextures.len + 1)
-        target.loadedTextures[ui.texture] = val
-        target.shader.setUniform("textures[$#]" % $(val - 1), ui.texture)
-        val
+      if Gluint(ui.texture) > 0:
+        uint64(ui.texture.getHandle())
       else:
-        0
+        0u64
 
-  target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: uint32 tex)
+  target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex, hasTex: uint32(tex))
 
 proc upload(button: Button, state: MyUiState, target: var UiRenderTarget) =
   MyUiElement(button).upload(state, target)
@@ -192,9 +192,9 @@ modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
 
 proc defineGui(): auto =
   let grid = VLayout[HLayout[Button]](pos: vec3(10, 10, 0), margin: 10, anchor: {top, right})
-  for y in 0..<3:
+  for y in 0..<8:
     let horz =  HLayout[Button](margin: 10)
-    for x in 0..<3:
+    for x in 0..<4:
       capture x, y:
         horz.children.add:
           Button(
@@ -276,7 +276,6 @@ proc update(dt: float32) =
 
 proc draw() =
   renderTarget.model.clear()
-  renderTarget.loadedTextures.clear()
   myUi.upload(uiState, renderTarget)
   renderTarget.model.reuploadSsbo()
   with renderTarget.shader:

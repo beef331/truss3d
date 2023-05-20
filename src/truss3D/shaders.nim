@@ -175,18 +175,14 @@ template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
   when declared(shader):
     with shader:
       let loc = glGetUniformLocation(Gluint(shader), uniform)
-      if loc != -1:
-        body
-      else:
-        echo "Failed to get uniform: ", name
+      assert loc != -1
+      body
   else:
     let
       shader = getActiveShader()
       loc = glGetUniformLocation(Gluint(shader), uniform)
-    if loc != -1:
-      body
-    else:
-      echo "Failed to get uniform: ", name
+    assert loc != -1
+    body
 
 template makeSetter(T: typedesc, body: untyped) {.dirty.} =
   proc setUniform*(uniform: string, value: T) =
