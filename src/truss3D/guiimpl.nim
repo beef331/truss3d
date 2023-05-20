@@ -47,6 +47,7 @@ type
     text: string
 
   NamedSlider[T] {.acyclic.} = ref object of MyUiElement
+    formatter: string
     name: Label
     slider: HSlider[T]
 
@@ -149,7 +150,7 @@ proc interact*[T](slider: NamedSlider[T], uiState: var MyUiState) =
   let sliderStart = slider.slider.value
   interact(slider.slider, uiState)
   if slider.slider.value != sliderStart:
-    slider.name.text = $slider.slider.value
+    slider.name.text = slider.formatter % $slider.slider.value
 
 const vertShader = ShaderFile"""
 #version 430
@@ -315,8 +316,14 @@ proc defineGui(): auto =
     HSlider[int](pos: vec3(10, 10, 0), size: vec2(200, 25), rng: 0..10),
     NamedSlider[int](
       pos: vec3(10, 500, 0),
-      name: Label(text: "0", size: vec2(25, 25)),
-      slider: HSLider[int](rng: 0..30, size: vec2(100, 25))
+      formatter: "Size: $#",
+      name: Label(text: "Size: $#" % $test.size.x, size: vec2(100, 25)),
+      slider: HSlider[int](
+        rng: 100..400,
+        size: vec2(100, 25),
+        onChange: proc(i: int) =
+          test.size.x = float32(i)
+        )
       ),
   )
 
