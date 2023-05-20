@@ -37,6 +37,7 @@ type
   VLayout[T] = VerticalLayoutBase[MyUiElement, T]
 
   Label = ref object of MyUiElement
+    text: string
 
   Button = ref object of ButtonBase[MyUiElement]
     baseColor: Vec4
@@ -47,13 +48,6 @@ type
     size: Vec2
     text: string
     font: Font
-
-proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
-  ButtonBase[MyUiElement](button).layout(parent, offset, screenSize)
-  if button.label != nil:
-    button.label.pos = vec3(0, 0, button.pos.z + 0.1)
-    button.label.size = button.size
-    button.label.layout(button, vec3(0), screenSize)
 
 proc `==`(a, b: Texture): bool = Gluint(a) == Gluint(b)
 proc hash(a: Texture): Hash = hash(Gluint(a))
@@ -85,6 +79,17 @@ proc makeTexture(s: string, size: Vec2): Texture =
     image.copyTo(tex)
     fontTextureCache[props] = tex
     tex
+
+proc layout*(label: Label, parent: MyUiElement, offset, screenSize: Vec3) =
+  MyUiElement(label).layout(parent, offset, screenSize)
+  label.texture = makeTexture(label.text, label.size)
+
+proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
+  ButtonBase[MyUiElement](button).layout(parent, offset, screenSize)
+  if button.label != nil:
+    button.label.pos = vec3(0, 0, button.pos.z + 0.1)
+    button.label.size = button.size
+    button.label.layout(button, vec3(0), screenSize)
 
 const vertShader = ShaderFile"""
 #version 430
@@ -196,7 +201,8 @@ proc defineGui(): auto =
             color: vec4(1),
             hoveredColor: vec4(0.5, 0.5, 0.5, 1),
             clickCb: (proc() = echo x, " ", y),
-            size: vec2(40, 40)
+            size: vec2(40, 40),
+            label: Label(color: vec4(0, 0, 0, 1), text: "$#, $#" % [$(x + 1), $(y + 1)])
           )
     grid.children.add horz
 
@@ -206,6 +212,7 @@ proc defineGui(): auto =
       anchor: {top, left},
       pos: vec3(20, 20, 0),
       size: vec2(300, 200),
+      text: "This is a Label!!!"
     ).named(test),
     Button(
       color: vec4(1),
@@ -226,21 +233,21 @@ proc defineGui(): auto =
           hoveredColor: vec4(0.5, 0, 0, 1),
           clickCb: (proc() = echo "huh", 1),
           size: vec2(60, 30),
-          label: Label(texture: makeTexture("Red", vec2(60, 30)), size: vec2(60, 30))
+          label: Label(text: "Red")
         ),
         Button(
           color: vec4(0, 1, 0, 1),
           hoveredColor: vec4(0, 0.5, 0, 1),
           clickCb: (proc() = echo "huh", 2),
           size: vec2(60, 30),
-          label: Label(texture: makeTexture("Blue", vec2(60, 30)), size: vec2(60, 30))
+          label: Label(text: "Blue")
         ),
         Button(
           color: vec4(0, 0, 1, 1),
           hoveredColor: vec4(0, 0, 0.5, 1),
           clickCb: (proc() = echo "huh", 3),
           size: vec2(60, 30),
-          label: Label(texture: makeTexture("Green", vec2(60, 30)), size: vec2(60, 30))
+          label: Label(text: "Green")
         )
       ]
     ),
