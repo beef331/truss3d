@@ -152,7 +152,6 @@ proc interact*[T](slider: NamedSlider[T], uiState: var MyUiState) =
   interact(slider.slider, uiState)
   if slider.slider.value != sliderStart:
     slider.name.text = $slider.slider.value
-    slider.name.texture = makeTexture(slider.name.text, slider.name.size)
 
 const vertShader = ShaderFile"""
 #version 430
