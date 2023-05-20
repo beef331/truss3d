@@ -77,7 +77,7 @@ proc makeTexture(s: string, size: Vec2): Texture =
   if props in fontTextureCache:
     fontTextureCache[props]
   else:
-    let
+    var
       tex = genTexture()
       image = newImage(int size.x, int size.y)
       font = defaultFont
@@ -90,6 +90,7 @@ proc makeTexture(s: string, size: Vec2): Texture =
     font.paint = rgb(255, 255, 255)
     image.fillText(font, s, bounds = size.vec2, hAlign = CenterAlign, vAlign = MiddleAlign)
     image.copyTo(tex)
+    image = nil
     fontTextureCache[props] = tex
     tex
 
@@ -100,7 +101,7 @@ proc layout*(label: Label, parent: MyUiElement, offset, screenSize: Vec3) =
 proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
   ButtonBase[MyUiElement](button).layout(parent, offset, screenSize)
   if button.label != nil:
-    button.label.pos = vec3(0, 0, button.pos.z + 0.1)
+    button.label.pos = vec3(0, 0, button.pos.z - 0.1)
     button.label.size = button.size
     button.label.layout(button, vec3(0), screenSize)
 
@@ -114,7 +115,7 @@ proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset, screenSize: Vec
   if slider.slideBar.isNil:
     new slider.slideBar
     slider.slideBar.color = vec4(1, 0, 0, 1)
-  slider.slideBar.pos = slider.pos + vec3(0, 0, 0.1)
+  slider.slideBar.pos = slider.pos - vec3(0, 0, 0.1)
   slider.slideBar.size.x = max(slider.percentage * slider.size.x, 0)
   slider.slideBar.size.y = slider.size.y
   slider.slideBar.layout(parent, offset, screenSize)
@@ -137,11 +138,8 @@ proc usedSize*[T](slider: NamedSlider[T]): Vec2 =
 proc layout*[T](slider: NamedSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
   slider.size = usedSize(slider)
   MyUiElement(slider).layout(parent, offset, screenSize)
-  var offset = vec3(0)
-  slider.name.layout(slider, offset, screenSize)
-  offset.x += slider.name.layoutSize.x
-
-  slider.slider.layout(slider, offset, screenSize)
+  slider.name.layout(MyUiElement slider, vec3(0), screenSize)
+  slider.slider.layout(slider, vec3(slider.name.layoutSize.x, 0, 0), screenSize)
 
 proc upload[T](slider: NamedSlider[T], uiState: MyUiState, target: var UiRenderTarget) =
   slider.name.upload(uiState, target)
@@ -317,9 +315,9 @@ proc defineGui(): auto =
     HSlider[int](pos: vec3(10, 10, 0), size: vec2(200, 25), rng: 0..10),
     NamedSlider[int](
       pos: vec3(10, 500, 0),
-      name: Label(size: vec2(50, 25)),
+      name: Label(text: "0", size: vec2(25, 25)),
       slider: HSLider[int](rng: 0..30, size: vec2(100, 25))
-      )
+      ),
   )
 
 var

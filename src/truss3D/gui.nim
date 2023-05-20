@@ -124,7 +124,7 @@ proc layout*[T: UiElements](ui: T, offset, screenSize: Vec3) =
   for field in ui.fields:
     layout(field, default(typeof(field)), offset, screenSize)
 
-proc interact*(ui: Element, state: var UiState) = # `auto` is bad, but the lesser of evils
+proc interact*[T: Element](ui: T, state: var UiState) = # `auto` is bad, but the lesser of evils
   mixin onClick, onEnter, onHover, onExit, interactImpl
   type Base = UiElement[typeof(ui.size), typeof(ui.pos)]
   if state.action == nothing:
