@@ -1,4 +1,5 @@
 import opengl, pixie
+import std/tables
 
 type
   TextureFormat* = enum
@@ -8,6 +9,7 @@ type
     tfR
 
   Texture* = distinct Gluint
+  TextureHandle* = distinct uint64
   TextureArray* = distinct Gluint
   RenderBuffer* = distinct GLuint
   FrameBufferId* = distinct Gluint
@@ -44,7 +46,6 @@ const
 proc genTexture*(): Texture =
   glCreateTextures(GlTexture2D, 1, result.Gluint.addr)
 
-
 proc genTextureArray*(width, height, depth: int, mipMapLevel = 1): TextureArray =
   glCreateTextures(GlTexture2dArray, 1, result.Gluint.addr)
   glBindTexture(GlTexture2dArray, Gluint(result))
@@ -57,6 +58,9 @@ proc genTextureArray*(width, height, depth: int, mipMapLevel = 1): TextureArray 
 
 proc delete*(tex: var Texture) =
   glDeleteTextures(1, tex.Gluint.addr)
+
+proc getHandle*(tex: Texture): TextureHandle =
+  TextureHandle glGetTextureHandleARB(Gluint tex)
 
 proc copyTo*(img: Image, tex: Texture) =
   glTextureStorage2D(tex.Gluint, 1.GlSizei, GlRgba8, img.width.GlSizei, img.height.GlSizei)
@@ -146,3 +150,16 @@ proc resize*(fb: var FrameBuffer, size: IVec2) =
   if size != fb.size:
     fb.size = size
     fb.attachTexture()
+
+var loadedTextures: Table[string, Texture] # Should use a ref count
+
+proc loadTexture*(path: string): Texture =
+  if path in loadedTextures:
+    loadedTextures[path]
+  else:
+    let
+      data = readImage path
+      tex = genTexture()
+    data.copyTo tex
+    loadedTextures[path] = tex
+    tex

@@ -95,7 +95,10 @@ proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
   glBindBufferbase(GlUniformBuffer, binding.Gluint, result.Gluint)
 
 proc copyTo*[T](val: T, ubo: Ubo[T]) =
-  glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
+  when T is seq:
+    glNamedBufferData(ubo.Gluint, sizeof(T) * val.len, val[0].unsafeAddr, GlDynamicDraw)
+  else:
+    glNamedBufferData(ubo.Gluint, sizeof(T), val.unsafeAddr, GlDynamicDraw)
 
 proc bindBuffer*(ssbo: Ssbo) =
   glBindBuffer(GlShaderStorageBuffer, Gluint(ssbo))
@@ -174,12 +177,16 @@ template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
       let loc = glGetUniformLocation(Gluint(shader), uniform)
       if loc != -1:
         body
+      else:
+        echo "Failed to get uniform: ", name
   else:
     let
       shader = getActiveShader()
       loc = glGetUniformLocation(Gluint(shader), uniform)
     if loc != -1:
       body
+    else:
+      echo "Failed to get uniform: ", name
 
 template makeSetter(T: typedesc, body: untyped) {.dirty.} =
   proc setUniform*(uniform: string, value: T) =
