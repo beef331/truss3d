@@ -57,6 +57,7 @@ type
     s.action is UiAction
     s.currentElement is UiElement[auto, auto]
     s.input is UiInput
+    s.inputPos is Vec2
 
 proc onlyUiElems*(t: typedesc[tuple]): bool =
   var val: t
@@ -119,16 +120,16 @@ proc layout*[T: UiElements](ui: T, offset, screenSize: Vec3) =
   for field in ui.fields:
     layout(field, default(typeof(field)), offset, screenSize)
 
-proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState, inputPos: S) =
+proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState) =
   mixin onClick, onEnter, onHover, onExit, interactImpl
   if state.action == nothing:
     when compiles(onEnter(ui, state)):
-      if isOver(ui, inputPos):
+      if isOver(ui, state.inputPos):
         onEnter(ui, state)
         state.action = overElement
         state.currentElement = ui
   if state.currentElement == ui:
-    if isOver(ui, inputPos):
+    if isOver(ui, state.inputPos):
       if state.input.kind == leftClick:
         when compiles(onClick(ui, state)):
           onClick(ui, state)
@@ -142,13 +143,13 @@ proc interact*[S, P; Ui: UiElement[S, P]](ui: Ui, state: var UiState, inputPos: 
         state.action = nothing
         state.currentElement = nil
 
-proc interact*[Ui: UiElements; T](ui: Ui, state: var UiState, inputPos: T) =
+proc interact*[Ui: UiElements](ui: Ui, state: var UiState) =
   mixin interact
   for field in ui.fields:
-    when compiles(interact(field, state, inputPos)):
-      interact(field, state, inputPos)
+    when compiles(interact(field, state)):
+      interact(field, state)
     else:
-      interact(UiElement[typeof(field.size), typeof(field.pos)](field), state, inputPos)
+      interact(UiElement[typeof(field.size), typeof(field.pos)](field), state)
 
 
 proc upload*[Ui: UiElements; T](ui: Ui, state: UiState, target: var T) =

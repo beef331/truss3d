@@ -50,10 +50,10 @@ proc layout*[Base, T](vert: Vert[Base, T], parent: Base, offset, screenSize: Vec
     child.layout(vert, offset, screenSize)
     offset.y += vert.margin + child.layoutSize.y
 
-proc interact*[Base, T](horz: Layout[Base, T], state: var UiState, inputPos: Vec2) =
+proc interact*[Base, T](horz: Layout[Base, T], state: var UiState) =
   mixin interact
   for x in horz.children:
-    interact(x, state, inputPos)
+    interact(x, state)
 
 
 proc upload*[Base, T](horz: Layout[Base, T], state: UiState, target: var auto) =

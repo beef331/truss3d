@@ -1,6 +1,6 @@
 import vmath, pixie
 import shaders, gui, textures, instancemodels, models
-import gui/[layouts, buttons]
+import gui/[layouts, buttons, sliders]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
@@ -31,10 +31,11 @@ type
     action: UiAction
     currentElement: MyUiElement
     input: UiInput
+    inputPos: Vec2
 
   HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
-
   VLayout[T] = VerticalLayoutBase[MyUiElement, T]
+  HSlider[T] = HorziontalSliderBase[MyUiElement, T]
 
   Label = ref object of MyUiElement
     text: string
@@ -48,6 +49,8 @@ type
     size: Vec2
     text: string
     font: Font
+
+proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
 
 proc `==`(a, b: Texture): bool = Gluint(a) == Gluint(b)
 proc hash(a: Texture): Hash = hash(Gluint(a))
@@ -271,8 +274,9 @@ proc update(dt: float32) =
     uiState.input = UiInput(kind: leftClick)
   else:
     uiState.input = UiInput(kind: UiInputKind.nothing)
+  uiState.inputPos = vec2 getMousePos()
   myUi.layout(vec3(0), vec3(vec2 screenSize(), 0))
-  myUi.interact(uiState, vec2 getMousePos())
+  myUi.interact(uiState)
 
 proc draw() =
   renderTarget.model.clear()
