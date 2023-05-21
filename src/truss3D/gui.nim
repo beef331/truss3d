@@ -86,7 +86,7 @@ proc isOver[S, P](ui: UiElement[S, P], pos: Vec2): bool =
   pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y
 
-proc usedSize*[S, P](ui: UiElement[S, P]): S = ui.size
+proc usedSize*[T: Element](ui: T): auto = ui.size
 
 
 proc layout*[S, P](ui: UiElement[S, P], parent: UiElement[S, P], offset, screenSize: P) =
@@ -156,7 +156,6 @@ proc interact*[Ui: UiElements](ui: Ui, state: var UiState) =
   mixin interact
   for field in ui.fields:
     interact(field, state)
-
 
 proc upload*[Ui: UiElements; T](ui: Ui, state: UiState, target: var T) =
   mixin upload

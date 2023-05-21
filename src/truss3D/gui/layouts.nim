@@ -18,7 +18,6 @@ type
 
   Layout[Base, T] = Vert[Base, T] or Horz[Base, T]
 
-
 proc usedSize*[Base, T](horz: Horz[Base, T]): Vec2 =
   result = typeof(horz.size).init(horz.margin * float32 horz.children.high, 0)
   for child in horz.children:

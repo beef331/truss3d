@@ -9,4 +9,5 @@ proc layout*[Base](button: ButtonBase[Base], parent: Base, offset, screenSize: V
   Base(button).layout(parent, offset, screenSize)
 
 proc onClick*[Base](button: ButtonBase[Base], uiState: var UiState) =
-  button.clickCb()
+  if button.clickCb != nil:
+    button.clickCb()

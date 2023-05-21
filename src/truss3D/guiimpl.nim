@@ -1,6 +1,6 @@
 import vmath, pixie
 import shaders, gui, textures, instancemodels, models
-import gui/[layouts, buttons, sliders]
+import gui/[layouts, buttons, sliders, groups]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
@@ -33,8 +33,9 @@ type
     input: UiInput
     inputPos: Vec2
 
-  HLayout[T] {.acyclic.} = HorizontalLayoutBase[MyUiElement, T]
-  VLayout[T] {.acyclic.} = VerticalLayoutBase[MyUiElement, T]
+  HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
+  VLayout[T] = VerticalLayoutBase[MyUiElement, T]
+  HGroup[T] = HorizontalGroupBase[MyUiElement, T]
 
   HSlider[T] {.acyclic.} = ref object of MyUiElement
     value: T
@@ -222,6 +223,10 @@ proc upload[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var U
   # This should not be required, why it's not calling the exact version is beyond me
   layouts.upload(layout, state, target)
 
+proc upload[T](group: HGroup[T], state: MyUiState, target: var UiRenderTarget) =
+  # This should not be required, why it's not calling the exact version is beyond me
+  groups.upload(group, state, target)
+
 proc upload(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
   let
     scrSize = vec2 screenSize()
@@ -326,6 +331,24 @@ proc defineGui(): auto =
           test.size.x = float32(i)
         )
       ),
+    HGroup[(Button, HSlider[int])](
+      pos: vec3(300, 100, 0),
+      anchor: {bottom, right},
+      margin: 10,
+      entries: (
+        Button(
+          label: Label(text: "Hello", color: vec4(0, 0, 0, 1)),
+          size: vec2(50, 25),
+          hoveredColor: vec4(0.1, 0.4, 0.4, 1),
+          clickCB: proc() = echo "Clickity"
+        ),
+        HSlider[int](
+          size: vec2(100, 25),
+          rng: 0..10,
+          onChange: proc(i: int) = echo i
+        )
+      )
+    ),
   )
 
 var
