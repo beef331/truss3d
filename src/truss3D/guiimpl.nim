@@ -4,155 +4,6 @@ import gui/[layouts, buttons, sliders, groups]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
-proc init(_: typedesc[Vec2], x, y: float32): Vec2 = vec2(x, y)
-proc init(_: typedesc[Vec3], x, y, z: float32): Vec3 = vec3(x, y, z)
-
-
-type
-  UiRenderObj* = object
-    color*: Vec4
-    backgroundColor*: Vec4
-    texture*: uint64
-    hasTex*: uint32
-    matrix* {.align: 16.}: Mat4
-
-  RenderInstance = seq[UiRenderObj]
-
-  UiRenderTarget* = object
-    model: InstancedModel[RenderInstance]
-    shader: Shader
-
-  MyUiElement {.acyclic.} = ref object of UiElement[Vec2, Vec3]
-    color: Vec4 = vec4(1, 1, 1, 1)
-    backgroundColor: Vec4
-    texture: Texture
-
-  MyUiState = object
-    action: UiAction
-    currentElement: MyUiElement
-    input: UiInput
-    inputPos: Vec2
-
-  HLayout[T] = HorizontalLayoutBase[MyUiElement, T]
-  VLayout[T] = VerticalLayoutBase[MyUiElement, T]
-  HGroup[T] = HorizontalGroupBase[MyUiElement, T]
-
-  HSlider[T] {.acyclic.} = ref object of MyUiElement
-    value: T
-    rng: Slice[T]
-    percentage: float32
-    slideBar: MyUiElement
-    onChange: proc(a: T)
-
-  Label {.acyclic.} = ref object of MyUiElement
-    text: string
-
-  NamedSlider[T] {.acyclic.} = ref object of MyUiElement
-    formatter: string
-    name: Label
-    slider: HSlider[T]
-
-  Button {.acyclic.} = ref object of ButtonBase[MyUiElement]
-    baseColor: Vec4
-    hoveredColor: Vec4
-    label: Label
-
-  FontProps = object
-    size: Vec2
-    text: string
-    font: Font
-
-proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
-
-proc `==`(a, b: Texture): bool = Gluint(a) == Gluint(b)
-proc hash(a: Texture): Hash = hash(Gluint(a))
-
-proc hash(f: Font): Hash = cast[Hash](f)
-
-var
-  fontTextureCache: Table[FontProps, Texture]
-  defaultFont = readFont"assets/fonts/MarradaRegular-Yj0O.ttf"
-  fontCache: Table[string, Font] = {"MarradaRegular": defaultFont}.toTable
-
-proc makeTexture(s: string, size: Vec2): Texture =
-  let props = FontProps(size: size, text: s, font: defaultFont)
-  if props in fontTextureCache:
-    fontTextureCache[props]
-  else:
-    var
-      tex = genTexture()
-      image = newImage(int size.x, int size.y)
-      font = defaultFont
-    font.size = size.y
-    var layout = font.layoutBounds(s)
-    while layout.x > size.x or layout.y > size.y:
-      font.size -= 1
-      layout = font.layoutBounds(s)
-
-    font.paint = rgb(255, 255, 255)
-    image.fillText(font, s, bounds = size.vec2, hAlign = CenterAlign, vAlign = MiddleAlign)
-    image.copyTo(tex)
-    image = nil
-    fontTextureCache[props] = tex
-    tex
-
-proc layout*(label: Label, parent: MyUiElement, offset, screenSize: Vec3) =
-  MyUiElement(label).layout(parent, offset, screenSize)
-  label.texture = makeTexture(label.text, label.size)
-
-proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
-  ButtonBase[MyUiElement](button).layout(parent, offset, screenSize)
-  if button.label != nil:
-    button.label.pos = vec3(0, 0, button.pos.z - 0.1)
-    button.label.size = button.size
-    button.label.layout(button, vec3(0), screenSize)
-
-proc upload[T](slider: HSlider[T], state: MyUiState, target: var UiRenderTarget) =
-  MyUiElement(slider).upload(state, target)
-  slider.slideBar.upload(state, target)
-
-proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
-  mixin layout
-  MyUiElement(slider).layout(parent, offset, screenSize)
-  if slider.slideBar.isNil:
-    new slider.slideBar
-    slider.slideBar.color = vec4(1, 0, 0, 1)
-  slider.slideBar.pos = slider.pos - vec3(0, 0, 0.1)
-  slider.slideBar.size.x = max(slider.percentage * slider.size.x, 0)
-  slider.slideBar.size.y = slider.size.y
-  slider.slideBar.layout(parent, offset, screenSize)
-
-proc onEnter*[T](slider: HSlider[T], uiState: var UiState) = discard
-
-proc onDrag*[T](slider: HSlider[T], uiState: var UiState) =
-  mixin lerp
-  slider.percentage = (uiState.inputPos.x - slider.layoutPos.x) / slider.size.x
-  let newVal = lerp(slider.rng.a, slider.rng.b, slider.percentage)
-  if slider.value != newVal:
-    slider.value = newVal
-    if slider.onChange != nil:
-      slider.onChange(slider.value)
-
-proc usedSize*[T](slider: NamedSlider[T]): Vec2 =
-  result.x += slider.name.size.x + slider.slider.size.x
-  result.y = max(slider.name.size.y, slider.slider.size.y)
-
-proc layout*[T](slider: NamedSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
-  slider.size = usedSize(slider)
-  MyUiElement(slider).layout(parent, offset, screenSize)
-  slider.name.layout(MyUiElement slider, vec3(0), screenSize)
-  slider.slider.layout(slider, vec3(slider.name.layoutSize.x, 0, 0), screenSize)
-
-proc upload[T](slider: NamedSlider[T], uiState: MyUiState, target: var UiRenderTarget) =
-  slider.name.upload(uiState, target)
-  slider.slider.upload(uiState, target)
-
-proc interact*[T](slider: NamedSlider[T], uiState: var MyUiState) =
-  let sliderStart = slider.slider.value
-  interact(slider.slider, uiState)
-  if slider.slider.value != sliderStart:
-    slider.name.text = slider.formatter % $slider.slider.value
-
 const vertShader = ShaderFile"""
 #version 430
 #extension GL_ARB_bindless_texture : require
@@ -208,24 +59,69 @@ void main() {
 
 """
 
-proc onEnter(button: Button, uiState: var MyUiState) =
-  button.baseColor = button.color
 
-proc onHover(button: Button, uiState: var MyUiState) =
-  button.flags.incl hovered
-  button.color = button.hoveredColor
+proc init(_: typedesc[Vec2], x, y: float32): Vec2 = vec2(x, y)
+proc init(_: typedesc[Vec3], x, y, z: float32): Vec3 = vec3(x, y, z)
 
-proc onExit(button: Button, uiState: var MyUiState) =
-  button.flags.excl hovered
-  button.color = button.baseColor
 
-proc upload[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var UiRenderTarget) =
-  # This should not be required, why it's not calling the exact version is beyond me
-  layouts.upload(layout, state, target)
+type
+  UiRenderObj* = object
+    color*: Vec4
+    backgroundColor*: Vec4
+    texture*: uint64
+    hasTex*: uint32
+    matrix* {.align: 16.}: Mat4
 
-proc upload[T](group: HGroup[T], state: MyUiState, target: var UiRenderTarget) =
-  # This should not be required, why it's not calling the exact version is beyond me
-  groups.upload(group, state, target)
+  RenderInstance = seq[UiRenderObj]
+
+  UiRenderTarget* = object
+    model: InstancedModel[RenderInstance]
+    shader: Shader
+
+  MyUiElement {.acyclic.} = ref object of UiElement[Vec2, Vec3]
+    color: Vec4 = vec4(1, 1, 1, 1)
+    backgroundColor: Vec4
+    texture: Texture
+
+  MyUiState = object
+    action: UiAction
+    currentElement: MyUiElement
+    input: UiInput
+    inputPos: Vec2
+
+  HLayout[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
+  VLayout[T] = ref object of VerticalLayoutBase[MyUiElement, T]
+  HGroup[T] = ref object of HorizontalGroupBase[MyUiElement, T]
+
+  HSlider[T] {.acyclic.} = ref object of HorizontalSliderBase[MyUiElement, T]
+    slideBar: MyUiElement
+    hoveredColor: Vec4
+    baseColor: Vec4
+
+  Label {.acyclic.} = ref object of MyUiElement
+    text: string
+
+  NamedSlider[T] {.acyclic.} = ref object of MyUiElement
+    formatter: string
+    name: Label
+    slider: HSlider[T]
+
+  Button {.acyclic.} = ref object of ButtonBase[MyUiElement]
+    baseColor: Vec4
+    hoveredColor: Vec4
+    label: Label
+
+  FontProps = object
+    size: Vec2
+    text: string
+    font: Font
+
+proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
+
+proc `==`(a, b: Texture): bool = Gluint(a) == Gluint(b)
+proc hash(a: Texture): Hash = hash(Gluint(a))
+
+proc hash(f: Font): Hash = cast[Hash](f)
 
 proc upload(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
   let
@@ -245,10 +141,132 @@ proc upload(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
 
   target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex, hasTex: uint32(tex))
 
+var
+  fontTextureCache: Table[FontProps, Texture]
+  defaultFont = readFont"assets/fonts/MarradaRegular-Yj0O.ttf"
+  fontCache: Table[string, Font] = {"MarradaRegular": defaultFont}.toTable
+
+proc makeTexture(s: string, size: Vec2): Texture =
+  let props = FontProps(size: size, text: s, font: defaultFont)
+  if props in fontTextureCache:
+    fontTextureCache[props]
+  else:
+    var
+      tex = genTexture()
+      image = newImage(int size.x, int size.y)
+      font = defaultFont
+    font.size = size.y
+    var layout = font.layoutBounds(s)
+    while layout.x > size.x or layout.y > size.y:
+      font.size -= 1
+      layout = font.layoutBounds(s)
+
+    font.paint = rgb(255, 255, 255)
+    image.fillText(font, s, bounds = size.vec2, hAlign = CenterAlign, vAlign = MiddleAlign)
+    image.copyTo(tex)
+    image = nil
+    fontTextureCache[props] = tex
+    tex
+
+proc layout*(label: Label, parent: MyUiElement, offset, screenSize: Vec3) =
+  MyUiElement(label).layout(parent, offset, screenSize)
+  label.texture = makeTexture(label.text, label.size)
+
+# Named Slider code
+
+proc usedSize*[T](slider: NamedSlider[T]): Vec2 =
+  result.x += slider.name.size.x + slider.slider.size.x
+  result.y = max(slider.name.size.y, slider.slider.size.y)
+
+proc layout*[T](slider: NamedSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
+  slider.size = usedSize(slider)
+  MyUiElement(slider).layout(parent, offset, screenSize)
+  slider.name.layout(MyUiElement slider, vec3(0), screenSize)
+  slider.slider.layout(slider, vec3(slider.name.layoutSize.x, 0, 0), screenSize)
+
+proc upload[T](slider: NamedSlider[T], uiState: MyUiState, target: var UiRenderTarget) =
+  slider.name.upload(uiState, target)
+  slider.slider.upload(uiState, target)
+
+proc interact*[T](slider: NamedSlider[T], uiState: var MyUiState) =
+  let sliderStart = slider.slider.value
+  interact(slider.slider, uiState)
+  if slider.slider.value != sliderStart:
+    slider.name.text = slider.formatter % $slider.slider.value
+
+# Layout/Group Code
+
+proc interact[T](layout: HLayout[T] or VLayout[T], uiState: var MyUiState) =
+  layouts.interact(layout, uiState)
+
+proc interact[T](group: HGroup[T], uiState: var MyUiState) =
+  groups.interact(group, uiState)
+
+# Slider Code
+proc upload[T](slider: HSlider[T], state: MyUiState, target: var UiRenderTarget) =
+  MyUiElement(slider).upload(state, target)
+  slider.slideBar.upload(state, target)
+
+proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
+  mixin layout
+  MyUiElement(slider).layout(parent, offset, screenSize)
+  if slider.slideBar.isNil:
+    new slider.slideBar
+    slider.slideBar.color = vec4(1, 0, 0, 1)
+  slider.slideBar.pos = slider.pos - vec3(0, 0, 0.1)
+  slider.slideBar.size.x = max(slider.percentage * slider.size.x, 0)
+  slider.slideBar.size.y = slider.size.y
+  slider.slideBar.layout(parent, offset, screenSize)
+
+proc onEnter[T](slider: HSlider[T], uiState: var MyUiState) =
+  slider.baseColor = slider.color
+
+proc onHover[T](slider: HSlider[T], uiState: var MyUiState) =
+  slider.flags.incl hovered
+  slider.color = slider.hoveredColor
+
+proc onExit[T](slider: HSlider[T], uiState: var MyUiState) =
+  slider.flags.excl hovered
+  slider.color = slider.baseColor
+
+proc onDrag[T](slider: HSlider[T], uiState: var MyUiState) =
+  sliders.onDrag(slider, uiState)
+
+# Button Code
+
 proc upload(button: Button, state: MyUiState, target: var UiRenderTarget) =
   MyUiElement(button).upload(state, target)
   if button.label != nil:
     button.label.upload(state, target)
+
+proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
+  ButtonBase[MyUiElement](button).layout(parent, offset, screenSize)
+  if button.label != nil:
+    button.label.pos = vec3(0, 0, button.pos.z - 0.1)
+    button.label.size = button.size
+    button.label.layout(button, vec3(0), screenSize)
+
+proc onClick(button: Button, uiState: var MyUiState) =
+  buttons.onClick(button, uiState)
+
+proc onEnter(button: Button, uiState: var MyUiState) =
+  button.baseColor = button.color
+
+proc onHover(button: Button, uiState: var MyUiState) =
+  button.flags.incl hovered
+  button.color = button.hoveredColor
+
+proc onExit(button: Button, uiState: var MyUiState) =
+  button.flags.excl hovered
+  button.color = button.baseColor
+
+proc upload[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var UiRenderTarget) =
+  # Due to generic dispatch these intermediate calls are requied
+  layouts.upload(layout, state, target)
+
+proc upload[T](group: HGroup[T], state: MyUiState, target: var UiRenderTarget) =
+  # Due to generic dispatch these intermediate calls are requied
+  groups.upload(group, state, target)
 
 
 var modelData: MeshData[Vec2]
@@ -297,21 +315,21 @@ proc defineGui(): auto =
         Button(
           color: vec4(1, 0, 0, 1),
           hoveredColor: vec4(0.5, 0, 0, 1),
-          clickCb: (proc() = echo "huh", 1),
+          clickCb: (proc() = test.color = vec4(1, 0, 0, 1)),
           size: vec2(60, 30),
           label: Label(text: "Red")
         ),
         Button(
-          color: vec4(0, 1, 0, 1),
-          hoveredColor: vec4(0, 0.5, 0, 1),
-          clickCb: (proc() = echo "huh", 2),
+          color: vec4(0, 0, 1, 1),
+          hoveredColor: vec4(0, 0, 0.5, 1),
+          clickCb: (proc() = test.color = vec4(0, 1, 0, 1)),
           size: vec2(60, 30),
           label: Label(text: "Blue")
         ),
         Button(
-          color: vec4(0, 0, 1, 1),
-          hoveredColor: vec4(0, 0, 0.5, 1),
-          clickCb: (proc() = echo "huh", 3),
+          color: vec4(0, 1, 0, 1),
+          hoveredColor: vec4(0, 0.5, 0, 1),
+          clickCb: (proc() = test.color = vec4(0, 0, 1, 1)),
           size: vec2(60, 30),
           label: Label(text: "Green")
         )
@@ -331,7 +349,7 @@ proc defineGui(): auto =
           test.size.x = float32(i)
         )
       ),
-    HGroup[(Button, HSlider[int])](
+    HGroup[(Button, HSlider[float32])](
       pos: vec3(300, 100, 0),
       anchor: {bottom, right},
       margin: 10,
@@ -342,10 +360,11 @@ proc defineGui(): auto =
           hoveredColor: vec4(0.1, 0.4, 0.4, 1),
           clickCB: proc() = echo "Clickity"
         ),
-        HSlider[int](
+        HSlider[float32](
           size: vec2(100, 25),
-          rng: 0..10,
-          onChange: proc(i: int) = echo i
+          rng: 0f..10f,
+          onChange: (proc(f: float32) = echo f),
+          hoveredColor: vec4(0.5, 0.3, 0.1, 1)
         )
       )
     ),
@@ -360,7 +379,7 @@ var
 proc init() =
   renderTarget.model = uploadInstancedModel[RenderInstance](modelData)
   myUi = defineGui()
-  myUi.layout(vec3(0), vec3(vec2 screenSize()))
+  myUi.layout(vec3(0), vec3(vec2 screenSize())) # Screensize should be inside `uiState`?
   renderTarget.shader = loadShader(vertShader, fragShader)
 
 proc update(dt: float32) =

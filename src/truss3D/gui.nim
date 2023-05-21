@@ -124,33 +124,43 @@ proc layout*[T: UiElements](ui: T, offset, screenSize: Vec3) =
   for field in ui.fields:
     layout(field, default(typeof(field)), offset, screenSize)
 
-proc interact*[T: Element](ui: T, state: var UiState) = # `auto` is bad, but the lesser of evils
-  mixin onClick, onEnter, onHover, onExit, interactImpl
+proc onEnter(ui: Element, state: var UiState) = discard
+proc onClick(ui: Element, state: var UiState) = discard
+proc onHover(ui: Element, state: var UiState) = discard
+proc onExit(ui: Element, state: var UiState) = discard
+proc onDrag(ui: Element, state: var UiState) = discard
+
+import std/macros
+
+macro noConvToElement(code: typed): untyped =
+  if not code[0].getImpl.params[1][^2].sameType(getType(Element)):
+    result = code
+  else:
+    result = newStmtList()
+
+
+proc interact*[T: Element](ui: T, state: var UiState) =
+  mixin onClick, onEnter, onHover, onExit, interact, onDrag
   type Base = UiElement[typeof(ui.size), typeof(ui.pos)]
   if state.action == nothing:
     when compiles(onEnter(ui, state)):
       if isOver(Base ui, state.inputPos):
-        onEnter(ui, state)
+        noConvToElement onEnter(ui, state)
         state.action = overElement
         state.currentElement = ui
   if state.currentElement == typeof(state.currentElement)(ui):
     if isOver(Base ui, state.inputPos):
       if state.input.kind == leftClick:
         if state.input.isHeld:
-          when compiles(onDrag(ui, state)):
-            onDrag(ui, state)
+          noConvToElement onDrag(ui, state)
         else:
-          when compiles(onClick(ui, state)):
-            onClick(ui, state)
-            reset state.input  # Consume it
-      when compiles(onHover(ui, state)):
-        onHover(ui, state)
+          noConvToElement onClick(ui, state)
+          reset state.input  # Consume it
+      noConvToElement onHover(ui, state)
     else:
-      when compiles(onExit(ui, state)):
-        onExit(ui, state)
-      when compiles(onEnter(ui, state)):
-        state.action = nothing
-        state.currentElement = nil
+      noConvToElement onExit(ui, state)
+      state.action = nothing
+      state.currentElement = nil
 
 proc interact*[Ui: UiElements](ui: Ui, state: var UiState) =
   mixin interact
