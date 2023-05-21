@@ -132,11 +132,11 @@ proc onDrag(ui: Element, state: var UiState) = discard
 
 import std/macros
 
-macro noConvToElement(code: typed): untyped =
+macro requiresConvToElement(code: typed): untyped =
   if not code[0].getImpl.params[1][^2].sameType(getType(Element)):
-    result = code
+    result = newStmtList(code, newLit false)
   else:
-    result = newStmtList()
+    result = newLit true
 
 
 proc interact*[T: Element](ui: T, state: var UiState) =
@@ -145,20 +145,20 @@ proc interact*[T: Element](ui: T, state: var UiState) =
   if state.action == nothing:
     when compiles(onEnter(ui, state)):
       if isOver(Base ui, state.inputPos):
-        noConvToElement onEnter(ui, state)
-        state.action = overElement
-        state.currentElement = ui
+        if not requiresConvToElement onEnter(ui, state):
+          state.action = overElement
+          state.currentElement = ui
   if state.currentElement == typeof(state.currentElement)(ui):
     if isOver(Base ui, state.inputPos):
       if state.input.kind == leftClick:
         if state.input.isHeld:
-          noConvToElement onDrag(ui, state)
+          discard requiresConvToElement onDrag(ui, state)
         else:
-          noConvToElement onClick(ui, state)
+          discard requiresConvToElement onClick(ui, state)
           reset state.input  # Consume it
-      noConvToElement onHover(ui, state)
+      discard requiresConvToElement onHover(ui, state)
     else:
-      noConvToElement onExit(ui, state)
+      discard requiresConvToElement onExit(ui, state)
       state.action = nothing
       state.currentElement = nil
 
