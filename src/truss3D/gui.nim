@@ -143,11 +143,10 @@ proc interact*[T: Element](ui: T, state: var UiState) =
   mixin onClick, onEnter, onHover, onExit, interact, onDrag
   type Base = UiElement[typeof(ui.size), typeof(ui.pos)]
   if state.action == nothing:
-    when compiles(onEnter(ui, state)):
-      if isOver(Base ui, state.inputPos):
-        if not requiresConvToElement onEnter(ui, state):
-          state.action = overElement
-          state.currentElement = ui
+    if isOver(Base ui, state.inputPos):
+      if not requiresConvToElement onEnter(ui, state):
+        state.action = overElement
+        state.currentElement = ui
   if state.currentElement == typeof(state.currentElement)(ui):
     if isOver(Base ui, state.inputPos):
       if state.input.kind == leftClick:
