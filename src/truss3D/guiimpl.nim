@@ -1,6 +1,6 @@
-import vmath, pixie
-import shaders, gui, textures, instancemodels, models
-import gui/[layouts, buttons, sliders, groups]
+import vmath, pixie, gooey
+import shaders, textures, instancemodels, models
+import gooey/[layouts, buttons, sliders, groups]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
@@ -88,6 +88,8 @@ type
     currentElement: MyUiElement
     input: UiInput
     inputPos: Vec2
+    screenSize: Vec2
+    scaling: float32
 
   HLayout[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
   VLayout[T] = ref object of VerticalLayoutBase[MyUiElement, T]
@@ -168,8 +170,8 @@ proc makeTexture(s: string, size: Vec2): Texture =
     fontTextureCache[props] = tex
     tex
 
-proc layout*(label: Label, parent: MyUiElement, offset, screenSize: Vec3) =
-  MyUiElement(label).layout(parent, offset, screenSize)
+proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) =
+  MyUiElement(label).layout(parent, offset, state)
   label.texture = makeTexture(label.text, label.size)
 
 # Named Slider code
@@ -178,11 +180,11 @@ proc usedSize*[T](slider: NamedSlider[T]): Vec2 =
   result.x += slider.name.size.x + slider.slider.size.x
   result.y = max(slider.name.size.y, slider.slider.size.y)
 
-proc layout*[T](slider: NamedSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
+proc layout*[T](slider: NamedSlider[T], parent: MyUiElement, offset: Vec3, state: MyUiState) =
   slider.size = usedSize(slider)
-  MyUiElement(slider).layout(parent, offset, screenSize)
-  slider.name.layout(MyUiElement slider, vec3(0), screenSize)
-  slider.slider.layout(slider, vec3(slider.name.layoutSize.x, 0, 0), screenSize)
+  MyUiElement(slider).layout(parent, offset, state)
+  slider.name.layout(MyUiElement slider, vec3(0), state)
+  slider.slider.layout(slider, vec3(slider.name.layoutSize.x, 0, 0), state)
 
 proc upload[T](slider: NamedSlider[T], uiState: MyUiState, target: var UiRenderTarget) =
   slider.name.upload(uiState, target)
@@ -207,16 +209,16 @@ proc upload[T](slider: HSlider[T], state: MyUiState, target: var UiRenderTarget)
   MyUiElement(slider).upload(state, target)
   slider.slideBar.upload(state, target)
 
-proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset, screenSize: Vec3) =
+proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset: Vec3, state: MyUiState) =
   mixin layout
-  MyUiElement(slider).layout(parent, offset, screenSize)
+  MyUiElement(slider).layout(parent, offset, state)
   if slider.slideBar.isNil:
     new slider.slideBar
     slider.slideBar.color = vec4(1, 0, 0, 1)
   slider.slideBar.pos = slider.pos - vec3(0, 0, 0.1)
   slider.slideBar.size.x = max(slider.percentage * slider.size.x, 0)
   slider.slideBar.size.y = slider.size.y
-  slider.slideBar.layout(parent, offset, screenSize)
+  slider.slideBar.layout(parent, offset, state)
 
 proc onEnter[T](slider: HSlider[T], uiState: var MyUiState) =
   slider.baseColor = slider.color
@@ -239,12 +241,12 @@ proc upload(button: Button, state: MyUiState, target: var UiRenderTarget) =
   if button.label != nil:
     button.label.upload(state, target)
 
-proc layout*(button: Button, parent: MyUiElement, offset, screenSize: Vec3) =
-  ButtonBase[MyUiElement](button).layout(parent, offset, screenSize)
+proc layout*(button: Button, parent: MyUiElement, offset: Vec3, state: MyUiState) =
+  ButtonBase[MyUiElement](button).layout(parent, offset, state)
   if button.label != nil:
     button.label.pos = vec3(0, 0, button.pos.z - 0.1)
     button.label.size = button.size
-    button.label.layout(button, vec3(0), screenSize)
+    button.label.layout(button, vec3(0), state)
 
 proc onClick(button: Button, uiState: var MyUiState) =
   buttons.onClick(button, uiState)
@@ -373,13 +375,13 @@ proc defineGui(): auto =
 var
   renderTarget: UiRenderTarget
   myUi: typeof(defineGui())
-  uiState = MyUiState()
+  uiState = MyUiState(scaling: 1)
 
 
 proc init() =
   renderTarget.model = uploadInstancedModel[RenderInstance](modelData)
   myUi = defineGui()
-  myUi.layout(vec3(0), vec3(vec2 screenSize())) # Screensize should be inside `uiState`?
+  myUi.layout(vec3(0), uiState)
   renderTarget.shader = loadShader(vertShader, fragShader)
 
 proc update(dt: float32) =
@@ -389,8 +391,9 @@ proc update(dt: float32) =
     uiState.input = UiInput(kind: leftClick, isHeld: true)
   else:
     uiState.input = UiInput(kind: UiInputKind.nothing)
+  uiState.screenSize = vec2 screenSize()
   uiState.inputPos = vec2 getMousePos()
-  myUi.layout(vec3(0), vec3(vec2 screenSize(), 0))
+  myUi.layout(vec3(0), uiState)
   myUi.interact(uiState)
 
 proc draw() =
