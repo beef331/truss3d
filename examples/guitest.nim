@@ -1,164 +1,147 @@
-import truss3D, vmath
-import truss3D/gui
-import std/sequtils
+import vmath, pixie, gooey, truss3D
+import truss3D/[shaders, textures, instancemodels, models, gui]
+import std/[sugar, tables, hashes, strutils]
 
-emitScrollbarMethods(float32)
+proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
 
-type MyEnum = enum
-  SomeValue
-  SomeOtherValue
-  SomeOthererValue
-  SomeOthrerererValue
 
-emitDropDownMethods(MyEnum)
+var modelData: MeshData[Vec2]
+modelData.appendVerts [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items
+modelData.append [0u32, 1, 2, 0, 2, 3].items
+modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
+
+proc defineGui(): auto =
+  let grid = VLayout[HLayout[Button]](pos: vec3(10, 10, 0), margin: 10, anchor: {top, right})
+  for y in 0..<8:
+    let horz =  HLayout[Button](margin: 10)
+    for x in 0..<4:
+      capture x, y:
+        horz.children.add:
+          Button(
+            color: vec4(1),
+            hoveredColor: vec4(0.5, 0.5, 0.5, 1),
+            clickCb: (proc() = echo x, " ", y),
+            size: vec2(40, 40),
+            label: Label(color: vec4(0, 0, 0, 1), text: "$#, $#" % [$(x + 1), $(y + 1)])
+          )
+    grid.children.add horz
+
+  (
+    Label(
+      color: vec4(1),
+      anchor: {top, left},
+      pos: vec3(20, 20, 0),
+      size: vec2(300, 200),
+      text: "This is a Label!!!"
+    ).named(test),
+    Button(
+      color: vec4(1),
+      hoveredColor: vec4(0.5, 0.5, 0.5, 1),
+      anchor: {bottom, right},
+      pos: vec3(10, 10, 0),
+      size: vec2(50, 50),
+      clickCb: proc() =
+        test.pos.x += 10
+    ),
+    HLayout[Button](
+      pos: vec3(10, 10, 0),
+      anchor: {bottom, left},
+      margin: 10,
+      children: @[
+        Button(
+          color: vec4(1, 0, 0, 1),
+          hoveredColor: vec4(0.5, 0, 0, 1),
+          clickCb: (proc() = test.color = vec4(1, 0, 0, 1)),
+          size: vec2(60, 30),
+          label: Label(text: "Red")
+        ),
+        Button(
+          color: vec4(0, 0, 1, 1),
+          hoveredColor: vec4(0, 0, 0.5, 1),
+          clickCb: (proc() = test.color = vec4(0, 1, 0, 1)),
+          size: vec2(60, 30),
+          label: Label(text: "Blue")
+        ),
+        Button(
+          color: vec4(0, 1, 0, 1),
+          hoveredColor: vec4(0, 0.5, 0, 1),
+          clickCb: (proc() = test.color = vec4(0, 0, 1, 1)),
+          size: vec2(60, 30),
+          label: Label(text: "Green")
+        )
+      ]
+    ),
+    grid,
+    HSlider[int](pos: vec3(10, 10, 0), size: vec2(200, 25), rng: 0..10),
+    NamedSlider[int](
+      pos: vec3(10, 100, 0),
+      anchor: {bottom, left},
+      formatter: "Size: $#",
+      name: Label(text: "Size: $#" % $test.size.x, size: vec2(100, 25)),
+      slider: HSlider[int](
+        rng: 100..400,
+        size: vec2(100, 25),
+        onChange: proc(i: int) =
+          test.size.x = float32(i)
+        )
+      ),
+    HGroup[(Button, HSlider[float32])](
+      pos: vec3(300, 100, 0),
+      anchor: {bottom, right},
+      margin: 10,
+      entries: (
+        Button(
+          label: Label(text: "Hello", color: vec4(0, 0, 0, 1)),
+          size: vec2(50, 25),
+          hoveredColor: vec4(0.1, 0.4, 0.4, 1),
+          clickCB: proc() = echo "Clickity"
+        ),
+        HSlider[float32](
+          size: vec2(100, 25),
+          rng: 0f..10f,
+          onChange: (proc(f: float32) = echo f),
+          hoveredColor: vec4(0.5, 0.3, 0.1, 1)
+        )
+      )
+    ),
+  )
+
+
+fontPath = "../assets/fonts/MarradaRegular-Yj0O.ttf"
 
 var
-  btns: seq[Button]
-  horzLayout, vertLayout: LayoutGroup
-  myDropDown: Dropdown[MyEnum]
-  textArea: TextArea
-  myVal: MyEnum
-
-proc init =
-  gui.fontPath = "../assets/fonts/MarradaRegular-Yj0O.ttf"
-  gui.init()
-  glClearColor(0.1, 0.1, 0.1, 1)
-  let backgroundTex = genTexture()
-  readImage("../assets/uiframe.png").copyTo(backgroundTex)
-  btns.add:
-    makeUi(Button):
-      pos = ivec2(10, 10)
-      size = ivec2(200, 100)
-      text = "Hmm"
-      backgroundColor = vec4(0.6, 0.6, 0.6, 1)
-      backgroundTex = backgroundTex
-      nineSliceSize = 28f
-      anchor = {AnchorDirection.left, top}
-      onClick = proc() = echo "Hello World"
-
-  btns.add:
-    makeUi(Button):
-      pos = ivec2(10, 10)
-      size = ivec2(200, 100)
-      text = "Is this text?!"
-      color = vec4(0.5)
-      anchor = {AnchorDirection.left, bottom}
-      onClick = proc() = echo "Hello World"
-
-  btns.add:
-    makeUi(Button):
-      pos = ivec2(10, 10)
-      size = ivec2(200, 100)
-      text = "So much memory being wasted."
-      color = vec4(0.5)
-      anchor = {AnchorDirection.bottom, right}
-      onClick = proc() = echo "Hello World"
-
-  btns.add:
-    makeUi(Button):
-      size = ivec2(200, 100)
-      text = "This does not even fit"
-      color = vec4(0.5)
-      anchor = {}
-      onClick = proc() = echo "Hello World"
-
-  btns.add:
-    makeUi(Button):
-      pos = ivec2(10, 10)
-      size = ivec2(200, 100)
-      text = "Swap dropdown pos"
-      color = vec4(0.5)
-      anchor = {AnchorDirection.top, right}
-      onClick = proc() =
-        swap(myDropDown.anchor, btns[2].anchor)
-
-  horzLayout = makeUi(LayoutGroup):
-    pos = ivec2(0, 10)
-    size = ivec2(500, 100)
-    anchor = {bottom}
-    children:
-      makeUi(Button):
-        size = ivec2(100, 75)
-        text = "Red"
-        backgroundColor = vec4(1, 0, 0, 1)
-        backgroundTex = backgroundTex
-        nineSliceSize = 28f
-        onClick = proc() =
-          echo "Red"
-      makeUi(Button):
-        size = ivec2(100, 75)
-        text = "Green"
-        backgroundColor = vec4(0, 1, 0, 1)
-        backgroundTex = backgroundTex
-        nineSliceSize = 28f
-        onClick = proc() =
-          echo "Green"
-      makeUi(Button):
-        size = ivec2(100, 75)
-        text = "Blue"
-        backgroundColor = vec4(0, 0, 1, 1)
-        backgroundTex = backgroundTex
-        nineSliceSize = 28f
-        onClick = proc() =
-          echo "Blue"
+  renderTarget: UiRenderTarget
+  myUi: typeof(defineGui())
+  uiState = MyUiState(scaling: 1)
 
 
-  vertLayout = makeUi(LayoutGroup):
-    pos = ivec2(0, 10)
-    size = ivec2(500, 300)
-    anchor = {top}
-    layoutDirection = vertical
-    children:
-      makeUi(ScrollBar[float32]):
-        size = ivec2(100, 20)
-        minMax = 0f..4f
-        color = vec4(0, 0, 0.6, 1)
-        backgroundColor = vec4(0, 0, 0.3, 1)
-      makeUi(ScrollBar[float32]):
-        size = ivec2(400, 20)
-        minMax = 0f..4f
-        color = vec4(0.6, 0, 0, 1)
-        backgroundColor = vec4(0.3, 0.0, 0.0, 1)
-      makeUi(ScrollBar[float32]):
-        size = ivec2(300, 20)
-        minMax = 0f..4f
-        color = vec4(0.6, 0, 0.6, 1)
-        backgroundColor = vec4(0.3, 0, 0.3, 1)
-
-  myDropDown = makeUi(DropDown[MyEnum]):
-    pos = ivec2(10)
-    size = ivec2(200, 45)
-    fontColor = vec4(0, 0, 0, 1)
-    color = vec4(0.75, 0.6, 0.75, 1)
-    values = MyEnum.toSeq
-    anchor = {AnchorDirection.right}
-    onValueChange = proc(a: MyEnum) = myVal = a
-
-  textArea = makeUi(TextArea):
-    anchor = {AnchorDirection.left}
-    size = ivec2(100, 100)
-    fontSize = 40
-    backgroundColor = vec4(0.3, 0.3, 0.3, 1)
-    onTextChange = proc(s: string) =
-      echo s
-
+proc init() =
+  renderTarget.model = uploadInstancedModel[RenderInstance](modelData)
+  myUi = defineGui()
+  myUi.layout(vec3(0), uiState)
+  renderTarget.shader = loadShader(guiVert, guiFrag)
 
 proc update(dt: float32) =
-  for btn in btns:
-    btn.update(dt)
-  horzLayout.update(dt)
-  vertLayout.update(dt)
-  myDropDown.update(dt)
-  textArea.update(dt)
-  guistate = GuiState.nothing
-
+  if leftMb.isDown:
+    uiState.input = UiInput(kind: leftClick)
+  elif leftMb.isPressed:
+    uiState.input = UiInput(kind: leftClick, isHeld: true)
+  else:
+    uiState.input = UiInput(kind: UiInputKind.nothing)
+  uiState.screenSize = vec2 screenSize()
+  uiState.inputPos = vec2 getMousePos()
+  myUi.layout(vec3(0), uiState)
+  myUi.interact(uiState)
 
 proc draw() =
-  for btn in btns:
-    btn.draw()
-  horzLayout.draw()
-  vertLayout.draw()
-  myDropDown.draw()
-  textArea.draw()
+  renderTarget.model.clear()
+  myUi.upload(uiState, renderTarget)
+  renderTarget.model.reuploadSsbo()
+  with renderTarget.shader:
+    glEnable(GlBlend)
+    glBlendFunc(GlOne, GlOneMinusSrcAlpha)
+    renderTarget.model.render()
+    glDisable(GlBlend)
 
-initTruss("Test", ivec2(1280, 720), guitest.init, update, draw)
+
+initTruss("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw)
