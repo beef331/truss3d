@@ -115,6 +115,7 @@ type
     label*: Label
 
   DropDown*[T] = ref object of DropDownBase[MyUiElement, Button, T]
+    hoveredColor*: Vec4
 
   FontProps = object
     size: Vec2
@@ -297,7 +298,7 @@ proc onExit*(button: Button, uiState: var MyUiState) =
 proc layout*[T](dropDown: DropDown[T], parent: MyUiElement, offset: Vec3, uiState: MyUiState) =
   if dropDown.buttons[T.low].isNil:
     for ind, button in dropDown.buttons.mpairs:
-      button = Button(size: dropDown.size, color: dropDown.color, label: Label(text: $ind))
+      button = Button(size: dropDown.size, color: dropDown.color, hoveredColor: dropDown.hoveredColor, label: Label(text: $ind))
   dropdowns.layout(dropDown, parent, offset, uiState)
 
 proc interact*[T](dropDown: DropDown[T], uiState: var MyUiState) =
