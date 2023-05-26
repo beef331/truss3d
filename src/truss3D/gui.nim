@@ -162,7 +162,7 @@ proc makeTexture*(s: string, size: Vec2): Texture =
       font = defaultFont
     font.size = size.y
     var layout = font.layoutBounds(s)
-    while layout.x - 1 > size.x or layout.y - 1 > size.y:
+    while layout.x > size.x - 3 or layout.y > size.y - 3:
       font.size -= 1
       layout = font.layoutBounds(s)
 
@@ -241,7 +241,7 @@ proc upload*[T](slider: HSlider[T], state: MyUiState, target: var UiRenderTarget
 
 proc layout*[T](slider: HSlider[T], parent: MyUiElement, offset: Vec3, state: MyUiState) =
   mixin layout
-  MyUiElement(slider).layout(parent, offset, state)
+  sliders.layout(slider, parent, offset, state)
   if slider.slideBar.isNil:
     new slider.slideBar
     slider.slideBar.color = vec4(1, 0, 0, 1)
@@ -297,7 +297,7 @@ proc onExit*(button: Button, uiState: var MyUiState) =
 proc layout*[T](dropDown: DropDown[T], parent: MyUiElement, offset: Vec3, uiState: MyUiState) =
   if dropDown.buttons[T.low].isNil:
     for ind, button in dropDown.buttons.mpairs:
-      button = Button(size: dropDown.size, label: Label(text: $ind))
+      button = Button(size: dropDown.size, color: dropDown.color, label: Label(text: $ind))
   dropdowns.layout(dropDown, parent, offset, uiState)
 
 proc interact*[T](dropDown: DropDown[T], uiState: var MyUiState) =

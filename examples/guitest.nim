@@ -3,6 +3,8 @@ import truss3D/[shaders, textures, instancemodels, models, gui]
 import std/[sugar, tables, hashes, strutils]
 
 proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
+proc reverseLerp(a: int, slice: Slice[int]): float32 = (a - slice.a) / (slice.b - slice.a)
+proc reverseLerp(a: float32, slice: Slice[float32]): float32 = (a - slice.a) / (slice.b - slice.a)
 
 
 var modelData: MeshData[Vec2]
