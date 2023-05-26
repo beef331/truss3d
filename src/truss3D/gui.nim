@@ -1,6 +1,6 @@
 import vmath, pixie, gooey
 import shaders, textures, instancemodels, models
-import gooey/[layouts, buttons, sliders, groups]
+import gooey/[layouts, buttons, sliders, groups, dropdowns]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
@@ -94,6 +94,7 @@ type
   HLayout*[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
   VLayout*[T] = ref object of VerticalLayoutBase[MyUiElement, T]
   HGroup*[T] = ref object of HorizontalGroupBase[MyUiElement, T]
+  VGroup*[T] = ref object of VerticalGroupBase[MyUiElement, T]
 
   HSlider*[T] {.acyclic.} = ref object of HorizontalSliderBase[MyUiElement, T]
     slideBar*: MyUiElement
@@ -112,6 +113,8 @@ type
     baseColor*: Vec4
     hoveredColor*: Vec4
     label*: Label
+
+  DropDown*[T] = ref object of DropDownBase[MyUiElement, Button, T]
 
   FontProps = object
     size: Vec2
@@ -214,14 +217,22 @@ proc interact*[T](slider: NamedSlider[T], uiState: var MyUiState) =
 proc layout*[T](layout: HLayout[T] or VLayout[T], parent: MyUiElement, offset: Vec3, uiState: MyUiState) =
   layouts.layout(layout, parent, offset, uiState)
 
-proc layout*[T](layout: HGroup[T], parent: MyUiElement, offset: Vec3, uiState: MyUiState) =
+proc layout*[T](layout: HGroup[T] or VGroup[T], parent: MyUiElement, offset: Vec3, uiState: MyUiState) =
   groups.layout(layout, parent, offset, uiState)
 
 proc interact*[T](layout: HLayout[T] or VLayout[T], uiState: var MyUiState) =
   layouts.interact(layout, uiState)
 
-proc interact*[T](group: HGroup[T], uiState: var MyUiState) =
+proc interact*[T](group: HGroup[T] or VGroup[T], uiState: var MyUiState) =
   groups.interact(group, uiState)
+
+proc upload*[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var UiRenderTarget) =
+  # Due to generic dispatch these intermediate calls are requied
+  layouts.upload(layout, state, target)
+
+proc upload*[T](group: HGroup[T] or VGroup[T], state: MyUiState, target: var UiRenderTarget) =
+  # Due to generic dispatch these intermediate calls are requied
+  groups.upload(group, state, target)
 
 # Slider Code
 proc upload*[T](slider: HSlider[T], state: MyUiState, target: var UiRenderTarget) =
@@ -281,10 +292,17 @@ proc onExit*(button: Button, uiState: var MyUiState) =
   button.flags.excl hovered
   button.color = button.baseColor
 
-proc upload*[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var UiRenderTarget) =
-  # Due to generic dispatch these intermediate calls are requied
-  layouts.upload(layout, state, target)
+# Dropdowns
 
-proc upload*[T](group: HGroup[T], state: MyUiState, target: var UiRenderTarget) =
+proc layout*[T](dropDown: DropDown[T], parent: MyUiElement, offset: Vec3, uiState: MyUiState) =
+  if dropDown.buttons[T.low].isNil:
+    for ind, button in dropDown.buttons.mpairs:
+      button = Button(size: dropDown.size, label: Label(text: $ind))
+  dropdowns.layout(dropDown, parent, offset, uiState)
+
+proc interact*[T](dropDown: DropDown[T], uiState: var MyUiState) =
+  dropdowns.interact(dropDown, uiState)
+
+proc upload*[T](dropDown: DropDown[T], state: MyUiState, target: var UiRenderTarget) =
   # Due to generic dispatch these intermediate calls are requied
-  groups.upload(group, state, target)
+  dropdowns.upload(dropDown, state, target)
