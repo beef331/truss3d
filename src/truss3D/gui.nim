@@ -1,6 +1,6 @@
 import vmath, pixie, gooey
 import shaders, textures, instancemodels, models
-import gooey/[layouts, buttons, sliders, groups, dropdowns]
+import gooey/[layouts, buttons, sliders, groups, dropdowns, textinputs]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
@@ -116,6 +116,9 @@ type
 
   DropDown*[T] = ref object of DropDownBase[MyUiElement, Button, T]
     hoveredColor*: Vec4
+
+  TextInput* = ref object of TextInputBase[MyUiElement]
+    internalLabel*: Label
 
   FontProps = object
     size: Vec2
@@ -307,3 +310,27 @@ proc interact*[T](dropDown: DropDown[T], uiState: var MyUiState) =
 proc upload*[T](dropDown: DropDown[T], state: MyUiState, target: var UiRenderTarget) =
   # Due to generic dispatch these intermediate calls are requied
   dropdowns.upload(dropDown, state, target)
+
+
+# TextInputs
+proc upload*(input: TextInput, state: UiState, target: var UiRenderTarget) =
+  input.internalLabel.upload(state, target)
+
+proc layout*(input: TextInput, parent: Element, offset: Vec3, state: UiState) =
+  textinputs.layout(input, parent, offset, state)
+  if input.internalLabel.isNil:
+    input.internalLabel = Label(size: input.size)
+  input.internalLabel.text = input.text
+  input.internalLabel.layout(input, Vec3.init(0, 0, 0), state)
+
+proc onEnter*(input: TextInput, uiState: var UiState) =
+  startTextInput(default(inputs.Rect), "")
+  echo "entered"
+
+proc onTextInput*(input: TextInput, uiState: var UiState) =
+  textinputs.onTextInput(input, uiState)
+
+proc onExit*(input: TextInput, uiState: var UiState) =
+  stopTextInput()
+
+

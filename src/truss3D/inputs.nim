@@ -78,6 +78,7 @@ type
     rect: Rect
 
 var
+  keyRepeating: array[TKeyCode, KeyState]
   keyState: array[TKeyCode, KeyState]
   mouseState: array[MouseButton, KeyState]
   mouseDelta: IVec2
@@ -125,6 +126,8 @@ proc resetInputs(dt: float32) =
     else:
       discard
 
+  reset keyRepeating
+
   mouseDelta = ivec2(0, 0)
   mouseScroll = 0
 
@@ -133,11 +136,10 @@ proc startTextInput*(r: Rect, text: sink string = "") =
   textInput.text = text
   textInput.pos = 0
 
-export stopTextInput
+export stopTextInput, isTextInputActive
 
 proc setInputText*(str: string) =
   textInput.text = str
-
 
 proc inputText*(): lent string = textInput.text
 
@@ -151,6 +153,9 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
       let
         key = e.key.keysym.sym
         lutd = KeyLut[key]
+
+      keyRepeating[lutd] = pressed
+
       if keyState[lutd] != held:
         keyState[lutd] = pressed
         dispatchEvents(lutd, pressed, dt)
@@ -158,6 +163,9 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
       let
         key = e.key.keysym.sym
         lutd = KeyLut[key]
+
+      keyRepeating[lutd] = nothing
+
       if keyState[KeyLut[key]] == held:
         keyState[KeyLut[key]] = released
         dispatchEvents(lutd, released, dt)
@@ -185,7 +193,7 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
         isRunning = false
       else: discard
     of sdl.TextInput:
-      textInput.text.add $e.text.text
+      textInput.text = $e.text.text
     of TextEditing:
       textInput.pos = e.edit.start
       #textInput.text = $e.edit.text
@@ -194,6 +202,8 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
     else: discard
 
 proc isDown*(k: TKeycode): bool = keyState[k] == pressed
+proc isDownRepeating*(k: TKeycode): bool = keyRepeating[k] == pressed
+
 proc isPressed*(k: TKeycode): bool = keyState[k] == held
 proc isUp*(k: TKeycode): bool = keyState[k] == released
 proc isNothing*(k: TKeycode): bool = keyState[k] == nothing

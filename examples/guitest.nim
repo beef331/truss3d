@@ -106,6 +106,11 @@ proc defineGui(): auto =
         )
       )
     ),
+    TextInput(
+      pos: vec3(0, 300, 0),
+      anchor: {bottom},
+      size: vec2(300, 400),
+    )
   )
 
 
@@ -124,12 +129,31 @@ proc init() =
   renderTarget.shader = loadShader(guiVert, guiFrag)
 
 proc update(dt: float32) =
+
+  let
+    isTextInput = isTextInputActive()
+    inputString =
+      if isTextInput:
+        inputText()
+      else: ""
+  setInputText("")
+
   if leftMb.isDown:
     uiState.input = UiInput(kind: leftClick)
   elif leftMb.isPressed:
     uiState.input = UiInput(kind: leftClick, isHeld: true)
+  elif isTextInput and inputString != "":
+    uiState.input = UiInput(kind: textInput, str: inputString)
+  elif isTextInput:
+    if KeycodeBackspace.isDownRepeating():
+      uiState.input = UiInput(kind: textDelete)
+    elif KeyCodeReturn.isDownRepeating():
+      uiState.input = UiInput(kind: textNewLine)
+    else:
+      reset uiState.input
   else:
-    uiState.input = UiInput(kind: UiInputKind.nothing)
+    reset uiState.input
+
   uiState.screenSize = vec2 screenSize()
   uiState.inputPos = vec2 getMousePos()
   myUi.layout(vec3(0), uiState)
@@ -146,4 +170,4 @@ proc draw() =
     glDisable(GlBlend)
 
 
-initTruss("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw)
+initTruss("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)
