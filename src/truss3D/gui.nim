@@ -325,7 +325,6 @@ proc layout*(input: TextInput, parent: Element, offset: Vec3, state: UiState) =
 
 proc onEnter*(input: TextInput, uiState: var UiState) =
   startTextInput(default(inputs.Rect), "")
-  echo "entered"
 
 proc onTextInput*(input: TextInput, uiState: var UiState) =
   textinputs.onTextInput(input, uiState)
