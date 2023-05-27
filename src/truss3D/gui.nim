@@ -14,7 +14,6 @@ layout(std430) struct data{
   vec4 color;
   vec4 backgroundColor;
   sampler2D tex;
-  uint hasTex;
   mat4 matrix;
 };
 
@@ -25,14 +24,12 @@ layout(std430, binding = 0) buffer instanceData{
 out vec2 fUv;
 out vec4 color;
 flat out sampler2D tex;
-flat out uint hasTex;
 
 void main(){
   data theData = instData[gl_InstanceID];
   gl_Position = theData.matrix * vec4(vertex_position, 0, 1);
   fUv = uv;
   color = theData.color;
-  hasTex = theData.hasTex;
   tex = theData.tex;
 }
 """
@@ -47,10 +44,10 @@ in vec4 color;
 in vec2 fUv;
 
 flat in sampler2D tex;
-flat in uint hasTex;
 
 void main() {
-  if(hasTex > 0){
+  uvec2 texIds = uvec2(tex);
+  if((texIds.x | texIds.y) != 0){
     frag_color = texture(tex, fUv) * color;
   }else{
     frag_color = color;
@@ -69,7 +66,6 @@ type
     color*: Vec4
     backgroundColor*: Vec4
     texture*: uint64
-    hasTex*: uint32
     matrix* {.align: 16.}: Mat4
 
   RenderInstance* = seq[UiRenderObj]
@@ -144,9 +140,9 @@ proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
       else:
         0u64
   if ui.backgroundColor != vec4(0):
-    target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor, hasTex: uint32(0))
+    target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor)
   if ui.color != vec4(0):
-    target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex, hasTex: uint32(tex))
+    target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex)
 
 
 var
