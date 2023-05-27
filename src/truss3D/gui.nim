@@ -144,7 +144,7 @@ proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
       else:
         0u64
   if ui.backgroundColor != vec4(0):
-    target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, 0.1)), color: ui.backgroundColor, hasTex: uint32(0))
+    target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor, hasTex: uint32(0))
   if ui.color != vec4(0):
     target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex, hasTex: uint32(tex))
 

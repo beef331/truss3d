@@ -107,9 +107,11 @@ proc defineGui(): auto =
       )
     ),
     TextInput(
+      color: vec4(0),
+      backgroundColor: vec4(0.3),
       pos: vec3(0, 300, 0),
       anchor: {bottom},
-      size: vec2(300, 400),
+      size: vec2(300, 200),
     )
   )
 
