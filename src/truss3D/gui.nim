@@ -90,6 +90,7 @@ type
     inputPos*: Vec2
     screenSize*: Vec2
     scaling*: float32
+    interactedWithCurrentElement*: bool
 
   HLayout*[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
   VLayout*[T] = ref object of VerticalLayoutBase[MyUiElement, T]
@@ -129,7 +130,7 @@ proc hash(a: Texture): Hash = hash(Gluint(a))
 
 proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
   let
-    scrSize = vec2 screenSize()
+    scrSize = state.screenSize
     size = ui.layoutSize * 2 / scrSize
   var pos = ui.layoutPos / vec3(scrSize, 1)
   pos.y *= -1
@@ -142,8 +143,10 @@ proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
         uint64(ui.texture.getHandle())
       else:
         0u64
-
-  target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex, hasTex: uint32(tex))
+  if ui.backgroundColor != vec4(0):
+    target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, 0.1)), color: ui.backgroundColor, hasTex: uint32(0))
+  if ui.color != vec4(0):
+    target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex, hasTex: uint32(tex))
 
 
 var
@@ -236,6 +239,7 @@ proc upload*[T](layout: HLayout[T] or VLayout[T], state: MyUiState, target: var 
 
 proc upload*[T](group: HGroup[T] or VGroup[T], state: MyUiState, target: var UiRenderTarget) =
   # Due to generic dispatch these intermediate calls are requied
+  MyUiElement(group).upload(state, target)
   groups.upload(group, state, target)
 
 # Slider Code
@@ -271,7 +275,14 @@ proc onDrag*[T](slider: HSlider[T], uiState: var MyUiState) =
 # Button Code
 
 proc upload*(button: Button, state: MyUiState, target: var UiRenderTarget) =
+  let baseColor = button.color
+  button.color =
+    if hovered in button.flags:
+      button.hoveredColor
+    else:
+      button.color
   MyUiElement(button).upload(state, target)
+  button.color = baseColor
   if button.label != nil:
     button.label.upload(state, target)
 
@@ -284,17 +295,15 @@ proc layout*(button: Button, parent: MyUiElement, offset: Vec3, state: MyUiState
 
 proc onClick*(button: Button, uiState: var MyUiState) =
   buttons.onClick(button, uiState)
-
-proc onEnter*(button: Button, uiState: var MyUiState) =
   button.baseColor = button.color
+
+proc onEnter*(button: Button, uiState: var MyUiState) = discard
 
 proc onHover*(button: Button, uiState: var MyUiState) =
   button.flags.incl hovered
-  button.color = button.hoveredColor
 
 proc onExit*(button: Button, uiState: var MyUiState) =
   button.flags.excl hovered
-  button.color = button.baseColor
 
 # Dropdowns
 
@@ -309,11 +318,13 @@ proc interact*[T](dropDown: DropDown[T], uiState: var MyUiState) =
 
 proc upload*[T](dropDown: DropDown[T], state: MyUiState, target: var UiRenderTarget) =
   # Due to generic dispatch these intermediate calls are requied
+  MyUiElement(dropDown).upload(state, target)
   dropdowns.upload(dropDown, state, target)
 
 
 # TextInputs
 proc upload*(input: TextInput, state: UiState, target: var UiRenderTarget) =
+  MyUiElement(input).upload(state, target)
   input.internalLabel.upload(state, target)
 
 proc layout*(input: TextInput, parent: Element, offset: Vec3, state: UiState) =
