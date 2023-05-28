@@ -285,7 +285,7 @@ proc upload*(button: Button, state: MyUiState, target: var UiRenderTarget) =
 proc layout*(button: Button, parent: MyUiElement, offset: Vec3, state: MyUiState) =
   ButtonBase[MyUiElement](button).layout(parent, offset, state)
   if button.label != nil:
-    button.label.pos = vec3(0, 0, button.pos.z - 0.1)
+    button.label.pos.z = button.pos.z - 0.1
     button.label.size = button.size
     button.label.layout(button, vec3(0), state)
 
@@ -307,6 +307,10 @@ proc layout*[T](dropDown: DropDown[T], parent: MyUiElement, offset: Vec3, uiStat
   if dropDown.buttons[T.low].isNil:
     for ind, button in dropDown.buttons.mpairs:
       button = Button(size: dropDown.size, color: dropDown.color, hoveredColor: dropDown.hoveredColor, label: Label(text: $ind))
+
+  for button in dropDown.buttons:
+    button.pos.z = dropDown.pos.z - 0.1
+
   dropdowns.layout(dropDown, parent, offset, uiState)
 
 proc interact*[T](dropDown: DropDown[T], uiState: var MyUiState) =
