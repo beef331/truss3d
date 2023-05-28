@@ -91,11 +91,11 @@ proc copyTo*(img: Image, tex: TextureArray, depth: int) =
 
 template with*(fb: FrameBuffer, body: untyped) =
   block:
-    var currentBuffer: Gluint
-    glGetIntegerv(GlDrawFrameBufferBinding, cast[ptr Glint](addr Gluint(currentBuffer)))
+    var currentBuffer: Glint
+    glGetIntegerv(GlDrawFrameBufferBinding, addr currentBuffer)
     fb.bindBuffer()
     body
-    glBindFrameBuffer(GlFrameBuffer, currentBuffer)
+    glBindFrameBuffer(GlFrameBuffer, Gluint currentBuffer)
     #glClear(GLDepthbufferBit or GlColorBufferBit)
 
 
@@ -150,6 +150,7 @@ proc resize*(fb: var FrameBuffer, size: IVec2) =
   if size != fb.size:
     fb.size = size
     fb.attachTexture()
+    fb.clear()
 
 var loadedTextures: Table[string, Texture] # Should use a ref count
 
