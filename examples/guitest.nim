@@ -165,6 +165,7 @@ proc draw() =
   renderTarget.model.clear()
   myUi.upload(uiState, renderTarget)
   renderTarget.model.reuploadSsbo()
+  atlas.ssbo.bindBuffer(1)
   with renderTarget.shader:
     glEnable(GlBlend)
     glBlendFunc(GlOne, GlOneMinusSrcAlpha)

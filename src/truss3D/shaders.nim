@@ -115,21 +115,20 @@ proc genSsbo*[T](binding: Natural): Ssbo[T] =
   glBindBufferbase(GlShaderStorageBuffer, GLuint(binding), Gluint result)
   unbindSsbo()
 
-proc copyTo*[T](val: T, ssbo: Ssbo[T]) =
+proc copyTo*[T](val: T, ssbo: Ssbo[T], buffer = 0) =
   let size =
     when T is seq:
       val.len * sizeof(val[0])
     else:
       sizeof(val)
-  ssbo.bindBuffer()
+  ssbo.bindBuffer(buffer)
   glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[val.low].unsafeAddr, GlDynamicDraw)
   unbindSsbo()
 
-proc copyTo*[T](val: T, ssbo: Ssbo[T], slice: Slice[int]) =
-  let newData = val[slice.a].unsafeAddr
-  ssbo.bindBuffer()
-  glNamedBufferData(GlShaderStorageBuffer, slice.a * sizeof(int16), (slice.b - slice.a) * sizeOf(
-      int16), newData)
+proc copyTo*[T](val: openArray, ssbo: Ssbo[T], buffer = 0) =
+  ssbo.bindBuffer(buffer)
+  const size = sizeof(typeof(val[0])) 
+  glNamedBufferData(Gluint ssbo, GlSizeIPtr(sizeof(T) * val.len), val[0].addr, GlDynamicDraw)
   unbindSsbo()
 
 type

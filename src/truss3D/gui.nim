@@ -1,19 +1,18 @@
 import vmath, pixie, gooey
-import shaders, textures, instancemodels, models
+import shaders, textures, instancemodels, models, fontatlaser
 import gooey/[layouts, buttons, sliders, groups, dropdowns, textinputs]
 import ../truss3D
 import std/[sugar, tables, hashes, strutils]
 
 const guiVert* = ShaderFile"""
 #version 430
-#extension GL_ARB_bindless_texture : require
 layout(location = 0) in vec2 vertex_position;
 layout(location = 2) in vec2 uv;
 
 layout(std430) struct data{
   vec4 color;
   vec4 backgroundColor;
-  sampler2D tex;
+  uint fontIndex;
   mat4 matrix;
 };
 
@@ -23,32 +22,39 @@ layout(std430, binding = 0) buffer instanceData{
 
 out vec2 fUv;
 out vec4 color;
-flat out sampler2D tex;
+flat out uint fontIndex;
 
 void main(){
   data theData = instData[gl_InstanceID];
   gl_Position = theData.matrix * vec4(vertex_position, 0, 1);
   fUv = uv;
   color = theData.color;
-  tex = theData.tex;
+  fontIndex = theData.fontIndex;
 }
 """
 
 const guiFrag* = ShaderFile"""
 #version 430
-#extension GL_ARB_bindless_texture : require
 
 out vec4 frag_color;
 in vec3 fNormal;
 in vec4 color;
 in vec2 fUv;
 
-flat in sampler2D tex;
+uniform sampler2D fontTex;
+
+layout(std430, binding = 1) buffer theFontData{
+  vec4 fontData[];
+};
+
+flat in uint fontIndex;
 
 void main() {
-  uvec2 texIds = uvec2(tex);
-  if((texIds.x | texIds.y) != 0){
-    frag_color = texture(tex, fUv) * color;
+  if(fontIndex != 0){
+    vec2 offset = fontData[fontIndex - 1].xy;
+    vec2 size = fontData[fontIndex - 1].zw;
+    vec2 texSize = vec2(textureSize(fontTex, 0));
+    frag_color = texture(fontTex, offset / texSize + fUv * (size / texSize)) * color;
   }else{
     frag_color = color;
   }
@@ -65,7 +71,7 @@ type
   UiRenderObj* = object
     color*: Vec4
     backgroundColor*: Vec4
-    texture*: uint64
+    fontIndex*: uint32
     matrix* {.align: 16.}: Mat4
 
   RenderInstance* = seq[UiRenderObj]
@@ -100,6 +106,7 @@ type
 
   Label* {.acyclic.} = ref object of MyUiElement
     text*: string
+    arrangement: Arrangement
 
   NamedSlider*[T] {.acyclic.} = ref object of MyUiElement
     formatter*: string
@@ -142,56 +149,43 @@ proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
   if ui.backgroundColor != vec4(0):
     target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor)
   if ui.color != vec4(0):
-    target.model.push UiRenderObj(matrix: mat, color: ui.color, texture: tex)
+    target.model.push UiRenderObj(matrix: mat, color: ui.color)
 
 
 var
   fontPath*: string
-  fontTextureCache: Table[FontProps, Texture]
-  guiTexRc: Table[Texture, int]
   defaultFont: Font
+  atlas*: FontAtlas
 
-proc makeTexture*(s: string, size: Vec2): Texture =
+proc arrange*(label: Label) =
   if defaultFont.isNil:
     defaultFont = readFont(fontPath)
-
-  let props = FontProps(size: size, text: s)
-  if props in fontTextureCache:
-    fontTextureCache[props]
-  else:
-    var
-      tex = genTexture()
-      image = newImage(int size.x, int size.y)
-      font = defaultFont
-    font.size = size.y
-    var layout = font.layoutBounds(s)
-    while layout.x > size.x - 3 or layout.y > size.y - 3:
-      font.size -= 1
-      layout = font.layoutBounds(s)
-
-    font.paint = rgb(255, 255, 255)
-    image.fillText(font, s, bounds = size.vec2, hAlign = CenterAlign, vAlign = MiddleAlign)
-    image.copyTo(tex)
-    image = nil
-    fontTextureCache[props] = tex
-    guiTexRc[tex] = 0
-    tex
-
+    defaultFont.size = 64
+    atlas = FontAtlas(width: 1024, height: 1024, font: defaultFont)
+  label.arrangement = defaultFont.typeset(label.text, label.layoutSize)
+  
 proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) =
   MyUiElement(label).layout(parent, offset, state)
-  var orig = label.texture
-  label.texture = makeTexture(label.text, label.size)
-  if int(orig) != int(label.texture):
-    if int(orig) != 0:
-      dec guiTexRc[orig]
-      if guiTexRc[orig] <= 0:
-        guiTexRc.del(orig)
-        for x, y in fontTextureCache:
-          if y == orig:
-            fontTextureCache.del(x)
-            break
-        orig.delete()
-    inc guiTexRc[label.texture]
+  label.arrange()
+
+proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
+  let
+    scrSize = state.screenSize
+    parentSize = label.layoutSize * 2 / scrSize
+    parentPos = label.layoutPos / vec3(scrSize, 1)
+
+  for i, rune in label.arrangement.runes:
+    let fontEntry = atlas.runeEntry(rune)
+
+    if fontEntry.id > 0:
+      let
+        offset = label.arrangement.positions[i] / scrSize
+        size = label.arrangement.selectionRects[i].wh * 2 / scrSize
+      var pos = parentPos + vec3(offset, 0)
+      pos.y *= -1
+      pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
+      target.model.push UiRenderObj(matrix: translate(pos) * scale(vec3(size, 0)), color: label.color, fontIndex: uint32 fontEntry.id)
+  target.shader.setUniform("fontTex", atlas.texture)
 
 # Named Slider code
 

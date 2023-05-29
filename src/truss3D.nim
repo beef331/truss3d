@@ -76,7 +76,7 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     glClearDepth(1)
     enableAutoGLerrorCheck(false)
     discard glSetSwapInterval(cint(ord(vSync)))
-    when defined(debug):
+    when not defined(release):
       glEnable(GlDebugOutput)
       glDebugMessageCallback(openGlDebug, nil)
     if initProc != nil:
