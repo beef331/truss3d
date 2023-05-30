@@ -75,7 +75,7 @@ proc copyTo*(img: Image, tex: Texture) =
                       img.data[0].unsafeAddr)
 
 proc setSize*(tex: Texture, width, height: int) =
-  glTextureStorage2D(tex.Gluint, 1.Glsizei, GlRgba8, GlSizei width, GlSizei height)
+  glTextureStorage2D(Gluint tex, 1.Glsizei, GlRgba8, GlSizei width, GlSizei height)
 
 
 proc copyTo*(img: Image, tex: TextureArray, depth: int) =

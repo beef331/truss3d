@@ -165,11 +165,11 @@ proc arrange*(label: Label) =
     atlas = FontAtlas(width: 1024, height: 1024, font: defaultFont)
   let startSize = defaultFont.size
   var layout = defaultFont.layoutBounds(label.text)
-  while layout.x > label.size.x or layout.y > label.size.y:
+  while layout.x > label.layoutSize.x or layout.y > label.layoutSize.y:
     defaultFont.size -= 1
     layout = defaultFont.layoutBounds(label.text)
   label.fontSize = defaultFont.size
-  label.arrangement = defaultFont.typeset(label.text, label.layoutSize)
+  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = CenterAlign, vAlign = MiddleAlign)
   defaultFont.size = startSize
   
 proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) =
@@ -179,7 +179,6 @@ proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) 
 proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
   let
     scrSize = state.screenSize
-    parentSize = label.layoutSize * 2 / scrSize
     parentPos = label.layoutPos
     scale = label.fontSize /  defaultFont.size
 
@@ -190,10 +189,10 @@ proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
       let
         arrPos = label.arrangement.positions[i]
         rect = label.arrangement.selectionRects[i]
-        offset = arrPos + vec2(0, rect.y)
-        size = rect.wh / scrSize
+        offset = vec2(rect.x, rect.y)
+        size = rect.wh * 2 / scrSize
 
-      var pos = (parentPos + vec3(offset, 0)) / vec3(scrSize, 1)
+      var pos = parentPos / vec3(scrSize, 1) + vec3(offset, 0) / vec3(scrSize, 1)
       pos.y *= -1
       pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
       target.model.push UiRenderObj(matrix: translate(pos) * scale(vec3(size, 0)), color: label.color, fontIndex: uint32 fontEntry.id)
