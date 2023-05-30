@@ -107,6 +107,7 @@ type
   Label* {.acyclic.} = ref object of MyUiElement
     text*: string
     arrangement: Arrangement
+    fontSize: float32
 
   NamedSlider*[T] {.acyclic.} = ref object of MyUiElement
     formatter*: string
@@ -162,7 +163,14 @@ proc arrange*(label: Label) =
     defaultFont = readFont(fontPath)
     defaultFont.size = 64
     atlas = FontAtlas(width: 1024, height: 1024, font: defaultFont)
+  let startSize = defaultFont.size
+  var layout = defaultFont.layoutBounds(label.text)
+  while layout.x > label.size.x or layout.y > label.size.y:
+    defaultFont.size -= 1
+    layout = defaultFont.layoutBounds(label.text)
+  label.fontSize = defaultFont.size
   label.arrangement = defaultFont.typeset(label.text, label.layoutSize)
+  defaultFont.size = startSize
   
 proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) =
   MyUiElement(label).layout(parent, offset, state)
@@ -172,16 +180,20 @@ proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
   let
     scrSize = state.screenSize
     parentSize = label.layoutSize * 2 / scrSize
-    parentPos = label.layoutPos / vec3(scrSize, 1)
+    parentPos = label.layoutPos
+    scale = label.fontSize /  defaultFont.size
 
   for i, rune in label.arrangement.runes:
     let fontEntry = atlas.runeEntry(rune)
 
     if fontEntry.id > 0:
       let
-        offset = label.arrangement.positions[i] / scrSize
-        size = label.arrangement.selectionRects[i].wh * 2 / scrSize
-      var pos = parentPos + vec3(offset, 0)
+        arrPos = label.arrangement.positions[i]
+        rect = label.arrangement.selectionRects[i]
+        offset = arrPos + vec2(0, rect.y)
+        size = rect.wh / scrSize
+
+      var pos = (parentPos + vec3(offset, 0)) / vec3(scrSize, 1)
       pos.y *= -1
       pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
       target.model.push UiRenderObj(matrix: translate(pos) * scale(vec3(size, 0)), color: label.color, fontIndex: uint32 fontEntry.id)

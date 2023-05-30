@@ -27,16 +27,15 @@ proc blit(atlas: var FontAtlas, row: var Row, rowInd: int, rune: Rune, runeStr: 
   image.copyTo(tex)
 
 
-
   glCopyImageSubData(
     Gluint tex, GlTexture2d, 0, 0, 0, 0,
-    Gluint atlas.texture, GlTexture2d, 0, Glint row.usedSpace, Glint(rowInd) * Glint(atlas.font.size), 0,
-    GlSizei size.x, GlSizei atlas.font.size, 1
+    Gluint atlas.texture, GlTexture2d, 0, Glint row.usedSpace, Glint(rowInd) * Glint size.y - 1, 0,
+    GlSizei size.x, GlSizei size.y - 1, 1
   )
 
 
   tex.delete()
-  let rect = Rect(x: float32 row.usedSpace, y: rowInd.float32 * atlas.font.size, w: size.x, h: atlas.font.size)
+  let rect = Rect(x: float32 row.usedSpace, y: rowInd.float32 * atlas.font.size, w: size.x, h: size.y)
   
   inc atlas.glyphCount
 
@@ -62,14 +61,14 @@ proc blit(atlas: var FontAtlas, rune: Rune) =
   let
     runeStr = $rune
     size = atlas.font.layoutBounds(runeStr)
-    image = newImage(int size.x, int atlas.font.size)
+    image = newImage(int size.x, int size.y)
 
   for i, row in atlas.rows.mpairs:
     if atlas.width - row.usedSpace >= int size.x:
       atlas.blit(row, i, rune, runeStr, image, size)
       return
 
-  if ((atlas.rows.len + 1) * int atlas.font.size) > atlas.height:
+  if ((atlas.rows.len + 1) * int size.y) > atlas.height:
     doAssert false, "Should we handle this?"
 
   atlas.rows.add Row(usedSpace: 0)
