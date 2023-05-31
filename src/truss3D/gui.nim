@@ -54,7 +54,7 @@ void main() {
     vec2 offset = fontData[fontIndex - 1].xy;
     vec2 size = fontData[fontIndex - 1].zw;
     vec2 texSize = vec2(textureSize(fontTex, 0));
-    frag_color = texture(fontTex, offset / texSize + fUv * (size / texSize)) * color;
+    frag_color = texture(fontTex, offset / texSize + fUv * (size / texSize)) * color * color.a;
   }else{
     frag_color = color;
   }
@@ -92,6 +92,7 @@ type
     inputPos*: Vec2
     screenSize*: Vec2
     scaling*: float32
+    dt*: float32
     interactedWithCurrentElement*: bool
 
   HLayout*[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
@@ -125,14 +126,11 @@ type
   TextInput* = ref object of TextInputBase[MyUiElement]
     internalLabel*: Label
 
-  FontProps = object
-    size: Vec2
-    text: string
+  TimedLabel* = ref object of Label
+    timer: float32
+    time*: float32
 
-proc `==`(a, b: Texture): bool = Gluint(a) == Gluint(b)
-proc hash(a: Texture): Hash = hash(Gluint(a))
-
-proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
+proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget, drawForeground = true) =
   let
     scrSize = state.screenSize
     size = ui.layoutSize * 2 / scrSize
@@ -144,7 +142,7 @@ proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
     mat = translate(pos) * scale(vec3(size, 0))
   if ui.backgroundColor != vec4(0):
     target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor)
-  if ui.color != vec4(0):
+  if ui.color != vec4(0) and drawForeground:
     target.model.push UiRenderObj(matrix: mat, color: ui.color)
 
 
@@ -172,6 +170,7 @@ proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) 
   label.arrange()
 
 proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
+  MyUiElement(label).upload(state, target, false)
   if label.text.len > 0 and label.arrangement != nil:
     let
       scrSize = state.screenSize
@@ -191,6 +190,25 @@ proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
         pos.y *= -1
         pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
         target.model.push UiRenderObj(matrix: translate(pos) * scale(vec3(size, 0)), color: label.color, fontIndex: uint32 fontEntry.id)
+
+proc layout*(timedLabel: TimedLabel, parent: MyUiElement, offset: Vec3, state: MyUiState) =
+  Label(timedLabel).layout(parent, offset, state)
+  timedLabel.timer -= state.dt
+
+proc upload*(timedLabel: TimedLabel, state: MyUiState, target: var UiRenderTarget) =
+  let 
+    color = timedLabel.color 
+    bgColor = timedLabel.backgroundColor
+  timedLabel.color = mix(color, vec4(color.rgb, 0), 1 - timedLabel.timer / timedLabel.time)
+  timedLabel.backgroundColor = mix(bgColor, vec4(bgColor.xyz, 0), 1 - timedLabel.timer / timedLabel.time)
+  if timedLabel.timer > 0:
+    Label(timedLabel).upload(state, target)
+  timedLabel.color = color
+  timedLabel.backgroundColor = bgColor
+
+proc show*(timedLabel: TimedLabel, msg: string) =
+  timedLabel.text = msg
+  timedLabel.timer = timedLabel.time
 
 # Named Slider code
 
