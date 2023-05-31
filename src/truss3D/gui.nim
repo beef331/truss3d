@@ -142,11 +142,6 @@ proc upload*(ui: MyUiElement, state: MyUiState, target: var UiRenderTarget) =
 
   let
     mat = translate(pos) * scale(vec3(size, 0))
-    tex =
-      if Gluint(ui.texture) > 0:
-        uint64(ui.texture.getHandle())
-      else:
-        0u64
   if ui.backgroundColor != vec4(0):
     target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor)
   if ui.color != vec4(0):
@@ -177,26 +172,25 @@ proc layout*(label: Label, parent: MyUiElement, offset: Vec3, state: MyUiState) 
   label.arrange()
 
 proc upload*(label: Label, state: MyUiState, target: var UiRenderTarget) =
-  let
-    scrSize = state.screenSize
-    parentPos = label.layoutPos
-    scale = label.fontSize /  defaultFont.size
+  if label.text.len > 0 and label.arrangement != nil:
+    let
+      scrSize = state.screenSize
+      parentPos = label.layoutPos
+      scale = label.fontSize /  defaultFont.size
 
-  for i, rune in label.arrangement.runes:
-    let fontEntry = atlas.runeEntry(rune)
+    for i, rune in label.arrangement.runes:
+      let fontEntry = atlas.runeEntry(rune)
 
-    if fontEntry.id > 0:
-      let
-        arrPos = label.arrangement.positions[i]
-        rect = label.arrangement.selectionRects[i]
-        offset = vec2(rect.x, rect.y)
-        size = rect.wh * 2 / scrSize
+      if fontEntry.id > 0:
+        let
+          rect = label.arrangement.selectionRects[i]
+          offset = vec2(rect.x, rect.y)
+          size = rect.wh * 2 / scrSize
 
-      var pos = parentPos / vec3(scrSize, 1) + vec3(offset, 0) / vec3(scrSize, 1)
-      pos.y *= -1
-      pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
-      target.model.push UiRenderObj(matrix: translate(pos) * scale(vec3(size, 0)), color: label.color, fontIndex: uint32 fontEntry.id)
-  target.shader.setUniform("fontTex", atlas.texture)
+        var pos = parentPos / vec3(scrSize, 1) + vec3(offset, 0) / vec3(scrSize, 1)
+        pos.y *= -1
+        pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
+        target.model.push UiRenderObj(matrix: translate(pos) * scale(vec3(size, 0)), color: label.color, fontIndex: uint32 fontEntry.id)
 
 # Named Slider code
 
