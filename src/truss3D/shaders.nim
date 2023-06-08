@@ -35,7 +35,7 @@ template with*(shader: Shader, body: untyped) =
   finally:
     Shader(activeProgram).makeActive
 
-proc loadShader*(shader: string, kind: ShaderKind): Gluint =
+proc loadShader*(shader: string, kind: ShaderKind, name: string): Gluint =
   let
     shaderProg = shader.cstring
     shaderLen = shader.len.GLint
@@ -51,17 +51,23 @@ proc loadShader*(shader: string, kind: ShaderKind): Gluint =
       len = 0.GlSizeI
     glGetShaderInfoLog(shaderId, 512, len.addr, buff[0].addr)
     buff.setLen(len.int)
+    if name.len > 0:
+      echo "Failed to compile: ", name
     echo buff
 
   result = shaderId
 
 proc loadShader*(vert, frag: distinct ShaderSource): Shader =
+  when vert is ShaderPath:
+    echo "Loading Vertex Shader: ", string vert
+  when frag is ShaderPath:
+    echo "Loading Frag Shader: ", string frag
   let
     vert =
       when vert is ShaderPath:
         try:
           readFile(vert.string)
-        except:
+        except IoError, OSerror:
           readFile(shaderPath / vert.string)
       else:
         vert.string
@@ -69,12 +75,22 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
       when frag is ShaderPath:
         try:
           readFile(frag.string)
-        except:
+        except IoError, OsError:
           readFile(shaderPath / frag.string)
       else:
         frag.string
-    vs = loadShader(vert, Vertex)
-    fs = loadShader(frag, Fragment)
+    vsName =
+      when vert is ShaderPath:
+        string vert
+      else:
+        ""
+    fsName =
+      when frag is ShaderPath:
+        string frag
+      else:
+        ""
+    vs = loadShader(vert, Vertex, vsName)
+    fs = loadShader(frag, Fragment, fsName)
   result = glCreateProgram().Shader
   glAttachShader(Gluint result, vs)
   glAttachShader(Gluint result, fs)
@@ -86,10 +102,6 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   if success == 0:
     var msg = newString(512)
     glGetProgramInfoLog(Gluint result, 512, nil, msg[0].addr)
-    when vert is ShaderPath:
-      echo "Failed to load: ", string vert
-    when frag is ShaderPath:
-      echo "Failed to load: ", string frag 
     echo msg
   glDeleteShader(vs)
   glDeleteShader(fs)
