@@ -86,6 +86,10 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   if success == 0:
     var msg = newString(512)
     glGetProgramInfoLog(Gluint result, 512, nil, msg[0].addr)
+    when vert is ShaderPath:
+      echo "Failed to load: ", string vert
+    when frag is ShaderPath:
+      echo "Failed to load: ", string frag 
     echo msg
   glDeleteShader(vs)
   glDeleteShader(fs)
