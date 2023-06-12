@@ -168,6 +168,7 @@ proc draw() =
   atlas.ssbo.bindBuffer(1)
   with renderTarget.shader:
     glEnable(GlBlend)
+    renderTarget.shader.setUniform("fontTex", atlas.texture)
     glBlendFunc(GlOne, GlOneMinusSrcAlpha)
     renderTarget.model.render()
     glDisable(GlBlend)
