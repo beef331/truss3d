@@ -9,7 +9,7 @@ const guiVert* = ShaderFile"""
 layout(location = 0) in vec2 vertex_position;
 layout(location = 2) in vec2 uv;
 
-layout(std430) struct data{
+struct data{
   vec4 color;
   vec4 backgroundColor;
   uint fontIndex;
