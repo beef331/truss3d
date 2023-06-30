@@ -94,6 +94,7 @@ type
     scaling*: float32
     dt*: float32
     interactedWithCurrentElement*: bool
+    overAnyUi*: bool
 
   HLayout*[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
   VLayout*[T] = ref object of VerticalLayoutBase[MyUiElement, T]
