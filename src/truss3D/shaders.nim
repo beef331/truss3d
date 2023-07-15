@@ -189,24 +189,28 @@ type
   Mat4 = Mat and (Mat4V or Mat4f) and not (Vec2 or Vec3 or Vec4)
 
 template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
-  bind glGetUniformLocation, Gluint
+  bind glGetUniformLocation, Gluint, error
   when declared(shader):
     with shader:
       let loc = glGetUniformLocation(Gluint(shader), uniform)
-      assert loc != -1
+      if loc == -1:
+        error "Cannot find uniform: ", name
       body
   else:
     let
       shader = getActiveShader()
       loc = glGetUniformLocation(Gluint(shader), uniform)
-    assert loc != -1
+    if loc == -1:
+      error "Cannot find uniform: ", name
     body
 
 template makeSetter(T: typedesc, body: untyped) {.dirty.} =
   proc setUniform*(uniform: string, value: T) =
+    bind error
     insideUniform(uniform, value):
       body
   proc setUniform*(shader: Shader, uniform: string, value: T) =
+    bind error
     insideUniform(uniform, value):
       body
 
