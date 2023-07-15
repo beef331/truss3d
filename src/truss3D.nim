@@ -58,8 +58,9 @@ proc openGlDebug(source: GLenum,
     userParam: pointer) {.stdcall.} =
 
   when defined(truss3D.log):
-    for handler in cast[ptr seq[Logger]](userParam)[]:
-      addHandler(handler)
+    if logg.getHandlers().len == 0:
+      for handler in cast[ptr seq[Logger]](userParam)[]:
+        addHandler(handler)
 
   if length > 0 and message != nil:
     var str = newString(length)
@@ -93,7 +94,11 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     discard glSetSwapInterval(cint(ord(vSync)))
     when not defined(release):
       glEnable(GlDebugOutput)
-      glDebugMessageCallback(openGlDebug, cast[ptr pointer](handlers.addr))
+      glDebugMessageCallback(openGlDebug):
+        when defined(truss3D.log):
+          cast[ptr pointer](handlers.addr)
+        else:
+          nil
     if initProc != nil:
       initProc()
 
