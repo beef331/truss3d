@@ -1,6 +1,7 @@
 import opengl, vmath, pixie
 import std/[monotimes, times, os]
-import truss3D/[inputs, models, shaders, textures]
+import std/logging as logg
+import truss3D/[inputs, models, shaders, textures, logging]
 import sdl2_nim/sdl except Keycode
 export models, shaders, textures, inputs, opengl
 
@@ -48,7 +49,6 @@ proc update =
   glDeleteContext(app.context)
   app.window.destroyWindow
 
-
 proc openGlDebug(source: GLenum,
     typ: GLenum,
     id: GLuint,
@@ -56,10 +56,25 @@ proc openGlDebug(source: GLenum,
     length: GLsizei,
     message: ptr GLchar,
     userParam: pointer) {.stdcall.} =
+
+  when defined(truss3D.log):
+    for handler in cast[ptr seq[Logger]](userParam)[]:
+      addHandler(handler)
+
   if length > 0 and message != nil:
     var str = newString(length)
     copyMem(str[0].addr, message, length)
-    echo str
+    when defined(truss3D.log):
+      case severity
+      of GlDebugSeverityHigh:
+        error str
+      of GlDebugSeverityMedium:
+        warn str
+      of GlDebugSeverityLow, GlDebugSeverityNotification:
+        info str
+      else: discard
+    else:
+      echo str
 
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc; vsync = false) =
@@ -78,7 +93,7 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
     discard glSetSwapInterval(cint(ord(vSync)))
     when not defined(release):
       glEnable(GlDebugOutput)
-      glDebugMessageCallback(openGlDebug, nil)
+      glDebugMessageCallback(openGlDebug, cast[ptr pointer](handlers.addr))
     if initProc != nil:
       initProc()
 
@@ -132,4 +147,5 @@ when isMainModule:
       setUniform "mvp", proj * view * mat4()
       glEnable(GlDepthTest)
       model.render
+  addLoggers("truss3D")
   initTruss("Test", ivec2(1280, 720), init, update, draw)

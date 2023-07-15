@@ -1,6 +1,6 @@
 import opengl
 import std/[tables, typetraits, os]
-import textures, mathtypes
+import textures, mathtypes, logging
 
 type
   ShaderKind* = enum
@@ -52,16 +52,15 @@ proc loadShader*(shader: string, kind: ShaderKind, name: string): Gluint =
     glGetShaderInfoLog(shaderId, 512, len.addr, buff[0].addr)
     buff.setLen(len.int)
     if name.len > 0:
-      echo "Failed to compile: ", name
-    echo buff
+      error "Failed to compile: ", name , "\n", buff
 
   result = shaderId
 
 proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   when vert is ShaderPath:
-    echo "Loading Vertex Shader: ", string vert
+    info "Loading Vertex Shader: ", string vert
   when frag is ShaderPath:
-    echo "Loading Frag Shader: ", string frag
+    info "Loading Frag Shader: ", string frag
   let
     vert =
       when vert is ShaderPath:
@@ -91,6 +90,10 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
         ""
     vs = loadShader(vert, Vertex, vsName)
     fs = loadShader(frag, Fragment, fsName)
+
+  if Gluint(0) in [Gluint(vs), Gluint(fs)]:
+    quit 1
+    
   result = glCreateProgram().Shader
   glAttachShader(Gluint result, vs)
   glAttachShader(Gluint result, fs)
@@ -102,7 +105,7 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   if success == 0:
     var msg = newString(512)
     glGetProgramInfoLog(Gluint result, 512, nil, msg[0].addr)
-    echo msg
+    error msg
   glDeleteShader(vs)
   glDeleteShader(fs)
 

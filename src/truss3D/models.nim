@@ -1,6 +1,7 @@
 import assimp, opengl, vmath, chroma
 import shaders
 import std/[macros, os]
+import truss3D/logging
 
 type
   Mesh* = object
@@ -31,6 +32,7 @@ proc loadModel*(path: string): Model =
   if scene == nil:
     scene = aiImportFile(cstring(modelPath / path), {})
     if scene == nil:
+      error path, " invalid model file."
       raise newException(IOError, path & " invalid model file")
   for mesh in scene.imeshes:
     type VboKinds = enum
