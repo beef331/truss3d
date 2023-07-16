@@ -53,8 +53,10 @@ proc loadShader*(shader: string, kind: ShaderKind, name: string): Gluint =
     buff.setLen(len.int)
     if name.len > 0:
       error "Failed to compile: ", name , "\n", buff
+    result = Gluint 0
 
-  result = shaderId
+  else:
+    result = shaderId
 
 proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   when vert is ShaderPath:

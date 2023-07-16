@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.9"
+version       = "0.2.10"
 author        = "Jason"
 description   = "Simple 2D/3D framework"
 license       = "MIT"
@@ -16,4 +16,4 @@ requires "vmath >= 2.0.0"
 requires "opengl >= 1.2.6"
 requires "https://github.com/beef331/nimassimp >= 0.1.3"
 requires "https://github.com/beef331/miniaudio >= 0.1.1"
-requires "https://github.com/beef331/gooey >= 0.1.1"
+requires "https://github.com/beef331/gooey >= 0.1.3"
