@@ -37,34 +37,34 @@ proc loadModel*(path: string): Model =
   for mesh in scene.imeshes:
     type VboKinds = enum
       vert, norm, uv, col
+    const VboSize: array[VboKinds, GLsizei] = [Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TColor4d]
     var vbos: array[VboKinds, Gluint]
     let
-      hasNormals = mesh.hasNormals
-      hasUvs = mesh.hasUvs()
-      hasColours = mesh.hasColors()
+      components = block:
+        var comps = {vert}
+        if mesh.hasNormals():
+          comps.incl norm
+        if mesh.hasUvs():
+          comps.incl uv
+        if mesh.hasColors():
+          comps.incl col
+        comps
 
-    glGenBuffers(1, vbos[vert].addr)
-    glBindBuffer(GlArrayBuffer, vbos[vert])
-    glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.vertices, GlStaticDraw)
+    glCreateBuffers(ord(VboKinds.high) + 1, vbos[vert].addr)
+    glNamedBufferStorage(vbos[vert], mesh.vertexCount * VboSize[vert], mesh.vertices, GlDynamicStorageBit)
 
-    if hasNormals:
-      glGenBuffers(1, vbos[norm].addr)
-      glBindBuffer(GlArrayBuffer, vbos[norm])
-      glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.normals, GlStaticDraw)
+    if norm in components:
+      glNamedBufferStorage(vbos[norm], mesh.vertexCount * VboSize[norm], mesh.normals, GlDynamicStorageBit)
 
-    if hasUvs:
-      glGenBuffers(1, vbos[uv].addr)
-      glBindBuffer(GlArrayBuffer, vbos[uv])
-      glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TVector3d), mesh.texCoords[0], GlStaticDraw)
+    if uv in components:
+      glNamedBufferStorage(vbos[uv], mesh.vertexCount * VboSize[uv], mesh.texCoords[0], GlDynamicStorageBit)
 
-    if hasColours:
-      glGenBuffers(1, vbos[col].addr)
-      glBindBuffer(GlArrayBuffer, vbos[col])
-      glBufferData(GlArrayBuffer, mesh.vertexCount * sizeof(TColor4d), mesh.colors[0], GlStaticDraw)
+    if col in components:
+      glNamedBufferStorage(vbos[col], mesh.vertexCount * VboSize[col], mesh.colors[0], GlDynamicStorageBit)
 
     var msh: Mesh
-    glGenBuffers(1, msh.indices.addr)
-    glBindBuffer(GlElementArrayBuffer, msh.indices)
+    glCreateVertexArrays(1, msh.vao.addr)
+    glCreateBuffers(1, msh.indices.addr)
 
     var indices = newSeqOfCap[cint](mesh.faceCount * 3)
 
@@ -76,37 +76,29 @@ proc loadModel*(path: string): Model =
 
     msh.size = indices.len.GlSizei
 
-    glBufferData(
-      GlElementArrayBuffer,
+    glNamedBufferStorage(msh.indices,
       msh.size * sizeof(cint),
       indices[0].addr,
-      GlStaticDraw)
+      GlDynamicStorageBit
+    )
 
-    glGenVertexArrays(1, msh.vao.addr)
-    glBindVertexArray(msh.vao)
-    glBindBuffer(GlArrayBuffer, vbos[vert])
-    glVertexAttribPointer(0, 3, cGlFloat, GlFalse, 0, nil)
-    glEnableVertexAttribArray(0)
+    glVertexArrayElementBuffer(msh.vao, msh.indices)
 
-    if hasNormals:
-      glBindBuffer(GlArrayBuffer, vbos[norm])
-      glVertexAttribPointer(1, 3, cGlFloat, GlTrue, 0, nil)
-      glEnableVertexAttribArray(1)
+    for ind, vbo in vbos.pairs:
+      if ind in components:
+        glVertexArrayVertexBuffer(msh.vao, Gluint ind, vbo, 0, VboSize[ind])
+        glEnableVertexArrayAttrib(msh.vao, Gluint ind)
+        case ind
+        of vert:
+          glVertexArrayAttribFormat(msh.vao, Gluint vert, 3, cGlFloat, GlFalse, 0)
+        of norm:
+          glVertexArrayAttribFormat(msh.vao, Gluint norm, 3, cGlFloat, GlFalse, 0) 
+        of uv:
+          glVertexArrayAttribFormat(msh.vao, Gluint uv, 3, cGlFloat, GlFalse, 0)
+        of col:
+          glVertexArrayAttribFormat(msh.vao, Gluint col, 4, cGlFloat, GlFalse, 0)
 
-    if hasUvs:
-      glBindBuffer(GlArrayBuffer, vbos[uv])
-      glVertexAttribPointer(2, 3, cGlFloat, GlTrue, 0, nil)
-      glEnableVertexAttribArray(2)
-
-    if hasColours:
-      glBindBuffer(GlArrayBuffer, vbos[col])
-      glVertexAttribPointer(3, 4, cGlFloat, GlTrue, 0, nil)
-      glEnableVertexAttribArray(3)
-
-    glBindBuffer(GlElementArrayBuffer, msh.indices)
-    glBindVertexArray(0)
-    glBindBuffer(GlArrayBuffer, 0)
-    glBindBuffer(GlElementArrayBuffer, 0)
+    glVertexArrayElementBuffer(msh.vao, msh.indices)
 
     result.buffers.add msh
   aiReleaseImport(scene)
