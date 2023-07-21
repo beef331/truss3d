@@ -58,7 +58,7 @@ proc openGlDebug(source: GLenum,
     userParam: pointer) {.stdcall.} =
 
   when defined(truss3D.log):
-    if logg.getHandlers().len == 0:
+    if getHandlers().len == 0:
       for handler in cast[ptr seq[Logger]](userParam)[]:
         addHandler(handler)
 
