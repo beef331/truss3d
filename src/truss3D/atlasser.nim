@@ -8,16 +8,17 @@ type
 
   
   Atlas*[T; R: RectangleImpl] = object
-    width, height: typeof(default(R).x)
+    width, height, margin*: typeof(default(R).x)
     usedRects: Table[T, R]
     freeRects: seq[R]
 
-proc init*[T; R: RectangleImpl](_: typedesc[Atlas[T, R]], width, height: auto): Atlas[T, R] =
+proc init*[T; R: RectangleImpl](_: typedesc[Atlas[T, R]], width, height, margin: auto): Atlas[T, R] =
   mixin init
   type FieldType = typeof(result.freeRects[0].w)
   Atlas[T, R](
     width: FieldType width,
     height: FieldType height,
+    margin: FieldType margin,
     freeRects: @[R.init(FieldType width, FieldType height)]
   )
 
@@ -49,10 +50,10 @@ proc add*[T, R](atlas: var Atlas[T, R], name: T, rect: R): (bool, R) =
       bottomHeight = oldRect.h - rect.h
 
     if rightWidth > 0:
-      atlas.freeRects.add R.init(oldRect.x + rect.w, oldRect.y, rightWidth, oldRect.h) # Add right side
+      atlas.freeRects.add R.init(oldRect.x + rect.w + atlas.margin, oldRect.y, rightWidth, oldRect.h) # Add right side
 
     if bottomHeight > 0:
-      atlas.freeRects.add R.init(oldRect.x, oldRect.y + rect.h, rect.w, bottomHeight) # Add Bottom side
+      atlas.freeRects.add R.init(oldRect.x, oldRect.y + rect.h + atlas.margin, rect.w, bottomHeight) # Add Bottom side
 
     atlas.freeRects.del(rectInd)
     
@@ -70,40 +71,13 @@ proc remove*[T, R](atlas: var Atlas[T, R], name: T) =
     atlas.freeRects.add r
     atlas.usedRects.del(name)
 
-template floatStuffs() =
-  type Rectangle = object
-    x, y, w, h: float
+proc `[]`*[T, R](atlas: var Atlas[T, R], name: T): R =
+  if name in atlas.usedRects:
+    result = atlas.usedRects[name]
 
-  proc init(_: typedesc[Rectangle], x, y, w, h: float): Rectangle = Rectangle(x: x, y: y, w: w, h: h)
-  proc init(_: typedesc[Rectangle], w, h: float): Rectangle = Rectangle(w: w, h: h)
+proc `{}`*[T, R](atlas: var Atlas[T, R], name: T): (bool, R) =
+  if name in atlas.usedRects:
+    (true, atlas.usedRects[name])
+  else:
+    (false, default(R))
 
-  static: assert Rectangle is RectangleImpl
-  discard Atlas[string, Rectangle]()
-  var atlas = Atlas[string, Rectangle].init(1d, 1d)
-  discard atlas.add("Hello", Rectangle(w: 0.5, h: 0.5))
-  discard atlas.add("World", Rectangle(w: 0.5, h: 0.5))
-  discard atlas.add("1", Rectangle(w: 0.1, h: 0.1))
-  discard atlas.add("2", Rectangle(w: 0.1, h: 0.1))
-  echo atlas
-
-
-template intStuffs() =
-  type Rectangle = object
-    x, y, w, h: int
-
-  proc init(_: typedesc[Rectangle], x, y, w, h: int): Rectangle = Rectangle(x: x, y: y, w: w, h: h)
-  proc init(_: typedesc[Rectangle], w, h: int): Rectangle = Rectangle(w: w, h: h)
-
-  var atlas = Atlas[int, Rectangle].init(10, 10)
-  discard atlas.add(0, Rectangle(w: 5, h: 5))
-  discard atlas.add(1, Rectangle(w: 5, h: 5))
-  discard atlas.add(2, Rectangle(w: 1, h: 1))
-  discard atlas.add(3, Rectangle(w: 1, h: 1))
-  echo atlas
-  atlas.remove(3)
-  echo atlas
-  atlas.remove(3)
-  echo atlas
-
-floatStuffs()
-intStuffs()
