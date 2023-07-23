@@ -1,6 +1,10 @@
 import pixie, opengl
-import textures, shaders
+import textures, shaders, atlasser, logging
 import std/[tables, unicode]
+
+proc init*(_: typedesc[Rect], w, h: float32): Rect = Rect(x: 0, y: 0, w: w, h: h)
+proc init*(_: typedesc[Rect], x, y, w, h: float32): Rect = Rect(x: x, y: y, w: w, h: h)
+
 
 type
   FontEntry* = object
@@ -8,78 +12,57 @@ type
     rect*: Rect
     rune*: Rune # Probably pointless
 
-  Row = object
-    usedSpace: int
   FontAtlas* = object
-    entries: Table[Rune, FontEntry]
     texture*: Texture
-    rows: seq[Row]
-    width*, height*: int
+    atlas*: Atlas[Rune, Rect]
+    entries*: Table[Rune, FontEntry]
     font*: Font
-    glyphCount: int
     rectData: seq[Rect]
     ssbo*: Ssbo[seq[Rect]] 
 
-proc blit(atlas: var FontAtlas, row: var Row, rowInd: int, rune: Rune, runeStr: string, image: Image, size: Vec2) =
-  image.fillText(atlas.font, runeStr)
-  atlas.font.paint = rgb(255, 255, 255)
-  var tex = genTexture()
-  image.copyTo(tex)
+proc init*(_: typedesc[FontAtlas], w, h, margin: float32, font: Font): FontAtlas =
+  result = FontAtlas(atlas: Atlas[Rune, Rect].init(w, h, margin), font: font)
+  result.texture = genTexture()
+  result.texture.setSize(int w, int h)
+  result.ssbo = genSsbo[seq[Rect]](1)
 
+proc blit(atlas: var FontAtlas, rune: Rune, runeStr: string, image: Image, size: Vec2) =
+  let (added, rect) = atlas.atlas.add(rune, Rect.init(size.x, size.y))
+  if added:
+    atlas.font.paint = rgb(255, 255, 255)
+    image.fillText(atlas.font, runeStr)
+    var tex = genTexture()
+    image.copyTo(tex)
 
-  glCopyImageSubData(
-    Gluint tex, GlTexture2d, 0, 0, 0, 0,
-    Gluint atlas.texture, GlTexture2d, 0, Glint row.usedSpace, Glint(rowInd) * Glint size.y - 1, 0,
-    GlSizei size.x, GlSizei size.y - 1, 1
-  )
+    glCopyImageSubData(
+      Gluint tex, GlTexture2d, 0, 0, 0, 0,
+      Gluint atlas.texture, GlTexture2d, 0, Glint rect.x, Glint rect.y, 0,
+      GlSizei size.x, GlSizei size.y, 1
+    )
+    tex.delete()   
 
+    info "Added: '", runeStr, "' to atlas, at: ", rect
 
-  tex.delete()
-  let rect = Rect(x: float32 row.usedSpace, y: rowInd.float32 * atlas.font.size, w: size.x, h: size.y)
-  
-  inc atlas.glyphCount
+    atlas.rectData.add rect
+    atlas.rectData.copyTo(atlas.ssbo, 1)
+    atlas.entries[rune] = FontEntry(id: atlas.rectData.len, rect: rect, rune: rune)  
 
-  atlas.entries[rune] = FontEntry(
-    id: atlas.glyphCount,
-    rect: rect,
-    rune: rune
-  )
- 
-  atlas.rectData.add rect
-  atlas.rectData.copyTo(atlas.ssbo, 1)
-
-  row.usedSpace += 1 + int size.x
-
+  else:
+    error "Did not add: '", runeStr, "'to atlas."
 
 proc blit(atlas: var FontAtlas, rune: Rune) =
-  if Gluint(atlas.texture) == 0:
-    atlas.font.paint = rgb(255, 255, 255)
-    atlas.texture = genTexture()
-    atlas.texture.setSize(atlas.width, atlas.height)
-    atlas.ssbo = genSsbo[seq[Rect]](1)
+  if rune notin atlas.entries:
+    let
+      runeStr = $rune
+      size = atlas.font.layoutBounds(runeStr)
+      image = newImage(int size.x, int size.y)
 
-  let
-    runeStr = $rune
-    size = atlas.font.layoutBounds(runeStr)
-    image = newImage(int size.x, int size.y)
-
-  for i, row in atlas.rows.mpairs:
-    if atlas.width - row.usedSpace >= int size.x:
-      atlas.blit(row, i, rune, runeStr, image, size)
-      return
-
-  if ((atlas.rows.len + 1) * int size.y) > atlas.height:
-    doAssert false, "Should we handle this?"
-
-  atlas.rows.add Row(usedSpace: 0)
-  atlas.blit(atlas.rows[^1], atlas.rows.high, rune, runeStr, image, size)
-
+    atlas.blit(rune, runeStr, image, size)
 
 proc runeEntry*(atlas: var FontAtlas, rune: Rune): FontEntry =
   if rune.isWhiteSpace:
     FontEntry()
   else:
-    if rune notin atlas.entries:
-      atlas.blit(rune)
+    atlas.blit(rune)
     atlas.entries[rune]
 

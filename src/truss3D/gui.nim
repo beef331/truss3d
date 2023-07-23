@@ -2,7 +2,7 @@ import vmath, pixie, gooey
 import shaders, textures, instancemodels, models, fontatlaser
 import gooey/[layouts, buttons, sliders, groups, dropdowns, textinputs]
 import ../truss3D
-import std/[sugar, tables, hashes, strutils]
+import std/[sugar, tables, hashes, strutils, unicode]
 
 const guiVert* = ShaderFile"""
 #version 430
@@ -156,7 +156,8 @@ proc arrange*(label: Label) =
   if defaultFont.isNil:
     defaultFont = readFont(fontPath)
     defaultFont.size = 64
-    atlas = FontAtlas(width: 1024, height: 1024, font: defaultFont)
+    atlas = FontAtlas.init(1024, 1024, 3, defaultFont)
+
   let startSize = defaultFont.size
   var layout = defaultFont.layoutBounds(label.text)
   while layout.x > label.layoutSize.x or layout.y > label.layoutSize.y:
