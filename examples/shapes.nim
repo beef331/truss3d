@@ -83,29 +83,29 @@ proc update(dt: float32) =
 proc draw =
   let ov = ortho * view
   with shader:
+    setUniform("col", vec4(1))
+    setUniform("matrix",  ov)
+    pentagon.render()
 
-    pentagon.renderWith(shader):
-      "col": vec4(1)
-      "matrix": ov
 
-    pentagon.renderWith(shader):
-      "col": vec4(0.3, 0.9, 0.9, 1)
-      "matrix": ov * scale(vec3(0.9))
+    setUniform("col", vec4(0.3, 0.9, 0.9, 1))
+    setUniform("matrix", ov * scale(vec3(0.9)))
+    pentagon.render()
 
-    circle.renderWith(shader):
-      "col": vec4(1, 0, 0, 1)
-      "matrix": ov * translate(vec3(3, 0, 0))
+    setUniform("col", vec4(1, 0, 0, 1))
+    setUniform("matrix", ov * translate(vec3(3, 0, 0)))
+    circle.render()
 
-    square.renderWith(shader):
-      "col": color(1, 1, 1)
-      "matrix": ov * translate(vec3(0, -3, 0))
+    setUniform("col", vec4(1, 1, 1, 1))
+    setUniform("matrix", ov * translate(vec3(0, -3, 0)))
+    square.render()
 
-    hexagon.renderWith(shader):
-      "col": vec4(0, 0, 1, 1)
-      "matrix": ov * translate(vec3(0, 3, 0))
+    setUniform("col", vec4(0, 0, 1, 1))
+    setUniform("matrix", ov * translate(vec3(0, 3, 0)))
+    hexagon.render()
 
-    triangle.renderWith(shader):
-      "col": vec4(0, 1, 0, 1)
-      "matrix": ov * translate(vec3(-3, 0, 0))
+    setUniform("col", vec4(0, 1, 0, 1))
+    setUniform("matrix", ov * translate(vec3(-3, 0, 0)))
+    triangle.render()
 
 initTruss("Something", ivec2(1280, 720), init, update, draw)
