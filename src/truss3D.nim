@@ -79,7 +79,7 @@ proc openGlDebug(source: GLenum,
 
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc; vsync = false) =
-  if init(INIT_VIDEO) == 0:
+  if init(INIT_VIDEO or INIT_GAMECONTROLLER) == 0:
     setCurrentDir(getAppDir())
     app.isRunning = true
     discard glSetAttribute(GL_CONTEXT_MAJOR_VERSION, 4)

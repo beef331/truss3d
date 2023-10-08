@@ -1,8 +1,10 @@
-import sdl2_nim/sdl
+import sdl2_nim/sdl except log
 import opengl
 import std/[macros, tables, strutils]
 import vmath
+import mathtypes, logging
 export Rect
+
 type
   KeyState* = enum
     nothing, pressed, held, released
@@ -15,7 +17,6 @@ type
   MouseRelativeMode* = enum
     MouseRelative
     MouseAbsolute
-
 
 const relativeMovement = {MouseRelative}
 
@@ -52,6 +53,7 @@ macro emitEnumFaff(key: typedesc[enum]): untyped =
       `arrName`
 
 emitEnumFaff(Keycode)
+
 type
   KeyProc* = proc(ke: var KeyEvent, dt: float){.closure.}
   MouseEvent* = proc(dt, delta: float){.closure.}
@@ -69,13 +71,44 @@ type
     event: KeyProc
     interrupted*: bool
 
-
   Events* = object
     keyEvents: array[EventPriority, Table[(TKeyCode, KeyState), seq[KeyEvent]]]
   TextInput = object
     text: string
     pos: int
     rect: Rect
+
+  Controller* = object
+    instanceId: JoystickID
+    sdlController: GameController
+    buttonState: array[ControllerButtonA.ord..ControllerButtonDpadRight.ord, KeyState]
+
+
+
+const
+  AxisLeftX* = ControllerAxisLeftX
+  AxisLeftY* = ControllerAxisLeftY
+  AxisRightX* = ControllerAxisRightX
+  AxisRightY* = ControllerAxisRightY
+  AxisTriggerL* = ControllerAxisTriggerLeft
+  AxisTriggerR* = ControllerAxisTriggerRight
+
+
+  ButtonA* = ControllerButtonA
+  ButtonB* = ControllerButtonB
+  ButtonX* = ControllerButtonX
+  ButtonY* = ControllerButtonY
+  ButtonBack* = ControllerButtonBack
+  ButtonGuide* = ControllerButtonGuide
+  ButtonStart* = ControllerButtonStart
+  ButtonLeftStick* = ControllerButtonLeftStick
+  ButtonRightStick* = ControllerButtonRightStick
+  ButtonLeftShoulder* = ControllerButtonLeftShoulder
+  ButtonRightShoulder* = ControllerButtonRightShoulder
+  ButtonDpadUp* = ControllerButtonDpadUp
+  ButtonDpadDown* = ControllerButtonDpadDown
+  ButtonDpadLeft* = ControllerButtonDpadLeft
+  ButtonDpadRight* = ControllerButtonDpadRight
 
 var
   keyRepeating: array[TKeyCode, KeyState]
@@ -87,6 +120,7 @@ var
   mouseMovement = MouseAbsolute
   events*: Events
   textInput: TextInput
+  controllers: seq[Controller]
 
 
 proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
@@ -126,6 +160,16 @@ proc resetInputs(dt: float32) =
     else:
       discard
 
+  for controller in controllers.mitems:
+    for state in controller.buttonState.mitems:
+      case state
+      of released:
+        state = nothing
+      of pressed:
+        state = held
+      else: discard
+
+
   reset keyRepeating
 
   mouseDelta = ivec2(0, 0)
@@ -146,9 +190,10 @@ proc inputText*(): lent string = textInput.text
 proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
   resetInputs(dt)
 
+  discard gameControllerEventState(1)
   var e: Event
   while pollEvent(addr e) != 0:
-    case e.kind:
+    case e.kind
     of Keydown:
       let
         key = e.key.keysym.sym
@@ -197,6 +242,29 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
     of TextEditing:
       textInput.pos = e.edit.start
       #textInput.text = $e.edit.text
+    of ControllerButtonUp:
+      for controller in controllers.mitems:
+        if controller.instanceId == e.cbutton.which:
+          controller.buttonState[e.cbutton.button.ord] = released 
+
+    of ControllerButtonDown:
+      for controller in controllers.mitems:
+        if controller.instanceId == e.cbutton.which:
+          controller.buttonState[e.cbutton.button.ord] = pressed
+
+    of ControllerDeviceAdded:
+      let 
+        id = joystickGetDeviceInstanceID(e.cdevice.which)
+
+      info "Connected: ", gameControllerNameForIndex(id) 
+      controllers.add Controller(instanceId: id, sdlController: gameControllerOpen(id))
+    of ControllerDeviceRemoved:
+      for x, controller in controllers.mpairs:
+        if controller.instanceId == e.cdevice.which:
+          info "Disconnected: ", gameControllerName(controller.sdlController)
+          gameControllerClose(controller.sdlController)
+          controllers.delete(x)
+          break
 
 
     else: discard
@@ -230,3 +298,34 @@ proc setSoftwareMousePos*(pos: IVec2) =
   ## Does not move the mouse in the OS, just inside Truss3D.
   ## Useful for things like RTS pan cameras.
   mousePos = pos
+
+proc getAxis*(axis: GameControllerAxis): float32 =
+  for controller in controllers:
+    let input = controller.sdlController.gameControllerGetAxis(axis)
+    case axis
+    of AxisTriggerL, AxisTriggerR:
+      result = input / int16.high
+    else:
+      if input < 0:
+        result = -(input / int16.low)
+      else:
+        result = input / int16.high
+    if result != 0:
+      break
+
+proc getAxis*[T: mathtypes.Vec2](axisX, axisY: GameControllerAxis): T =
+  result.x = getAxis(axisX)
+  result.y = getAxis(axisY)
+
+proc getButtonPressed*(button: GameControllerButton): bool =
+  for controller in controllers:
+    if controller.buttonState[button.ord] == pressed:
+      return true
+
+proc rumble*(left, right, time: float32) =
+  let
+    left = uint16(uint16.high.float32 * left)
+    right = uint16(uint16.high.float32 * right)
+    time = uint32(time * 1000)
+  for controller in controllers:
+    discard controller.sdlController.gameControllerRumble(left, right, time)
