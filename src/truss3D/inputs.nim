@@ -317,9 +317,19 @@ proc getAxis*[T: mathtypes.Vec2](axisX, axisY: GameControllerAxis): T =
   result.x = getAxis(axisX)
   result.y = getAxis(axisY)
 
-proc getButtonPressed*(button: GameControllerButton): bool =
+proc isDown*(button: GameControllerButton): bool =
   for controller in controllers:
     if controller.buttonState[button.ord] == pressed:
+      return true
+
+proc isPressed*(button: GameControllerButton): bool =
+  for controller in controllers:
+    if controller.buttonState[button.ord] == held:
+      return true
+
+proc isUp*(button: GameControllerButton): bool =
+  for controller in controllers:
+    if controller.buttonState[button.ord] == released:
       return true
 
 proc rumble*(left, right, time: float32) =
