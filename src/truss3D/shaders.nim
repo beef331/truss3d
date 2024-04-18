@@ -13,12 +13,17 @@ type
   ShaderFile* = distinct string
   ShaderSource = ShaderPath or ShaderFile
 
+proc `=dup`(shader: Shader): Shader {.error.}
+proc `=dup`[T](ssbo: Ssbo[T]): Ssbo[T] {.error.}
 
-proc `=destroy`*[T](ssbo: Ssbo[T]) =
+
+proc `=destroy`[T](ssbo: Ssbo[T]) =
   glDeleteBuffers(1, GLuint(ssbo).addr)
 
-proc `=destroy`*(shader: Shader) =
+proc `=destroy`(shader: Shader) =
   glDeleteShader(Gluint(shader))
+
+
 
 const KindLut = [
   Vertex: GlVertexShader,

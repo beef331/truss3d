@@ -23,7 +23,11 @@ proc init*[T; R: RectangleImpl](_: typedesc[Atlas[T, R]], width, height, margin:
   )
 
 proc clear*[T, R](atlas: var Atlas[T, R]) =
-  atlas = typeof(atlas).init(atlas.width, atlas.height, atlas.margin)
+  mixin init
+  type FieldType = typeof(atlas.freeRects[0].w)
+  atlas.freeRects.setLen(1)
+  atlas.freeRects[0] = R.init(FieldType atlas.width, FieldType atlas.height)
+  atlas.usedRects.clear()
 
 proc getNearestSizeIndex*[T, R](atlas: Atlas[T, R], rect: R): int =
   mixin high, init
@@ -35,7 +39,8 @@ proc getNearestSizeIndex*[T, R](atlas: Atlas[T, R], rect: R): int =
       wDiff = freeRect.w - rect.w
       hDiff = freeRect.h - rect.h
       mDist = wDiff + hDiff
-    if wDiff >= 0.FieldType and hDiff >= 0.FieldType and dist > mDist: # Probably an issue, but meh
+    if wDiff >= 0.FieldType and hDiff >= 0.FieldType and
+    dist > mDist and freeRect.x + rect.w < atlas.width and freeRect.y + rect.h < atlas.height:
       dist = mDist 
       result = i
     if wDiff == 0.FieldType and hDiff == 0.FieldType:
@@ -85,5 +90,9 @@ proc `{}`*[T, R](atlas: var Atlas[T, R], name: T): (bool, R) =
     (false, default(R))
 
 
-proc width*[T, R](atlas: Atlas[T, R]): T = atlas.width
-proc height*[T, R](atlas: Atlas[T, R]): T = atlas.height
+proc width*[T, R](atlas: Atlas[T, R]): auto =
+  typeof(atlas.freeRects[0].w) atlas.width
+
+proc height*[T, R](atlas: Atlas[T, R]): auto =
+  typeof(atlas.freeRects[0].w) atlas.height
+

@@ -26,11 +26,16 @@ type
     clearColor*: Color
     depthTexture*: Texture
 
+proc `=dup`(fb: FrameBufferId): FrameBufferId {.error.}
+proc `=dup`(tex: Texture): Texture {.error.}
+
 proc `=destroy`(fb: FrameBufferId) =
   glDeleteFramebuffers(1, Gluint(fb).addr)
 
+
 proc `=destroy`(tex: Texture) =
   glDeleteTextures(1, Gluint(tex).addr)
+
 
 
 const 
