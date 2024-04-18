@@ -52,6 +52,10 @@ const
 proc genTexture*(): Texture =
   glCreateTextures(GlTexture2D, 1, result.Gluint.addr)
 
+proc clearBlack*(tex: Texture) =
+  var data = [0u8, 0, 0, 0]
+  glClearTexImage(Gluint tex, 0, GlRgba8, GlRgba8, cast[ptr pointer](data[0].addr))
+
 proc genTextureArray*(width, height, depth: int, mipMapLevel = 1): TextureArray =
   glCreateTextures(GlTexture2dArray, 1, result.Gluint.addr)
   glBindTexture(GlTexture2dArray, Gluint(result))
