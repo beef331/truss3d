@@ -32,11 +32,13 @@ proc setFontSize*(atlas: var FontAtlas, size: float32) =
   atlas.font.size = size
   atlas.atlas.clear()
   atlas.entries.clear()
+  atlas.rectData.clear()
 
 proc setFont*(atlas: var FontAtlas, font: Font) =
   atlas.font[] = font[]
   atlas.atlas.clear()
   atlas.entries.clear()
+  atlas.rectData.clear()
 
 proc blit(atlas: var FontAtlas, rune: Rune, runeStr: string, image: Image, size: Vec2) =
   let (added, rect) = atlas.atlas.add(rune, Rect.init(size.x, size.y))
