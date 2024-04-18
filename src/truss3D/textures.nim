@@ -26,6 +26,12 @@ type
     clearColor*: Color
     depthTexture*: Texture
 
+proc `=destroy`(fb: FrameBufferId) =
+  glDeleteFramebuffers(1, Gluint(fb).addr)
+
+proc `=destroy`(tex: Texture) =
+  glDeleteTextures(1, Gluint(tex).addr)
+
 
 const 
   formatLut =

@@ -13,6 +13,13 @@ type
   ShaderFile* = distinct string
   ShaderSource = ShaderPath or ShaderFile
 
+
+proc `=destroy`*[T](ssbo: Ssbo[T]) =
+  glDeleteBuffers(1, GLuint(ssbo).addr)
+
+proc `=destroy`*(shader: Shader) =
+  glDeleteShader(Gluint(shader))
+
 const KindLut = [
   Vertex: GlVertexShader,
   Fragment: GlFragmentShader,

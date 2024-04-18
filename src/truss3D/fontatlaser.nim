@@ -20,11 +20,23 @@ type
     rectData: seq[Rect]
     ssbo*: Ssbo[seq[Rect]] 
 
+proc `=dup`(atlas: FontAtlas): FontAtlas {.error.}
+
 proc init*(_: typedesc[FontAtlas], w, h, margin: float32, font: Font): FontAtlas =
   result = FontAtlas(atlas: Atlas[Rune, Rect].init(w, h, margin), font: font)
   result.texture = genTexture()
   result.texture.setSize(int w, int h)
   result.ssbo = genSsbo[seq[Rect]](1)
+
+proc setFontSize*(atlas: var FontAtlas, size: float32) =
+  atlas.font.size = size
+  atlas.atlas.clear()
+  atlas.entries.clear()
+
+proc setFont*(atlas: var FontAtlas, font: Font) =
+  atlas.font[] = font[]
+  atlas.atlas.clear()
+  atlas.entries.clear()
 
 proc blit(atlas: var FontAtlas, rune: Rune, runeStr: string, image: Image, size: Vec2) =
   let (added, rect) = atlas.atlas.add(rune, Rect.init(size.x, size.y))
