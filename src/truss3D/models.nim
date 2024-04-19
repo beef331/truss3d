@@ -37,7 +37,7 @@ proc loadModel*(path: string): Model =
   for mesh in scene.imeshes:
     type VboKinds = enum
       vert, norm, uv, col
-    const VboSize: array[VboKinds, GLsizei] = [Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TColor4d]
+    const vboSize: array[VboKinds, GLsizei] = [Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TColor4d]
     var vbos: array[VboKinds, Gluint]
     let
       components = block:
@@ -51,42 +51,42 @@ proc loadModel*(path: string): Model =
         comps
 
     glCreateBuffers(ord(VboKinds.high) + 1, vbos[vert].addr)
-    glNamedBufferStorage(vbos[vert], mesh.vertexCount * VboSize[vert], mesh.vertices, GlDynamicStorageBit)
+    glNamedBufferStorage(vbos[vert], mesh.vertexCount * vboSize[vert], mesh.vertices, GLbitfield 0)
 
     if norm in components:
-      glNamedBufferStorage(vbos[norm], mesh.vertexCount * VboSize[norm], mesh.normals, GlDynamicStorageBit)
+      glNamedBufferStorage(vbos[norm], mesh.vertexCount * vboSize[norm], mesh.normals, GLbitfield 0)
 
     if uv in components:
-      glNamedBufferStorage(vbos[uv], mesh.vertexCount * VboSize[uv], mesh.texCoords[0], GlDynamicStorageBit)
+      glNamedBufferStorage(vbos[uv], mesh.vertexCount * vboSize[uv], mesh.texCoords[0], GLbitfield 0)
 
     if col in components:
-      glNamedBufferStorage(vbos[col], mesh.vertexCount * VboSize[col], mesh.colors[0], GlDynamicStorageBit)
+      glNamedBufferStorage(vbos[col], mesh.vertexCount * vboSize[col], mesh.colors[0], GLbitfield 0)
 
     var msh: Mesh
     glCreateVertexArrays(1, msh.vao.addr)
     glCreateBuffers(1, msh.indices.addr)
 
-    var indices = newSeqOfCap[cint](mesh.faceCount * 3)
+    var
+      indices = newSeqOfCap[cint](mesh.faceCount * 3)
 
     for face in mesh.ifaces:
-      assert face.indexCount == 3, "Only supporting triangulated models"
-      let start = indices.len
-      indices.setLen(start + face.indexCount)
-      copyMem(indices[start].addr, face.indices, face.indexCount * sizeof(cint))
+      if face.indexCount != 3:
+        raise (ref ValueError)(msg: "Only acceepting triangulated meshes")
+      indices.add cast[ptr array[3, cint]](face.indices)[]
 
     msh.size = indices.len.GlSizei
 
     glNamedBufferStorage(msh.indices,
       msh.size * sizeof(cint),
       indices[0].addr,
-      GlDynamicStorageBit
+      GLbitfield 0
     )
 
     glVertexArrayElementBuffer(msh.vao, msh.indices)
 
     for ind, vbo in vbos.pairs:
       if ind in components:
-        glVertexArrayVertexBuffer(msh.vao, Gluint ind, vbo, 0, VboSize[ind])
+        glVertexArrayVertexBuffer(msh.vao, Gluint ind, vbo, 0, vboSize[ind])
         glEnableVertexArrayAttrib(msh.vao, Gluint ind)
         case ind
         of vert:
