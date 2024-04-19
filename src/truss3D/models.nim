@@ -28,7 +28,7 @@ type
 var modelPath* = ""
 
 proc loadModel*(path: string): Model =
-  var scene = aiImportFile(path, {})
+  var scene = aiImportFile(path, {flipUvs})
   if scene == nil:
     scene = aiImportFile(cstring(modelPath / path), {})
     if scene == nil:
