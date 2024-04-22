@@ -21,7 +21,8 @@ proc `=destroy`[T](ssbo: Ssbo[T]) =
   glDeleteBuffers(1, GLuint(ssbo).addr)
 
 proc `=destroy`(shader: Shader) =
-  glDeleteShader(Gluint(shader))
+  if Gluint(shader) > 0:
+    glDeleteShader(Gluint(shader))
 
 
 
@@ -45,7 +46,7 @@ template with*(shader: Shader, body: untyped) =
     shader.makeActive
     body
   finally:
-    Shader(activeProgram).makeActive
+    glUseProgram(activeProgram)
 
 proc loadShader*(shader: string, kind: ShaderKind, name: string): Gluint =
   let
@@ -106,7 +107,7 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
     fs = loadShader(frag, Fragment, fsName)
 
   if Gluint(0) in [Gluint(vs), Gluint(fs)]:
-    quit 1
+    return
     
   result = glCreateProgram().Shader
   glAttachShader(Gluint result, vs)
@@ -211,12 +212,12 @@ template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
         error "Cannot find uniform: ", name
       body
   else:
-    let
-      shader = getActiveShader()
-      loc = glGetUniformLocation(Gluint(shader), uniform)
+    var shader = getActiveShader()
+    let loc = glGetUniformLocation(Gluint(shader), uniform)
     if loc == -1:
       error "Cannot find uniform: ", name
     body
+    `=wasMoved`(shader)
 
 template makeSetter(T: typedesc, body: untyped) {.dirty.} =
   proc setUniform*(uniform: string, value: T) =
