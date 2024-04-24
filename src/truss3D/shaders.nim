@@ -14,11 +14,14 @@ type
   ShaderSource = ShaderPath or ShaderFile
 
 proc `=dup`(shader: Shader): Shader {.error.}
+proc `=copy`(a: var Shader, b: Shader) {.error.}
 proc `=dup`[T](ssbo: Ssbo[T]): Ssbo[T] {.error.}
+proc `=copy`[T](a: var Ssbo[T], b: Ssbo[T]) {.error.}
 
 
 proc `=destroy`[T](ssbo: Ssbo[T]) =
-  glDeleteBuffers(1, GLuint(ssbo).addr)
+  if Gluint(ssbo) > 0:
+    glDeleteBuffers(1, GLuint(ssbo).addr)
 
 proc `=destroy`(shader: Shader) =
   if Gluint(shader) > 0:
@@ -205,26 +208,24 @@ type
 
 template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
   bind glGetUniformLocation, Gluint, error
-  when declared(shader):
-    with shader:
-      let loc = glGetUniformLocation(Gluint(shader), uniform)
-      if loc == -1:
-        error "Cannot find uniform: ", name
-      body
-  else:
+  const hasShader = declared(shader)
+  when not hasShader:
     var shader = getActiveShader()
+  with shader:
     let loc = glGetUniformLocation(Gluint(shader), uniform)
-    if loc == -1:
+    if (loc == -1) and required:
       error "Cannot find uniform: ", name
     body
-    `=wasMoved`(shader)
+    when not hasShader:
+      `=wasMoved`(shader)
+
 
 template makeSetter(T: typedesc, body: untyped) {.dirty.} =
-  proc setUniform*(uniform: string, value: T) =
+  proc setUniform*(uniform: string, value: T, required = true) =
     bind error
     insideUniform(uniform, value):
       body
-  proc setUniform*(shader: Shader, uniform: string, value: T) =
+  proc setUniform*(shader: Shader, uniform: string, value: T, required = true) =
     bind error
     insideUniform(uniform, value):
       body
