@@ -8,6 +8,10 @@ type
     tfRg
     tfR
 
+  TextureWrapping* = enum
+    Repeat
+    Clamped
+
   Texture* = distinct Gluint
   TextureHandle* = distinct uint64
   TextureArray* = distinct Gluint
@@ -25,6 +29,7 @@ type
     colourTexture*: Texture
     clearColor*: Color
     depthTexture*: Texture
+    wrapMode: TextureWrapping
 
 proc `=dup`(fb: FrameBufferId): FrameBufferId {.error.}
 proc `=dup`(tex: Texture): Texture {.error.}
@@ -52,6 +57,11 @@ const
       tfRgb: GlUnsignedByte,
       tfRg: GlUnsignedByte,
       tfR: GlUnsignedByte,
+    ]
+
+  wrapLut = [
+    Repeat: GlRepeat,
+    GlClamp
     ]
 
 proc genTexture*(): Texture =
@@ -124,15 +134,15 @@ proc bindBuffer*(fb: FrameBuffer) =
 proc unbindFrameBuffer*() = 
   glBindFrameBuffer(GlFrameBuffer, 0.Gluint)
 
-proc attachTexture*(buffer: var FrameBuffer) =
+proc attachTexture*(buffer: var FrameBuffer, wrapMode: TextureWrapping) =
   with buffer:
     if Color in buffer.textures:
       glBindTexture(GlTexture2d, buffer.colourTexture.Gluint)
       glTexImage2D(GlTexture2d, 0.Glint, formatLut[buffer.format].Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, formatLut[buffer.format], dataType[buffer.format], nil)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapLut[wrapMode])
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapLut[wrapMode])
       glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.colourTexture.Gluint, 0)
 
     if Depth in buffer.textures:
@@ -140,8 +150,8 @@ proc attachTexture*(buffer: var FrameBuffer) =
       glTexImage2D(GlTexture2d, 0.Glint, GlDepthComponent.Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, GlDepthComponent, cGlFloat, nil)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapLut[wrapMode])
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapLut[wrapMode])
       glFramebufferTexture2D(GlFrameBuffer, GlDepthAttachment, GlTexture2D, buffer.depthTexture.Gluint, 0)
 
     glBindTexture(GlTexture2d, Gluint(0))
@@ -155,20 +165,20 @@ proc clear*(fb: FrameBuffer) =
       let depth: GlFloat = 1
       glClearBufferfv(GlDepth, 0, depth.unsafeaddr)
 
-proc genFrameBuffer*(size: Ivec2, format: TextureFormat, textures = {FrameBufferKind.Color, Depth}): FrameBuffer =
+proc genFrameBuffer*(size: Ivec2, format: TextureFormat, textures = {FrameBufferKind.Color, Depth}, wrapMode = default TextureWrapping): FrameBuffer =
   assert textures != {}
-  result = FrameBuffer(size: size, textures: textures)
+  result = FrameBuffer(size: size, textures: textures, wrapMode: wrapMode)
   result.colourTexture = genTexture()
   if Depth in result.textures:
     result.depthTexture = genTexture()
   glCreateFramebuffers(1, result.id.Gluint.addr)
-  result.attachTexture()
+  result.attachTexture(wrapMode)
   result.clear()
 
 proc resize*(fb: var FrameBuffer, size: IVec2) =
   if size != fb.size:
     fb.size = size
-    fb.attachTexture()
+    fb.attachTexture(fb.wrapMode)
     fb.clear()
 
 var loadedTextures: Table[string, Texture] # Should use a ref count
