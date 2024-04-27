@@ -127,6 +127,8 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
   glDeleteShader(vs)
   glDeleteShader(fs)
 
+proc isLoaded*(shader: Shader): bool = Gluint(shader) > 0
+
 proc genUbo*[T](shader: Gluint, binding: Natural): Ubo[T] =
   glCreateBuffers(1, result.Gluint.addr)
   glBindBufferbase(GlUniformBuffer, binding.Gluint, result.Gluint)
@@ -158,15 +160,12 @@ proc copyTo*[T](val: T, ssbo: Ssbo[T], buffer = 0) =
       val.len * sizeof(val[0])
     else:
       sizeof(val)
-  ssbo.bindBuffer(buffer)
   glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[val.low].unsafeAddr, GlDynamicDraw)
-  unbindSsbo()
 
 proc copyTo*[T](val: openArray, ssbo: Ssbo[T], buffer = 0) =
   ssbo.bindBuffer(buffer)
   const size = sizeof(typeof(val[0])) 
   glNamedBufferData(Gluint ssbo, GlSizeIPtr(sizeof(T) * val.len), val[0].addr, GlDynamicDraw)
-  unbindSsbo()
 
 type
   Vec2 = concept v
