@@ -17,6 +17,20 @@ type
   UpdateProc* = proc(dt: float32){.nimcall.}
   DrawProc* = proc(){.nimcall.}
 
+type WindowFlag* = enum
+  FullScreen
+  Shown = 2
+  Hidden
+  Borderless
+  Resizable
+  Maximized
+  Minimized
+  MouseGrabbed
+  InputFocus
+  MouseFocus
+  HighDpi
+
+
 var
   app: App
   gupdateProc: UpdateProc
@@ -78,14 +92,14 @@ proc openGlDebug(source: GLenum,
       echo str
 
 proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
-    drawProc: DrawProc; vsync = false) =
+    drawProc: DrawProc; vsync = false, flags = {Resizable}) =
   if init(INIT_VIDEO or INIT_GAMECONTROLLER) == 0:
     setCurrentDir(getAppDir())
     app.isRunning = true
     discard glSetAttribute(GL_CONTEXT_MAJOR_VERSION, 4)
     discard glSetAttribute(GL_CONTEXT_MINOR_VERSION, 3)
     app.windowSize = size
-    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x.cint, size.y.cint, WindowOpenGl or WindowResizable)
+    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x.cint, size.y.cint, WindowOpenGl or cast[uint32](flags))
     app.context = glCreateContext(app.window)
     loadExtensions()
     glClearColor(0.0, 0.0, 0.0, 1)
