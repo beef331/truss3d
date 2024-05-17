@@ -1,7 +1,12 @@
-import assimp, opengl, vmath, chroma
+import opengl, vmath, chroma
 import shaders
 import std/[macros, os]
 import truss3D/logging
+
+const useAssimp*{.booldefine:"truss3D.useAssimp".} = true
+
+when useAssimp:
+  import assimp
 
 type
   Mesh* = object
@@ -27,81 +32,82 @@ type
 
 var modelPath* = ""
 
-proc loadModel*(path: string): Model =
-  var scene = aiImportFile(path, {flipUvs})
-  if scene == nil:
-    scene = aiImportFile(cstring(modelPath / path), {})
+when useAssimp:
+  proc loadModel*(path: string): Model =
+    var scene = aiImportFile(path, {flipUvs})
     if scene == nil:
-      error path, " invalid model file."
-      raise newException(IOError, path & " invalid model file")
-  for mesh in scene.imeshes:
-    type VboKinds = enum
-      vert, norm, uv, col
-    const vboSize: array[VboKinds, GLsizei] = [Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TColor4d]
-    var vbos: array[VboKinds, Gluint]
-    let
-      components = block:
-        var comps = {vert}
-        if mesh.hasNormals():
-          comps.incl norm
-        if mesh.hasUvs():
-          comps.incl uv
-        if mesh.hasColors():
-          comps.incl col
-        comps
+      scene = aiImportFile(cstring(modelPath / path), {})
+      if scene == nil:
+        error path, " invalid model file."
+        raise newException(IOError, path & " invalid model file")
+    for mesh in scene.imeshes:
+      type VboKinds = enum
+        vert, norm, uv, col
+      const vboSize: array[VboKinds, GLsizei] = [Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TVector3d, Glsizei sizeof TColor4d]
+      var vbos: array[VboKinds, Gluint]
+      let
+        components = block:
+          var comps = {vert}
+          if mesh.hasNormals():
+            comps.incl norm
+          if mesh.hasUvs():
+            comps.incl uv
+          if mesh.hasColors():
+            comps.incl col
+          comps
 
-    glCreateBuffers(ord(VboKinds.high) + 1, vbos[vert].addr)
-    glNamedBufferStorage(vbos[vert], mesh.vertexCount * vboSize[vert], mesh.vertices, GLbitfield 0)
+      glCreateBuffers(ord(VboKinds.high) + 1, vbos[vert].addr)
+      glNamedBufferStorage(vbos[vert], mesh.vertexCount * vboSize[vert], mesh.vertices, GLbitfield 0)
 
-    if norm in components:
-      glNamedBufferStorage(vbos[norm], mesh.vertexCount * vboSize[norm], mesh.normals, GLbitfield 0)
+      if norm in components:
+        glNamedBufferStorage(vbos[norm], mesh.vertexCount * vboSize[norm], mesh.normals, GLbitfield 0)
 
-    if uv in components:
-      glNamedBufferStorage(vbos[uv], mesh.vertexCount * vboSize[uv], mesh.texCoords[0], GLbitfield 0)
+      if uv in components:
+        glNamedBufferStorage(vbos[uv], mesh.vertexCount * vboSize[uv], mesh.texCoords[0], GLbitfield 0)
 
-    if col in components:
-      glNamedBufferStorage(vbos[col], mesh.vertexCount * vboSize[col], mesh.colors[0], GLbitfield 0)
+      if col in components:
+        glNamedBufferStorage(vbos[col], mesh.vertexCount * vboSize[col], mesh.colors[0], GLbitfield 0)
 
-    var msh: Mesh
-    glCreateVertexArrays(1, msh.vao.addr)
-    glCreateBuffers(1, msh.indices.addr)
+      var msh: Mesh
+      glCreateVertexArrays(1, msh.vao.addr)
+      glCreateBuffers(1, msh.indices.addr)
 
-    var
-      indices = newSeqOfCap[cint](mesh.faceCount * 3)
+      var
+        indices = newSeqOfCap[cint](mesh.faceCount * 3)
 
-    for face in mesh.ifaces:
-      if face.indexCount != 3:
-        raise (ref ValueError)(msg: "Only acceepting triangulated meshes")
-      indices.add cast[ptr array[3, cint]](face.indices)[]
+      for face in mesh.ifaces:
+        if face.indexCount != 3:
+          raise (ref ValueError)(msg: "Only acceepting triangulated meshes")
+        indices.add cast[ptr array[3, cint]](face.indices)[]
 
-    msh.size = indices.len.GlSizei
+      msh.size = indices.len.GlSizei
 
-    glNamedBufferStorage(msh.indices,
-      msh.size * sizeof(cint),
-      indices[0].addr,
-      GLbitfield 0
-    )
+      glNamedBufferStorage(msh.indices,
+        msh.size * sizeof(cint),
+        indices[0].addr,
+        GLbitfield 0
+      )
 
-    glVertexArrayElementBuffer(msh.vao, msh.indices)
+      glVertexArrayElementBuffer(msh.vao, msh.indices)
 
-    for ind, vbo in vbos.pairs:
-      if ind in components:
-        glVertexArrayVertexBuffer(msh.vao, Gluint ind, vbo, 0, vboSize[ind])
-        glEnableVertexArrayAttrib(msh.vao, Gluint ind)
-        case ind
-        of vert:
-          glVertexArrayAttribFormat(msh.vao, Gluint vert, 3, cGlFloat, GlFalse, 0)
-        of norm:
-          glVertexArrayAttribFormat(msh.vao, Gluint norm, 3, cGlFloat, GlFalse, 0) 
-        of uv:
-          glVertexArrayAttribFormat(msh.vao, Gluint uv, 3, cGlFloat, GlFalse, 0)
-        of col:
-          glVertexArrayAttribFormat(msh.vao, Gluint col, 4, cGlFloat, GlFalse, 0)
+      for ind, vbo in vbos.pairs:
+        if ind in components:
+          glVertexArrayVertexBuffer(msh.vao, Gluint ind, vbo, 0, vboSize[ind])
+          glEnableVertexArrayAttrib(msh.vao, Gluint ind)
+          case ind
+          of vert:
+            glVertexArrayAttribFormat(msh.vao, Gluint vert, 3, cGlFloat, GlFalse, 0)
+          of norm:
+            glVertexArrayAttribFormat(msh.vao, Gluint norm, 3, cGlFloat, GlFalse, 0)
+          of uv:
+            glVertexArrayAttribFormat(msh.vao, Gluint uv, 3, cGlFloat, GlFalse, 0)
+          of col:
+            glVertexArrayAttribFormat(msh.vao, Gluint col, 4, cGlFloat, GlFalse, 0)
 
-    glVertexArrayElementBuffer(msh.vao, msh.indices)
+      glVertexArrayElementBuffer(msh.vao, msh.indices)
 
-    result.buffers.add msh
-  aiReleaseImport(scene)
+      result.buffers.add msh
+    aiReleaseImport(scene)
 
 proc uploadData*(mesh: MeshData): Model =
   var vertVbo, normVbo, uvVbo, colVbo: Gluint
