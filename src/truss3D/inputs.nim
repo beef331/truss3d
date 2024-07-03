@@ -287,7 +287,9 @@ proc simulatePressed*(input: var InputState, k: TKeycode) = input.keyState[k] = 
 proc isUp*(input: InputState, k: TKeycode): bool = input.keyState[k] == released
 proc simulateUp*(input: var InputState, k: TKeycode) = input.keyState[k] = released
 proc isNothing*(input: InputState, k: TKeycode): bool = input.keyState[k] == nothing
-proc simulateClear*(input: var InputState, k: TKeycode) = input.keyState[k] = released
+proc simulateClear*(input: var InputState, k: TKeycode) =
+  input.keyState[k] = nothing
+  input.keyRepeating[k] = nothing
 
 proc state*(input: InputState, k: TKeycode): KeyState = input.keyState[k]
 
