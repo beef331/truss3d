@@ -276,25 +276,44 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
     else: discard
 
 proc isDown*(input: InputState, k: TKeycode): bool = input.keyState[k] == pressed
+proc simulateDown*(input: var InputState, k: TKeycode) = input.keyState[k] = pressed
+
 proc isDownRepeating*(input: InputState, k: TKeycode): bool = input.keyRepeating[k] == pressed
+proc simulateDownRepeating*(input: var InputState, k: TKeycode) = input.keyRepeating[k] = pressed
 
 proc isPressed*(input: InputState, k: TKeycode): bool = input.keyState[k] == held
+proc simulatePressed*(input: var InputState, k: TKeycode) = input.keyState[k] = held
+
 proc isUp*(input: InputState, k: TKeycode): bool = input.keyState[k] == released
+proc simulateUp*(input: var InputState, k: TKeycode) = input.keyState[k] = released
 proc isNothing*(input: InputState, k: TKeycode): bool = input.keyState[k] == nothing
+proc simulateClear*(input: var InputState, k: TKeycode) = input.keyState[k] = released
 
 proc state*(input: InputState, k: TKeycode): KeyState = input.keyState[k]
 
 proc isDown*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == pressed
+proc simulateDown*(input: var InputState, mb: MouseButton) = input.mouseState[mb] = pressed
+
 proc isPressed*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == held
+proc simulatePressed*(input: var InputState, mb: MouseButton) = input.mouseState[mb] = held
+
 proc isUp*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == released
+proc simulateUp*(input: var InputState, mb: MouseButton) = input.mouseState[mb] = released
+
 proc isNothing*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == nothing
+proc simulateClear*(input: var InputState, mb: MouseButton) = input.mouseState[mb] = nothing
 
 proc state*(input: InputState, mb: MouseButton): KeyState = input.mouseState[mb]
 
 
 proc getMousePos*(input: InputState): IVec2 = input.mousePos
+proc simulateMousePos*(input: var InputState, pos: IVec2) = input.mousePos = pos
+
 proc getMouseDelta*(input: InputState): IVec2 = input.mouseDelta
+proc simulateMouseDelta*(input: var InputState, pos: IVec2) = input.mouseDelta = pos
+
 proc getMouseScroll*(input: InputState): int32 = input.mouseScroll
+proc simulateMouseScroll*(input: var InputState, dir: int32) = input.mouseScroll = dir
 
 proc setMouseMode*(input: var InputState, mode: MouseRelativeMode) =
   input.mouseMovement = mode
@@ -346,8 +365,9 @@ proc rumble*(input: var InputState, left, right, time: float32) =
   for controller in input.controllers:
     discard controller.sdlController.gameControllerRumble(left, right, time)
 
+
 when not defined(truss3D.inputHandler):
-  var inputs = InputState()
+  var inputs* = InputState()
   proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
     inputs.addEvent(key, state, prio, prc, eventFlags)
 
