@@ -82,6 +82,18 @@ type
     instanceId: JoystickID
     sdlController: GameController
     buttonState: array[ControllerButtonA.ord..ControllerButtonDpadRight.ord, KeyState]
+  InputState* = object
+    keyRepeating: array[TKeyCode, KeyState]
+    keyState: array[TKeyCode, KeyState]
+    mouseState: array[MouseButton, KeyState]
+    mouseDelta: IVec2
+    mousePos: IVec2
+    mouseScroll: int32
+    mouseMovement = MouseAbsolute
+    events*: Events
+    textInput: TextInput
+    controllers: seq[Controller]
+
 
 
 
@@ -110,48 +122,35 @@ const
   ButtonDpadLeft* = ControllerButtonDpadLeft
   ButtonDpadRight* = ControllerButtonDpadRight
 
-var
-  keyRepeating: array[TKeyCode, KeyState]
-  keyState: array[TKeyCode, KeyState]
-  mouseState: array[MouseButton, KeyState]
-  mouseDelta: IVec2
-  mousePos: IVec2
-  mouseScroll: int32
-  mouseMovement = MouseAbsolute
-  events*: Events
-  textInput: TextInput
-  controllers: seq[Controller]
 
+proc addEvent*(input: var InputState, key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
+  if input.events.keyEvents[prio].hasKeyOrPut((key, state), @[KeyEvent(flags: eventFlags, event: prc)]):
+    input.events.keyEvents[prio][(key, state)].add KeyEvent(flags: eventFlags, event: prc)
 
-proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
-  if events.keyEvents[prio].hasKeyOrPut((key, state), @[KeyEvent(flags: eventFlags, event: prc)]):
-    events.keyEvents[prio][(key, state)].add KeyEvent(flags: eventFlags, event: prc)
-
-proc addEvent*(keys: set[TKeyCode], state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
+proc addEvent*(input: var InputState, keys: set[TKeyCode], state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
   for key in keys:
-    addEvent(key, state, prio, prc, eventFlags)
+    input.addEvent(key, state, prio, prc, eventFlags)
 
-
-proc dispatchEvents(keyCode: TKeyCode, state: KeyState, dt: float32) =
+proc dispatchEvents(input: var InputState, keyCode: TKeyCode, state: KeyState, dt: float32) =
   for prio in EventPriority:
-    if (keyCode, state) in events.keyEvents[prio]:
-      for event in events.keyEvents[prio][(keyCode, state)].mitems:
+    if (keyCode, state) in input.events.keyEvents[prio]:
+      for event in input.events.keyEvents[prio][(keyCode, state)].mitems:
         if efInteruptable notin event.flags or not event.interrupted:
           event.event(event, dt)
           event.interrupted = true
 
-proc resetInputs(dt: float32) =
-  for key, state in keyState.pairs:
+proc resetInputs(input: var InputState, dt: float32) =
+  for key, state in input.keyState.pairs:
     case state:
     of released:
-      keyState[key] = nothing
+      input.keyState[key] = nothing
     of pressed:
-      keyState[key] = held
+      input.keyState[key] = held
     of held:
-      dispatchEvents(key, held, dt)
+      input.dispatchEvents(key, held, dt)
     else: discard
 
-  for btn in mouseState.mitems:
+  for btn in input.mouseState.mitems:
     case btn:
     of released:
       btn = nothing
@@ -160,7 +159,7 @@ proc resetInputs(dt: float32) =
     else:
       discard
 
-  for controller in controllers.mitems:
+  for controller in input.controllers.mitems:
     for state in controller.buttonState.mitems:
       case state
       of released:
@@ -170,25 +169,32 @@ proc resetInputs(dt: float32) =
       else: discard
 
 
-  reset keyRepeating
+  reset input.keyRepeating
 
-  mouseDelta = ivec2(0, 0)
-  mouseScroll = 0
+  input.mouseDelta = ivec2(0, 0)
+  input.mouseScroll = 0
 
-proc startTextInput*(r: Rect, text: sink string = "") =
+
+proc startTextInput*(input: var InputState, r: Rect, text: sink string = "") =
   sdl.startTextInput()
-  textInput.text = text
-  textInput.pos = 0
+  input.textInput.text = text
+  input.textInput.pos = 0
 
-export stopTextInput, isTextInputActive
 
-proc setInputText*(str: string) =
-  textInput.text = str
+proc stopTextInput*(input: var InputState) =
+  sdl.stopTextInput()
 
-proc inputText*(): lent string = textInput.text
+proc setInputText*(input: var InputState, str: string) =
+  input.textInput.text = str
 
-proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
-  resetInputs(dt)
+export isTextInputActive
+
+proc inputText*(input: InputState): lent string = input.textInput.text
+proc inputText*(input: var InputState): var string = input.textInput.text
+
+
+proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRunning: var bool) =
+  input.resetInputs(dt)
 
   discard gameControllerEventState(1)
   var e: Event
@@ -199,35 +205,35 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
         key = e.key.keysym.sym
         lutd = KeyLut[key]
 
-      keyRepeating[lutd] = pressed
+      input.keyRepeating[lutd] = pressed
 
-      if keyState[lutd] != held:
-        keyState[lutd] = pressed
-        dispatchEvents(lutd, pressed, dt)
+      if input.keyState[lutd] != held:
+        input.keyState[lutd] = pressed
+        input.dispatchEvents(lutd, pressed, dt)
     of KeyUp:
       let
         key = e.key.keysym.sym
         lutd = KeyLut[key]
 
-      keyRepeating[lutd] = nothing
+      input.keyRepeating[lutd] = nothing
 
-      if keyState[KeyLut[key]] == held:
-        keyState[KeyLut[key]] = released
-        dispatchEvents(lutd, released, dt)
+      if input.keyState[KeyLut[key]] == held:
+        input.keyState[KeyLut[key]] = released
+        input.dispatchEvents(lutd, released, dt)
     of MouseMotion:
       let motion = e.motion
-      if mouseMovement notin relativeMovement:
-        mousePos = ivec2(motion.x.int, motion.y.int)
-      mouseDelta = ivec2(motion.xrel.int, motion.yrel.int)
+      if input.mouseMovement notin relativeMovement:
+        input.mousePos = ivec2(motion.x.int, motion.y.int)
+      input.mouseDelta = ivec2(motion.xrel.int, motion.yrel.int)
     of MouseButtonDown:
       let button = MouseButton(e.button.button - 1)
-      mouseState[button] = pressed
+      input.mouseState[button] = pressed
     of MouseButtonUp:
       let button = MouseButton(e.button.button - 1)
-      mouseState[button] = released
+      input.mouseState[button] = released
     of MouseWheel:
       let sign = if e.wheel.direction == MouseWheelFlipped: -1 else: 1
-      mouseScroll = sign * e.wheel.y
+      input.mouseScroll = sign * e.wheel.y
     of WindowEvent:
       case e.window.event.WindowEventID
       of WindowEventResized, WindowEventSizeChanged:
@@ -238,17 +244,17 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
         isRunning = false
       else: discard
     of sdl.TextInput:
-      textInput.text = $e.text.text
+      input.textInput.text = $e.text.text
     of TextEditing:
-      textInput.pos = e.edit.start
+      input.textInput.pos = e.edit.start
       #textInput.text = $e.edit.text
     of ControllerButtonUp:
-      for controller in controllers.mitems:
+      for controller in input.controllers.mitems:
         if controller.instanceId == e.cbutton.which:
           controller.buttonState[e.cbutton.button.ord] = released 
 
     of ControllerButtonDown:
-      for controller in controllers.mitems:
+      for controller in input.controllers.mitems:
         if controller.instanceId == e.cbutton.which:
           controller.buttonState[e.cbutton.button.ord] = pressed
 
@@ -257,50 +263,50 @@ proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
         id = joystickGetDeviceInstanceID(e.cdevice.which)
 
       info "Connected: ", gameControllerNameForIndex(id) 
-      controllers.add Controller(instanceId: id, sdlController: gameControllerOpen(id))
+      input.controllers.add Controller(instanceId: id, sdlController: gameControllerOpen(id))
     of ControllerDeviceRemoved:
-      for x, controller in controllers.mpairs:
+      for x, controller in input.controllers.mpairs:
         if controller.instanceId == e.cdevice.which:
           info "Disconnected: ", gameControllerName(controller.sdlController)
           gameControllerClose(controller.sdlController)
-          controllers.delete(x)
+          input.controllers.delete(x)
           break
 
 
     else: discard
 
-proc isDown*(k: TKeycode): bool = keyState[k] == pressed
-proc isDownRepeating*(k: TKeycode): bool = keyRepeating[k] == pressed
+proc isDown*(input: InputState, k: TKeycode): bool = input.keyState[k] == pressed
+proc isDownRepeating*(input: InputState, k: TKeycode): bool = input.keyRepeating[k] == pressed
 
-proc isPressed*(k: TKeycode): bool = keyState[k] == held
-proc isUp*(k: TKeycode): bool = keyState[k] == released
-proc isNothing*(k: TKeycode): bool = keyState[k] == nothing
+proc isPressed*(input: InputState, k: TKeycode): bool = input.keyState[k] == held
+proc isUp*(input: InputState, k: TKeycode): bool = input.keyState[k] == released
+proc isNothing*(input: InputState, k: TKeycode): bool = input.keyState[k] == nothing
 
-proc state*(k: TKeycode): KeyState = keyState[k]
+proc state*(input: InputState, k: TKeycode): KeyState = input.keyState[k]
 
-proc isDown*(mb: MouseButton): bool = mouseState[mb] == pressed
-proc isPressed*(mb: MouseButton): bool = mouseState[mb] == held
-proc isUp*(mb: MouseButton): bool = mouseState[mb] == released
-proc isNothing*(mb: MouseButton): bool = mouseState[mb] == nothing
+proc isDown*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == pressed
+proc isPressed*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == held
+proc isUp*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == released
+proc isNothing*(input: InputState, mb: MouseButton): bool = input.mouseState[mb] == nothing
 
-proc state*(mb: MouseButton): KeyState = mouseState[mb]
+proc state*(input: InputState, mb: MouseButton): KeyState = input.mouseState[mb]
 
 
-proc getMousePos*(): IVec2 = mousePos
-proc getMouseDelta*(): IVec2 = mouseDelta
-proc getMouseScroll*(): int32 = mouseScroll
+proc getMousePos*(input: InputState): IVec2 = input.mousePos
+proc getMouseDelta*(input: InputState): IVec2 = input.mouseDelta
+proc getMouseScroll*(input: InputState): int32 = input.mouseScroll
 
-proc setMouseMode*(mode: MouseRelativeMode) =
-  mouseMovement = mode
+proc setMouseMode*(input: var InputState, mode: MouseRelativeMode) =
+  input.mouseMovement = mode
   discard setRelativeMouseMode(mode in relativeMovement)
 
-proc setSoftwareMousePos*(pos: IVec2) = 
+proc setSoftwareMousePos*(input: var InputState, pos: IVec2) =
   ## Does not move the mouse in the OS, just inside Truss3D.
   ## Useful for things like RTS pan cameras.
-  mousePos = pos
+  input.mousePos = pos
 
-proc getAxis*(axis: GameControllerAxis): float32 =
-  for controller in controllers:
+proc getAxis*(input: var InputState, axis: GameControllerAxis): float32 =
+  for controller in input.controllers:
     let input = controller.sdlController.gameControllerGetAxis(axis)
     case axis
     of AxisTriggerL, AxisTriggerR:
@@ -313,29 +319,99 @@ proc getAxis*(axis: GameControllerAxis): float32 =
     if result != 0:
       break
 
-proc getAxis*[T: mathtypes.Vec2](axisX, axisY: GameControllerAxis): T =
+proc getAxis*[T: mathtypes.Vec2](input: var InputState, axisX, axisY: GameControllerAxis): T =
   result.x = getAxis(axisX)
   result.y = getAxis(axisY)
 
-proc isDown*(button: GameControllerButton): bool =
-  for controller in controllers:
+proc isDown*(input: var InputState, button: GameControllerButton): bool =
+  for controller in input.controllers:
     if controller.buttonState[button.ord] == pressed:
       return true
 
-proc isPressed*(button: GameControllerButton): bool =
-  for controller in controllers:
+proc isPressed*(input: var InputState, button: GameControllerButton): bool =
+  for controller in input.controllers:
     if controller.buttonState[button.ord] == held:
       return true
 
-proc isUp*(button: GameControllerButton): bool =
-  for controller in controllers:
+proc isUp*(input: var InputState, button: GameControllerButton): bool =
+  for controller in input.controllers:
     if controller.buttonState[button.ord] == released:
       return true
 
-proc rumble*(left, right, time: float32) =
+proc rumble*(input: var InputState, left, right, time: float32) =
   let
     left = uint16(uint16.high.float32 * left)
     right = uint16(uint16.high.float32 * right)
     time = uint32(time * 1000)
-  for controller in controllers:
+  for controller in input.controllers:
     discard controller.sdlController.gameControllerRumble(left, right, time)
+
+when not defined(truss3D.inputHandler):
+  var inputs = InputState()
+  proc addEvent*(key: TKeyCode, state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
+    inputs.addEvent(key, state, prio, prc, eventFlags)
+
+  proc addEvent*(keys: set[TKeyCode], state: KeyState, prio: EventPriority, prc: KeyProc, eventFlags: EventFlags = {}) =
+    inputs.addEvent(keys, state, prio, prc, eventFlags)
+
+  proc startTextInput*(r: Rect, text: sink string = "") =
+    inputs.startTextInput(r, text)
+
+  proc stopTextInput*() =
+    inputs.stopTextInput()
+
+  proc setInputText*(str: string) =
+    inputs.setInputText(str)
+
+
+  proc inputText*(): var string = inputs.textInput.text
+
+
+  proc pollInputs*(screenSize: var IVec2, dt: float32, isRunning: var bool) =
+    inputs.pollInputs(screenSize, dt, isRunning)
+
+  proc isDown*(k: TKeycode): bool = inputs.isDown(k)
+  proc isDownRepeating*(k: TKeycode): bool = inputs.isDownRepeating(k)
+
+  proc isPressed*(k: TKeycode): bool = inputs.isPressed(k)
+  proc isUp*(k: TKeycode): bool = inputs.isUp(k)
+  proc isNothing*(k: TKeycode): bool = inputs.isNothing(k)
+
+  proc state*(k: TKeycode): KeyState = inputs.state(k)
+
+  proc isDown*(mb: MouseButton): bool = inputs.isDown(mb)
+  proc isPressed*(mb: MouseButton): bool = inputs.isPressed(mb)
+  proc isUp*(mb: MouseButton): bool = inputs.isUp(mb)
+  proc isNothing*(mb: MouseButton): bool = inputs.isNothing(mb)
+
+  proc state*(mb: MouseButton): KeyState = inputs.mouseState[mb]
+
+
+  proc getMousePos*(): IVec2 = inputs.mousePos
+  proc getMouseDelta*(): IVec2 = inputs.mouseDelta
+  proc getMouseScroll*(): int32 = inputs.mouseScroll
+
+  proc setMouseMode*(mode: MouseRelativeMode) = inputs.setMouseMode(mode)
+
+  proc setSoftwareMousePos*(pos: IVec2) =
+    ## Does not move the mouse in the OS, just inside Truss3D.
+    ## Useful for things like RTS pan cameras.
+    inputs.setSoftwareMousePos(pos)
+
+  proc getAxis*(axis: GameControllerAxis): float32 =
+    inputs.getAxis(axis)
+
+  proc getAxis*[T: mathtypes.Vec2](axisX, axisY: GameControllerAxis): T =
+    inputs.getAxis[: T](axisX, axisY)
+
+  proc isDown*(button: GameControllerButton): bool =
+    inputs.isDown(button)
+
+  proc isPressed*(button: GameControllerButton): bool =
+    inputs.isPressed(buttoN)
+
+  proc isUp*(button: GameControllerButton): bool =
+    inputs.isUp(button)
+
+  proc rumble*(left, right, time: float32) =
+    inputs.rumble(left, right, time)

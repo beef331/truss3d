@@ -41,6 +41,8 @@ proc quitTruss*() =
   app.isRunning = false
 
 proc screenSize*: IVec2 = app.windowSize
+proc mutScreenSize*(): var IVec2 = app.windowSize
+proc isRunning*(): var bool = app.isRunning
 proc getTime*: float32 = time
 
 proc update =
