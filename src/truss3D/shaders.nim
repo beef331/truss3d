@@ -111,7 +111,7 @@ proc loadShader*(vert, frag: distinct ShaderSource): Shader =
 
   if Gluint(0) in [Gluint(vs), Gluint(fs)]:
     return
-    
+
   result = glCreateProgram().Shader
   glAttachShader(Gluint result, vs)
   glAttachShader(Gluint result, fs)
@@ -160,11 +160,16 @@ proc copyTo*[T](val: T, ssbo: Ssbo[T], buffer = 0) =
       val.len * sizeof(val[0])
     else:
       sizeof(val)
-  glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[val.low].unsafeAddr, GlDynamicDraw)
+  const start =
+    when val is array:
+      val.low
+    else:
+      0
+  glNamedBufferData(Gluint(ssbo), GLsizeiptr(size), val[start].unsafeAddr, GlDynamicDraw)
 
 proc copyTo*[T](val: openArray, ssbo: Ssbo[T], buffer = 0) =
   ssbo.bindBuffer(buffer)
-  const size = sizeof(typeof(val[0])) 
+  const size = sizeof(typeof(val[0]))
   glNamedBufferData(Gluint ssbo, GlSizeIPtr(sizeof(T) * val.len), val[0].addr, GlDynamicDraw)
 
 type
@@ -263,4 +268,3 @@ makeSetter(Texture):
 makeSetter(TextureArray):
   glBindTextureUnit(loc.Gluint, value.GLuint);
   glUniform1i(loc, loc)
-
