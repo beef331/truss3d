@@ -5,65 +5,60 @@ import truss3D/[inputs, models, shaders, textures, logging]
 import sdl2_nim/sdl except Keycode
 export models, shaders, textures, inputs, opengl
 
-type App = object
-  window: Window
-  windowSize: IVec2
-  context: GLContext
-  isRunning: bool
-  rect: Gluint
-
 type
-  InitProc* = proc(){.nimcall.}
-  UpdateProc* = proc(dt: float32){.nimcall.}
-  DrawProc* = proc(){.nimcall.}
+  InitProc* = proc(truss: var Truss){.nimcall.}
+  UpdateProc* = proc(truss: var Truss, dt: float32){.nimcall.}
+  DrawProc* = proc(truss: var Truss){.nimcall.}
+  Truss* = object
+    window: Window
+    windowSize*: IVec2
+    context: GLContext
+    isRunning*: bool
+    rect: Gluint
+    updateProc*: UpdateProc
+    drawProc*: DrawProc
+    initProc*: InitProc
+    time: float
+    hasInit: bool
+    inputs*: InputState
+    lastFrame: MonoTime
 
-type WindowFlag* = enum
-  FullScreen
-  Shown = 2
-  Hidden
-  Borderless
-  Resizable
-  Maximized
-  Minimized
-  MouseGrabbed
-  InputFocus
-  MouseFocus
-  HighDpi
 
 
-var
-  app: App
-  gupdateProc: UpdateProc
-  gdrawProc: DrawProc
-  time = 0f32
+  WindowFlag* = enum
+    FullScreen
+    Shown = 2
+    Hidden
+    Borderless
+    Resizable
+    Maximized
+    Minimized
+    MouseGrabbed
+    InputFocus
+    MouseFocus
+    HighDpi
 
-proc quitTruss*() =
-  app.isRunning = false
+proc `=destroy`(truss: var Truss) =
+  glDeleteContext(truss.context)
+  truss.window.destroyWindow
 
-proc screenSize*: IVec2 = app.windowSize
-proc mutScreenSize*(): var IVec2 = app.windowSize
-proc isRunning*(): var bool = app.isRunning
-proc getTime*: float32 = time
+proc update*(truss: var Truss) =
+  assert truss.updateProc != nil
+  assert truss.drawProc != nil
 
-proc update =
-  var lastFrame = getMonoTime()
-  while app.isRunning:
-    assert gupdateProc != nil
-    assert gdrawProc != nil
+  let thisFrame = getMonoTime()
+  let dt = (thisFrame - truss.lastFrame).inNanoSeconds.float32 * 1e-9
+  truss.time += dt
 
-    let dt = (getMonoTime() - lastFrame).inNanoseconds.float / 1000000000
-    time += dt
-    lastFrame = getMonoTime()
-    pollInputs(app.windowSize, dt, app.isRunning)
-    gupdateProc(dt)
-    glBindFramebuffer(GlFrameBuffer, 0)
-    glClear(GlColorBufferBit or GlDepthBufferBit)
-    gdrawProc()
-    glSwapWindow(app.window)
+  truss.inputs.pollInputs(truss.windowSize, dt, truss.isRunning)
+  truss.updateProc(truss, dt)
 
-  quitTruss()
-  glDeleteContext(app.context)
-  app.window.destroyWindow
+  glBindFramebuffer(GlFrameBuffer, 0)
+  glClear(GlColorBufferBit or GlDepthBufferBit)
+  truss.drawProc(truss)
+  glSwapWindow(truss.window)
+  truss.lastFrame = thisFrame
+
 
 proc openGlDebug(source: GLenum,
     typ: GLenum,
@@ -93,16 +88,16 @@ proc openGlDebug(source: GLenum,
     else:
       echo str
 
-proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
-    drawProc: DrawProc; vsync = false, flags = {Resizable}) =
+proc init*(_: typedesc[Truss], name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
+    drawProc: DrawProc; vsync = false, flags = {Resizable}): Truss =
   if init(INIT_VIDEO or INIT_GAMECONTROLLER) == 0:
     setCurrentDir(getAppDir())
-    app.isRunning = true
+    result = Truss(isRunning: true, hasInit: true, windowSize: size)
     discard glSetAttribute(GL_CONTEXT_MAJOR_VERSION, 4)
     discard glSetAttribute(GL_CONTEXT_MINOR_VERSION, 3)
-    app.windowSize = size
-    app.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x.cint, size.y.cint, WindowOpenGl or cast[uint32](flags))
-    app.context = glCreateContext(app.window)
+    result.windowSize = size
+    result.window = createWindow(name, WindowPosUndefined, WindowPosUndefined, size.x.cint, size.y.cint, WindowOpenGl or cast[uint32](flags))
+    result.context = glCreateContext(result.window)
     loadExtensions()
     glClearColor(0.0, 0.0, 0.0, 1)
     glClearDepth(1)
@@ -116,24 +111,23 @@ proc initTruss*(name: string, size: IVec2, initProc: InitProc, updateProc: Updat
         else:
           nil
     if initProc != nil:
-      initProc()
+      initProc(result)
+    result.lastFrame = getMonoTime()
+    result.updateProc = updateProc
+    result.drawProc = drawProc
 
-    gupdateProc = updateProc
-    gdrawProc = drawProc
-    update()
+proc moveMouse*(truss: var Truss, target: IVec2) =
+  let target = ivec2(clamp(target.x, 0, truss.windowSize.x), clamp(target.y, 0, truss.windowSize.y))
+  truss.inputs.setSoftwareMousePos(target)
+  warpMouseInWindow(cast[ptr Window](truss.window), target.x.cint, target.y.cint)
 
-proc moveMouse*(target: IVec2) =
-  let target = ivec2(clamp(target.x, 0, app.windowSize.x), clamp(target.y, 0, app.windowSize.y))
-  setSoftwareMousePos(target)
-  warpMouseInWindow(cast[ptr Window](app.window), target.x.cint, target.y.cint)
+proc grabWindow*(truss: var Truss) = setWindowGrab(truss.window, true)
+proc releaseWindow*(truss: var Truss) = setWindowGrab(truss.window, false)
 
-proc grabWindow*() = setWindowGrab(app.window, true)
-proc releaseWindow*() = setWindowGrab(app.window, false)
-
-proc getNormalizedMousePos*(): Vec2 =
+proc getNormalizedMousePos*(truss: Truss): Vec2 =
   let
-    screenSize = screenSize()
-    mousePos = getMousePos()
+    screenSize = truss.windowSize
+    mousePos = truss.inputs.getMousePos()
   vec2(mousePos.x / screenSize.x, mousePos.y / screenSize.y)
 
 when isMainModule:
@@ -144,29 +138,31 @@ when isMainModule:
     proj: Mat4
     texture: textures.Texture
 
-  addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
-    echo "buh bye"
-    quitTruss()
-
-  proc init() =
+  proc init(truss: var Truss) =
     model = loadModel("../assets/Cube.glb")
     shader = loadShader(ShaderPath"../assets/vert.glsl", ShaderPath"../assets/frag.glsl")
-    proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
+    proj = perspective(90f, truss.windowSize.x.float / truss.windowSize.y.float, 0.01, 100)
     let sam = readImage"../assets/Sam.jpg"
     texture = genTexture()
     sam.copyTo texture
     shader.setUniform "mvp", proj * view * mat4()
     shader.setUniform "tex", texture
 
-  proc update(dt: float32) = discard
+  proc update(truss: var Truss, dt: float32) = discard
 
 
-  proc draw() =
+  proc draw(truss: var Truss) =
     with shader:
-      view = lookAt(vec3(sin(time) * 4, 1, -3), vec3(0, 0, 0), vec3(0, 1, 0))
-      proj = perspective(90f, app.windowSize.x.float / app.windowSize.y.float, 0.01, 100)
+      view = lookAt(vec3(sin(truss.time) * 4, 1, -3), vec3(0, 0, 0), vec3(0, 1, 0))
+      proj = perspective(90f, truss.windowSize.x.float / truss.windowSize.y.float, 0.01, 100)
       setUniform "mvp", proj * view * mat4()
       glEnable(GlDepthTest)
       model.render
   addLoggers("truss3D")
-  initTruss("Test", ivec2(1280, 720), init, update, draw)
+
+  var truss = Truss.init("Truss3D", ivec2(1280, 720), InitProc init, UpdateProc update, DrawProc draw)
+
+  while truss.isRunning:
+    truss.update()
+
+

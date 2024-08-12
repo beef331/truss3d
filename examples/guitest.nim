@@ -124,25 +124,25 @@ var
   uiState = MyUiState(scaling: 1)
 
 
-proc init() =
+proc init(truss: var Truss) =
   renderTarget.model = uploadInstancedModel[RenderInstance](modelData)
   myUi = defineGui()
   myUi.layout(vec3(0), uiState)
   renderTarget.shader = loadShader(guiVert, guiFrag)
 
-proc update(dt: float32) =
+proc update(truss: var Truss, dt: float32) =
 
   let
     isTextInput = isTextInputActive()
     inputString =
       if isTextInput:
-        inputText()
+        truss.inputs.inputText()
       else: ""
-  setInputText("")
+  truss.inputs.setInputText("")
 
-  if leftMb.isDown:
+  if truss.inputs.isDown(leftMb):
     uiState.input = UiInput(kind: leftClick)
-  elif leftMb.isPressed:
+  elif truss.inputs.isPressed(leftMb):
     uiState.input = UiInput(kind: leftClick, isHeld: true)
   elif isTextInput and inputString != "":
     uiState.input = UiInput(kind: textInput, str: inputString)
@@ -156,12 +156,12 @@ proc update(dt: float32) =
   else:
     reset uiState.input
 
-  uiState.screenSize = vec2 screenSize()
-  uiState.inputPos = vec2 getMousePos()
+  uiState.screenSize = vec2 truss.windowSize
+  uiState.inputPos = vec2 truss.inputs.getMousePos()
   myUi.layout(vec3(0), uiState)
   myUi.interact(uiState)
 
-proc draw() =
+proc draw(truss: var Truss) =
   renderTarget.model.clear()
   myUi.upload(uiState, renderTarget)
   renderTarget.model.reuploadSsbo()
@@ -173,5 +173,6 @@ proc draw() =
     renderTarget.model.render()
     glDisable(GlBlend)
 
-
-initTruss("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)
+var truss = Truss.init("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)
+while truss.isRunning:
+  truss.update()
