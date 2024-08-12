@@ -130,6 +130,8 @@ proc getNormalizedMousePos*(truss: Truss): Vec2 =
     mousePos = truss.inputs.getMousePos()
   vec2(mousePos.x / screenSize.x, mousePos.y / screenSize.y)
 
+proc time*(truss: Truss): float = truss.time
+
 when isMainModule:
   var
     model: Model
