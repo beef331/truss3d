@@ -85,18 +85,18 @@ var
   ortho = ortho(-camSize, camSize, -camSize, camSize, 0f, 10f)
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, 1, 0))
 
-proc init =
+proc init(truss: var Truss) =
   shader = loadShader(ShaderFile vert, ShaderFile frag)
   line.generateMesh
-  let xAspect = (screenSize().x / screenSize().y).float32
+  let xAspect = (truss.windowSize.x / truss.windowSize.y).float32
   ortho = ortho(-camSize * xAspect, camSize * xAspect, -camSize, camSize, 0f, 10f)
   view = lookat(vec3(0), vec3(0, 0, 1), vec3(0, 1, 0))
 
-proc update(dt: float32) =
-  if KeyCodeQ.isDown:
-    quitTruss()
+proc update(truss: var Truss, dt: float32) =
+  if truss.inputs.isDown(KeyCodeQ):
+    truss.isRunning = false
 
-proc draw =
+proc draw(truss: var Truss) =
   let ov = ortho * view
 
   with shader:
@@ -106,4 +106,6 @@ proc draw =
 
 
 
-initTruss("Something", ivec2(1280, 720), init, update, draw)
+var truss = Truss.init("Something", ivec2(1280, 720), init, update, draw)
+while truss.isRunning:
+  truss.update()

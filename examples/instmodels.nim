@@ -67,9 +67,7 @@ var
   texture: textures.Texture
   mySound: SoundEffect
 
-addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
-  echo "buh bye"
-  quitTruss()
+
 
 proc randomizeSSBO() =
   with shader:
@@ -79,10 +77,10 @@ proc randomizeSSBO() =
     model.reuploadSsbo()
 
 
-proc init() =
+proc init(truss: var Truss) =
   model = loadInstancedModel[Buffer]("../assets/Cube.glb")
   shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
-  let screenSize = screenSize()
+  let screenSize = truss.windowSize
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
   let sam = readImage"../assets/Sam.jpg"
   texture = genTexture()
@@ -107,15 +105,22 @@ proc moveSSBO(dt: float32) =
       x.pos.y += (1 / length(x.scale)) * 0.1 * dt
     model.reuploadSsbo()
 
-proc update(dt: float32) =
-  let screenSize = screenSize()
-  proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
+proc update(truss: var Truss, dt: float32) =
+  let screenSize = truss.windowSize
+  proj = perspective(90f, truss.windowSize.x.float / truss.windowSize.y.float, 0.01, 100)
   moveSsbo(dt)
   audio.update()
 
-proc draw() =
+proc draw(truss: var Truss) =
   with shader:
     glEnable(GlDepthTest)
     setUniform("VP", proj * view)
     model.render()
-initTruss("Test", ivec2(1280, 720), instmodels.init, update, draw)
+var truss = Truss.init("Test", ivec2(1280, 720), instmodels.init, update, draw)
+
+truss.inputs.addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
+  echo "buh bye"
+  truss.isRunning = false
+
+while truss.isRunning:
+  truss.update()

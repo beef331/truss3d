@@ -63,16 +63,14 @@ var
   proj: Mat4
   texture: textures.Texture
 
-addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
-  echo "buh bye"
-  quitTruss()
+
 
 proc myUpdate*(particle: var Particle, dt: float32, ps: ParticleSystem) =
   particle.pos += dt * particle.velocity * 20 * (1 - (particle.lifeTime / ps.lifeTime))
   particle.scale = vec3((particle.lifeTime / ps.lifeTime))
 
 
-proc init() =
+proc init(truss: var Truss) =
   particleSystem = initParticleSystem(
     "../assets/Cube.glb",
     vec3(5, 0, 5),
@@ -82,7 +80,7 @@ proc init() =
     myUpdate
   )
   shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
-  let screenSize = screenSize()
+  let screenSize = truss.windowSize
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
   let sam = readImage"../assets/Sam.jpg"
   texture = genTexture()
@@ -90,18 +88,25 @@ proc init() =
   shader.setUniform "tex", texture
 
 
-proc update(dt: float32) =
-  let screenSize = screenSize()
+proc update(truss: var Truss, dt: float32) =
+  let screenSize = truss.windowSize
   view = lookAt(vec3(0, 10, 0), vec3(5, 0, 5), vec3(0, 1, 0))
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
-  if KeycodeSpace.isPressed():
+  if truss.inputs.isPressed(KeyCodeSpace):
     particleSystem.spawn(100)
 
   particleSystem.update(dt)
 
-proc draw() =
+proc draw(truss: var Truss) =
   with shader:
     glEnable(GlDepthTest)
     setUniform("VP", proj * view)
     particleSystem.render()
-initTruss("Test", ivec2(1280, 720), init, update, draw)
+
+var truss =Truss.init("Test", ivec2(1280, 720), init, update, draw)
+truss.inputs.addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
+  truss.isRunning = false
+
+while truss.isRunning:
+  truss.update()
+
