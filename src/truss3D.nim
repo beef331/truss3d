@@ -59,6 +59,7 @@ proc update*(truss: var Truss) =
   glSwapWindow(truss.window)
   truss.lastFrame = thisFrame
 
+proc hasInit*(truss: Truss): bool = truss.hasInit
 
 proc openGlDebug(source: GLenum,
     typ: GLenum,
