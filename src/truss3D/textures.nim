@@ -39,11 +39,13 @@ proc `=dup`(fb: FrameBufferId): FrameBufferId {.error.}
 proc `=dup`(tex: Texture): Texture {.error.}
 
 proc `=destroy`(fb: FrameBufferId) =
-  glDeleteFramebuffers(1, Gluint(fb).addr)
+  if Gluint(fb) != 0:
+    glDeleteFramebuffers(1, Gluint(fb).addr)
 
 
 proc `=destroy`(tex: Texture) =
-  glDeleteTextures(1, Gluint(tex).addr)
+  if Gluint(tex) != 0:
+    glDeleteTextures(1, Gluint(tex).addr)
 
 
 

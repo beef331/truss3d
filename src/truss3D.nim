@@ -38,9 +38,10 @@ type
     MouseFocus
     HighDpi
 
-proc `=destroy`(truss: var Truss) =
-  glDeleteContext(truss.context)
-  truss.window.destroyWindow
+proc `=destroy`(truss: Truss) =
+  if truss.hasInit:
+    glDeleteContext(truss.context)
+    truss.window.destroyWindow
 
 proc update*(truss: var Truss) =
   assert truss.updateProc != nil
@@ -80,6 +81,7 @@ proc openGlDebug(source: GLenum,
     when defined(truss3D.log):
       case severity
       of GlDebugSeverityHigh:
+        writeStackTrace()
         error str
       of GlDebugSeverityMedium:
         warn str
