@@ -81,7 +81,6 @@ proc openGlDebug(source: GLenum,
     when defined(truss3D.log):
       case severity
       of GlDebugSeverityHigh:
-        writeStackTrace()
         error str
       of GlDebugSeverityMedium:
         warn str
