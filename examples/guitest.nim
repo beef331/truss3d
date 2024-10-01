@@ -147,9 +147,9 @@ proc update(truss: var Truss, dt: float32) =
   elif isTextInput and inputString != "":
     uiState.input = UiInput(kind: textInput, str: inputString)
   elif isTextInput:
-    if KeycodeBackspace.isDownRepeating():
+    if truss.inputs.isDownRepeating(KeyCodeBackspace):
       uiState.input = UiInput(kind: textDelete)
-    elif KeyCodeReturn.isDownRepeating():
+    elif truss.inputs.isDownRepeating(KeyCodeReturn):
       uiState.input = UiInput(kind: textNewLine)
     else:
       reset uiState.input
@@ -174,5 +174,6 @@ proc draw(truss: var Truss) =
     glDisable(GlBlend)
 
 var truss = Truss.init("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)
+uiState.truss = truss.addr
 while truss.isRunning:
   truss.update()

@@ -95,6 +95,7 @@ type
     dt*: float32
     interactedWithCurrentElement*: bool
     overAnyUi*: bool
+    truss*: ptr Truss # Unsafe, but who gives a hoot how many of these are we making?!
 
   HLayout*[T] = ref object of HorizontalLayoutBase[MyUiElement, T] # Need atleast Nim '28a116a47701462a5f22e0fa496a91daff2c1816' for this inheritance
   VLayout*[T] = ref object of VerticalLayoutBase[MyUiElement, T]
@@ -354,12 +355,12 @@ proc layout*(input: TextInput, parent: Element, offset: Vec3, state: UiState) =
   input.internalLabel.layout(input, Vec3.init(0, 0, 0), state)
 
 proc onEnter*(input: TextInput, uiState: var UiState) =
-  startTextInput(default(inputs.Rect), "")
+  uiState.truss[].inputs.startTextInput(default(inputs.Rect), "")
 
 proc onTextInput*(input: TextInput, uiState: var UiState) =
   textinputs.onTextInput(input, uiState)
 
 proc onExit*(input: TextInput, uiState: var UiState) =
-  stopTextInput()
+  uistate.truss[].inputs.stopTextInput()
 
 
