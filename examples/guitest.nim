@@ -112,6 +112,35 @@ proc defineGui(): auto =
       pos: vec3(0, 300, 0),
       anchor: {bottom},
       size: vec2(300, 200),
+    ),
+    VLayout[HLayout[Button]](
+      anchor: {left},
+      margin: 10,
+      align: right,
+      children: @[
+        HLayout[Button](
+          margin: 10,
+          children: @[
+            Button(size: vec2(50, 50)),
+            Button(size: vec2(100, 50)),
+            Button(size: vec2(50, 50))
+          ]
+        ),
+        HLayout[Button](
+          margin: 10,
+          children: @[
+            Button(size: vec2(100, 50))
+          ]
+        ),
+        HLayout[Button](
+          margin: 10,
+          children: @[
+            Button(size: vec2(50, 50)),
+            Button(size: vec2(100, 50)),
+            Button(size: vec2(50, 50))
+          ]
+        ),
+      ]
     )
   )
 
