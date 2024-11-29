@@ -8,9 +8,9 @@ type
     pos*: Vec3
     lifeTime*: float32
     scale*: Vec3
-    someReserved: float32
+    reserved1: int32
     velocity*: Vec3
-    someMoreReserved: float32
+    reserved2: int32
 
   ParticleSystem* = object
     pos: Vec3
@@ -37,7 +37,7 @@ proc initParticleSystem*(
       let scale = scale..scale
     ParticleSystem(pos: pos, model: model, color: color, scale: scale, updateProc: updateProc, lifeTime: lifeTime)
 
-proc generateParticle(ps: ParticleSystem, startPos = none(Vec3)): Particle =
+proc generateParticle(ps: ParticleSystem, startPos = none(Vec3), extraData = [0i32, 0i32]): Particle =
   Particle(
     pos:
       if startPos.isSome:
@@ -48,13 +48,15 @@ proc generateParticle(ps: ParticleSystem, startPos = none(Vec3)): Particle =
     color: ps.color.a,
     lifeTime: ps.lifeTime,
     scale: ps.scale.a,
-    velocity: vec3(rand(-1f..1f), rand(-1f..1f), rand(-1f..1f)).normalize()
-    )
+    velocity: vec3(rand(-1f..1f), rand(-1f..1f), rand(-1f..1f)).normalize(),
+    reserved1: extraData[0],
+    reserved2: extraData[1],
+  )
 
 
-proc spawn*(particleSystem: var ParticleSystem, count = 1, pos = none(Vec3)) =
+proc spawn*(particleSystem: var ParticleSystem, count = 1, pos = none(Vec3), extraData = [0i32, 0i32]) =
   for x in 0..<count:
-    particleSystem.model.ssboData.add particleSystem.generateParticle(pos)
+    particleSystem.model.ssboData.add particleSystem.generateParticle(pos, extraData)
 
   particleSystem.model.reuploadSsbo()
   particleSystem.model.drawCount = particleSystem.model.ssboData.len
