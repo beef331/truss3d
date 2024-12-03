@@ -1,23 +1,17 @@
 import vmath, pixie, truss3D
-import truss3D/[shaders, textures, instancemodels, models, gui]
-import std/[sugar, tables, hashes, strutils]
+import truss3D/[shaders, instancemodels, models, gui]
 import truss3D/gui
 import truss3D/gui/[labels, boxes, buttons, layouts]
-
-proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
-proc reverseLerp(a: int, slice: Slice[int]): float32 = (a - slice.a) / (slice.b - slice.a)
-proc reverseLerp(a: float32, slice: Slice[float32]): float32 = (a - slice.a) / (slice.b - slice.a)
-
 
 var modelData: MeshData[Vec2]
 modelData.appendVerts [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items
 modelData.append [0u32, 1, 2, 0, 2, 3].items
 modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
 
-proc defineGui(): seq[TrussUiElement] =
+proc defineGui(): seq[UiElement] =
   @[
     Box().setSize(vec2(50)).setPosition(vec2(30, 30)).setAnchor({top, left}),
-    TrussUiElement (let lab = label().setText("Hello").setSize(vec2(100, 50)).setTimer(1).setColor(vec4(1, 1, 0, 1)).setBackgroundColor(vec4(0.3)); lab),
+    UiElement (let lab = label().setText("Hello").setSize(vec2(100, 50)).setTimer(1).setColor(vec4(1, 1, 0, 1)).setBackgroundColor(vec4(0.3)); lab),
 
 
     Box().onClick(proc(ui: UiElement, state: UiState) = discard lab.setTimer(1)).setSize(vec2(10, 10)).setAnchor({center}),
@@ -45,7 +39,7 @@ fontPath = "../assets/fonts/MarradaRegular-Yj0O.ttf"
 var
   renderTarget: UiRenderTarget
   myUi: typeof(defineGui())
-  uiState = TrussUiState(scaling: 1)
+  uiState = UiState(scaling: 1)
 
 
 proc init(truss: var Truss) =
@@ -85,7 +79,7 @@ proc update(truss: var Truss, dt: float32) =
   uiState.inputPos = vec2 truss.inputs.getMousePos()
   for ele in myUi:
     ele.layout(nil, vec2(0), uiState)
-    ele.interact(UiState uiState)
+    ele.interact(uiState)
 
 proc draw(truss: var Truss) =
   renderTarget.model.clear()

@@ -1,7 +1,7 @@
 import ../[gui, fontatlaser, instancemodels]
 import pixie
 
-type Label* = ref object of TrussUiElement
+type Label* = ref object of UiElement
   text*: string
   dirtied*: bool
   timer*: float32 = float32.high # This is silly
@@ -51,7 +51,7 @@ method layout*(label: Label, parent: UiElement, offset: Vec2, state: UiState) =
     label.arrange()
     label.dirtied = false
 
-method upload*(label: Label, state: TrussUiState, target: var UiRenderTarget) =
+method upload*(label: Label, state: UiState, target: var UiRenderTarget) =
   let
     color = label.color
     bgColor = label.backgroundColor
@@ -62,7 +62,7 @@ method upload*(label: Label, state: TrussUiState, target: var UiRenderTarget) =
         max(label.timer / label.startTimer, 0)
   label.color = vec4(0)
   label.backgroundColor = mix(vec4(bgColor.rgb, 0), bgColor, progress)
-  procCall TrussUiElement(label).upload(state, target)
+  procCall UiElement(label).upload(state, target)
   label.backgroundColor = bgColor
   label.color = color
 

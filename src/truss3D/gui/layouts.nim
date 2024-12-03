@@ -9,8 +9,8 @@ type
     Vertical
     Horizontal
 
-  Layout* = ref object of TrussUiElement
-    children*: seq[TrussUiElement]
+  Layout* = ref object of UiElement
+    children*: seq[UiElement]
     direction*: LayoutDirection
     reversed*: bool
     alignment*: AnchorDirection
@@ -19,7 +19,7 @@ type
 proc layout*(): Layout =
   Layout(flags: {onlyVisual})
 
-proc addChildren*[T: Layout](layout: T, children: varargs[TrussUiElement]): T =
+proc addChildren*[T: Layout](layout: T, children: varargs[UiElement]): T =
   layout.children.add @children
   layout
 
@@ -98,7 +98,6 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
             offset.x += layout.margin * state.scaling + child.size.x
             offset.y = oldOffset
     of Vertical:
-      procCall layout.UiElement.layout(parent, offset, state)
       var offset = vec2(0)
       if layout.reversed:
         for child in layout.children.reversed:
@@ -127,10 +126,11 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
               discard
             child.layout(layout, offset, state)
             offset.y += layout.margin * state.scaling + child.size.y
+            offset.x = oldOffset
 
 
 
-method upload*(layout: Layout, state: TrussUiState, target: var UiRenderTarget) =
+method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
   for elem in layout.children:
     elem.upload(state, target)
 

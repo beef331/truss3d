@@ -19,7 +19,7 @@ proc buttonTick*(ui: UiElement, state: UiState) =
   discard button.setColor(mix(button.baseColor, button.hoverColor, button.hovertimer))
 
 method layout*(button: Button, parent: UiElement, offset: Vec2, state: UiState) =
-  procCall button.TrussUiElement.layout(parent, offset, state)
+  procCall button.UiElement.layout(parent, offset, state)
   if button.label != nil:
     button.label
       .setPosition(button.position) # Labels sit where buttons are
@@ -27,8 +27,8 @@ method layout*(button: Button, parent: UiElement, offset: Vec2, state: UiState) 
       .layout(button, vec2(0), state)
 
 
-method upload*(button: Button, state: TrussUiState, target: var UiRenderTarget) =
-  procCall button.TrussUiElement.upload(state, target)
+method upload*(button: Button, state: UiState, target: var UiRenderTarget) =
+  procCall button.UiElement.upload(state, target)
   if button.label != nil:
     button.label.upload(state, target)
 
