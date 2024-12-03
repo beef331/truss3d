@@ -1,4 +1,4 @@
-import vmath, pixie, gooey, truss3D
+import vmath, pixie, truss3D
 import truss3D/[shaders, textures, instancemodels, models, gui]
 import std/[sugar, tables, hashes, strutils]
 import truss3D/gui
@@ -22,19 +22,17 @@ proc defineGui(): seq[TrussUiElement] =
       .setLabel("Test", vec4(1, 0, 0, 1))
       .setSize(vec2(100, 50))
       .setAnchor({top})
-      .setHoverSpeed(5)
       .setColor(vec4(0.7, 0.7, 0.7, 1))
       .setHoverColor(vec4(1))
       .onClick(proc(ui: UiElement, state: UiState) = discard ui.setAnchor(if ui.anchor == {top}: {bottom} else: {top}))
     ,
     layout()
-      .addChildren(button().setSize(vec2(30)).setHoverSpeed(5), button().setSize(vec2(30))
-      .setHoverSpeed(5))
+      .addChildren(button().setSize(vec2(30)), button().setSize(vec2(30)))
       .setMargin(10)
       .setAnchor({bottom, right})
       .setPosition(vec2(10))
     ,
-    layout().addChildren(button().setSize(vec2(30)).setHoverSpeed(5), button().setSize(vec2(30)).setHoverSpeed(5)).setMargin(10).setAnchor({bottom, left}).setDirection(Horizontal),
+    layout().addChildren(button().setSize(vec2(30)), button().setSize(vec2(30))).setMargin(10).setAnchor({bottom, left}).setDirection(Horizontal),
   ]
 
 
