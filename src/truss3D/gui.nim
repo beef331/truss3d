@@ -132,15 +132,21 @@ method upload*(ui: TrussUiElement, state: TrussUiState, target: var UiRenderTarg
   pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
 
   let mat = translate(vec3(pos, 0)) * scale(vec3(size, 0))
-  if ui.backgroundColor != vec4(0):
+  if ui.backgroundColor.a > 0:
     target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor)
-  if ui.color != vec4(0):
+
+  if ui.color.a > 0:
     target.model.push UiRenderObj(matrix: mat, color: ui.color)
 
 
 proc setColor*[T: TrussUiElement](ele: T, color: Vec4): T =
   ele.color = color
   ele
+
+proc setBackgroundColor*[T: TrussUiElement](ele: T, color: Vec4): T =
+  ele.backgroundColor = color
+  ele
+
 
 var
   fontPath*: string

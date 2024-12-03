@@ -16,8 +16,11 @@ modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
 
 proc defineGui(): seq[TrussUiElement] =
   @[
-    TrussUiElement Label().setText("Hello").setSize(vec2(100, 50)),
-    Box().onClick(proc(ui: UiElement, state: UiState) = echo "hello").setSize(vec2(10, 10)).setAnchor({center}),
+    Box().setSize(vec2(50)).setPosition(vec2(30, 30)).setAnchor({top, left}),
+    TrussUiElement (let lab = label().setText("Hello").setSize(vec2(100, 50)).setTimer(1).setColor(vec4(1, 1, 0, 1)).setBackgroundColor(vec4(0.3)); lab),
+
+
+    Box().onClick(proc(ui: UiElement, state: UiState) = discard lab.setTimer(1)).setSize(vec2(10, 10)).setAnchor({center}),
     button()
       .setLabel("Test", vec4(1, 0, 0, 1))
       .setSize(vec2(100, 50))
@@ -26,6 +29,7 @@ proc defineGui(): seq[TrussUiElement] =
       .setHoverColor(vec4(1))
       .onClick(proc(ui: UiElement, state: UiState) = discard ui.setAnchor(if ui.anchor == {top}: {bottom} else: {top}))
     ,
+
     layout()
       .addChildren(button().setSize(vec2(30)), button().setSize(vec2(30)))
       .setMargin(10)
