@@ -118,36 +118,36 @@ method layout*(ui: UiElement, parent: UiElement, offset: Vec2,  uiState: UiState
     else:
       raise (ref AssertionDefect)(msg: "Invalid anchor: " & $ui.anchor)
 
-proc onEnter(ui: UiElement, state: var UiState) =
+proc onEnter(ui: UiElement, state: UiState) =
   if ui.onEnterHandler != nil:
     ui.onEnterHandler(ui, state)
 
-proc onClick(ui: UiElement, state: var UiState) =
+proc onClick(ui: UiElement, state: UiState) =
   if ui.onClickHandler != nil:
     ui.onClickHandler(ui, state)
 
-proc onHover(ui: UiElement, state: var UiState) =
+proc onHover(ui: UiElement, state: UiState) =
   if ui.onHoverHandler != nil:
     ui.onHoverHandler(ui, state)
 
-proc onExit(ui: UiElement, state: var UiState) =
+proc onExit(ui: UiElement, state: UiState) =
   if ui.onExitHandler != nil:
     ui.onExitHandler(ui, state)
 
-proc onDrag(ui: UiElement, state: var UiState) =
+proc onDrag(ui: UiElement, state: UiState) =
   if ui.onDragHandler != nil:
     ui.onDragHandler(ui, state)
 
-proc onText(ui: UiElement, state: var UiState) =
+proc onText(ui: UiElement, state: UiState) =
   if ui.onTextHandler != nil:
     ui.onTextHandler(ui, state)
 
-proc onTick(ui: UiElement, state: var UiState) =
+proc onTick(ui: UiElement, state: UiState) =
   if ui.onTickHandler != nil:
     ui.onTickHandler(ui, state)
 
 
-method interact*(ui: UiElement, state: var UiState) {.base.} =
+method interact*(ui: UiElement, state: UiState) {.base.} =
   if state.action == nothing or
     (state.action == overElement and not state.interactedWithCurrentElement and state.currentElement != ui):
     if isOver(ui, state.inputPos):

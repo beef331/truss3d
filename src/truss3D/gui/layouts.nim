@@ -134,6 +134,6 @@ method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
   for elem in layout.children:
     elem.upload(state, target)
 
-method interact*(layout: Layout, state: var UiState)  =
+method interact*(layout: Layout, state: UiState)  =
   for elem in layout.children:
     elem.interact(state)
