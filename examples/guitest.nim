@@ -1,12 +1,14 @@
 import vmath, pixie, truss3D
 import truss3D/[shaders, instancemodels, models, gui]
 import truss3D/gui
-import truss3D/gui/[labels, boxes, buttons, layouts]
+import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns]
 
 var modelData: MeshData[Vec2]
 modelData.appendVerts [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items
 modelData.append [0u32, 1, 2, 0, 2, 3].items
 modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
+
+type Colors = enum Red, Green, Blue, Yellow, Orange, Purple
 
 proc defineGui(): seq[UiElement] =
   @[
@@ -31,6 +33,15 @@ proc defineGui(): seq[UiElement] =
       .setPosition(vec2(10))
     ,
     layout().addChildren(button().setSize(vec2(30)), button().setSize(vec2(30))).setMargin(10).setAnchor({bottom, left}).setDirection(Horizontal),
+    dropdown()
+      .setSize(vec2(100, 50))
+      .setOptions(Colors)
+      .setAnchor({top, right})
+      .setHoverColor(vec4(0.3))
+      .setBackgroundColor(vec4(0))
+      .setColor(vec4(0.7))
+      .setLabelColor(vec4(1))
+    ,
   ]
 
 

@@ -6,7 +6,7 @@ type Button* = ref object of Box
   baseColor*: Vec4 = vec4(1)
   hovertimer*: float32
   hoverSpeed*: float32 = 5
-  label: Label
+  label*: Label
 
 proc buttonTick*(ui: UiElement, state: UiState) =
   let button = Button(ui)
@@ -42,6 +42,11 @@ proc setLabel*[T: Button](button: T, text: sink string, color = vec4(1)): T =
 
 proc setHoverColor*[T: Button](button: T, color: Vec4): T =
   button.hoverColor = color
+  button
+
+proc setLabelColor*[T: Button](button: T, color: Vec4): T =
+  if button.label != nil:
+    discard button.label.setColor(color)
   button
 
 proc setColor*[T: Button](button: T, color: Vec4): T =

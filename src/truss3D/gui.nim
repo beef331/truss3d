@@ -146,6 +146,9 @@ proc onTick(ui: UiElement, state: UiState) =
   if ui.onTickHandler != nil:
     ui.onTickHandler(ui, state)
 
+proc clearInteract*(state: UiState) =
+  state.action = nothing
+  state.currentElement = nil
 
 method interact*(ui: UiElement, state: UiState) {.base.} =
   if state.action == nothing or
