@@ -60,6 +60,7 @@ method upload*(label: Label, state: UiState, target: var UiRenderTarget) =
         1f
       else:
         max(label.timer / label.startTimer, 0)
+
   label.color = vec4(0)
   label.backgroundColor = mix(vec4(bgColor.rgb, 0), bgColor, progress)
   procCall UiElement(label).upload(state, target)

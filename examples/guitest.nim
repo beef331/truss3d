@@ -11,7 +11,7 @@ modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
 proc defineGui(): seq[UiElement] =
   @[
     Box().setSize(vec2(50)).setPosition(vec2(30, 30)).setAnchor({top, left}),
-    UiElement (let lab = label().setText("Hello").setSize(vec2(100, 50)).setTimer(1).setColor(vec4(1, 1, 0, 1)).setBackgroundColor(vec4(0.3)); lab),
+    UiElement (let lab = label().setText("Hello").setSize(vec2(100, 50)).setTimer(1).setColor(vec4(1, 1, 0, 1)).setBackgroundColor(vec4(0.1, 0.1, 0.1, 0.5)); lab),
 
 
     Box().onClick(proc(ui: UiElement, state: UiState) = discard lab.setTimer(1)).setSize(vec2(10, 10)).setAnchor({center}),
@@ -82,17 +82,18 @@ proc update(truss: var Truss, dt: float32) =
     ele.interact(uiState)
 
 proc draw(truss: var Truss) =
+  glClearColor(0, 0, 0.3, 0)
   renderTarget.model.clear()
   for ele in myUi:
     ele.upload(uiState, renderTarget)
   renderTarget.model.reuploadSsbo()
   atlas.ssbo.bindBuffer(1)
+  glEnable(GlBlend)
+  glBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha)
   with renderTarget.shader:
-    glEnable(GlBlend)
     renderTarget.shader.setUniform("fontTex", atlas.texture)
-    glBlendFunc(GlOne, GlOneMinusSrcAlpha)
     renderTarget.model.render()
-    glDisable(GlBlend)
+  glDisable(GlBlend)
 
 var truss = Truss.init("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)
 uiState.truss = truss.addr
