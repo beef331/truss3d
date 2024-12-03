@@ -2,7 +2,7 @@ import vmath, pixie, gooey, truss3D
 import truss3D/[shaders, textures, instancemodels, models, gui]
 import std/[sugar, tables, hashes, strutils]
 import truss3D/gui
-import truss3D/gui/[labels, boxes, buttons]
+import truss3D/gui/[labels, boxes, buttons, layouts]
 
 proc lerp(a, b: int, f: float32): int = int(mix(float32 a, float32 b, f))
 proc reverseLerp(a: int, slice: Slice[int]): float32 = (a - slice.a) / (slice.b - slice.a)
@@ -26,6 +26,15 @@ proc defineGui(): seq[TrussUiElement] =
       .setColor(vec4(0.7, 0.7, 0.7, 1))
       .setHoverColor(vec4(1))
       .onClick(proc(ui: UiElement, state: UiState) = discard ui.setAnchor(if ui.anchor == {top}: {bottom} else: {top}))
+    ,
+    layout()
+      .addChildren(button().setSize(vec2(30)).setHoverSpeed(5), button().setSize(vec2(30))
+      .setHoverSpeed(5))
+      .setMargin(10)
+      .setAnchor({bottom, right})
+      .setPosition(vec2(10))
+    ,
+    layout().addChildren(button().setSize(vec2(30)).setHoverSpeed(5), button().setSize(vec2(30)).setHoverSpeed(5)).setMargin(10).setAnchor({bottom, left}).setDirection(Horizontal),
   ]
 
 
