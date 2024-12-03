@@ -53,7 +53,7 @@ proc setOptions*[T: DropDown](dropDown: T, Vals: typedesc[enum or range]): T =
         if dropDown.dropDownHandler != nil:
           dropDown.dropDownHandler(dropDown, i)
         dropDown.active = i
-        discard dropDown.openButton.setLabel($val)
+        discard dropDown.openButton.setLabel($val, dropDown.labelColor)
         dropDown.opened = false
         state.clearInteract()
 

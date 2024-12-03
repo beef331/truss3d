@@ -34,13 +34,13 @@ proc defineGui(): seq[UiElement] =
     ,
     layout().addChildren(button().setSize(vec2(30)), button().setSize(vec2(30))).setMargin(10).setAnchor({bottom, left}).setDirection(Horizontal),
     dropdown()
-      .setSize(vec2(100, 50))
+      .setSize(vec2(75, 30))
       .setOptions(Colors)
       .setAnchor({top, right})
       .setHoverColor(vec4(0.3))
       .setBackgroundColor(vec4(0))
       .setColor(vec4(0.7))
-      .setLabelColor(vec4(1))
+      .setLabelColor(vec4(0.7, 0, 0.7, 1))
     ,
   ]
 
