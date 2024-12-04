@@ -2,7 +2,7 @@ import ../gui
 import boxes, labels
 
 type Button* = ref object of Box
-  hoverColor*: Vec4 = vec4(0.3, 0.3, 0.3, 1)
+  hoverColor*: Vec4 = vec4(0.3)
   baseColor*: Vec4 = vec4(1)
   hovertimer*: float32
   hoverSpeed*: float32 = 5

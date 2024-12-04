@@ -183,6 +183,15 @@ template eventFactory*(name: untyped): untyped =
     ui.`name Handler` = prc
     ui
 
+  when typeof(UiElement().`name Handler`) is InteractEvent:
+    proc name*[T: UiElement](ui: T, prc: proc()): T =
+      ui.`name Handler` = proc(_: UiElement, _: UiState) = prc()
+      ui
+  elif astToStr(name) == "visible":
+    proc name*[T: UiElement](ui: T, prc: proc(): bool): T =
+      ui.`name Handler` = proc(_: UiElement): bool = prc()
+      ui
+
 eventFactory onEnter
 eventFactory onExit
 eventFactory onClick

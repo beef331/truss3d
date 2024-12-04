@@ -131,11 +131,13 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
 
 
 method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
-  for elem in layout.children:
-    if elem.isVisible:
-      elem.upload(state, target)
+  if layout.isVisible():
+    for elem in layout.children:
+      if elem.isVisible:
+        elem.upload(state, target)
 
 method interact*(layout: Layout, state: UiState)  =
-  for elem in layout.children:
-    if elem.isVisible:
-      elem.interact(state)
+  if layout.isVisible():
+    for elem in layout.children:
+      if elem.isVisible:
+        elem.interact(state)
