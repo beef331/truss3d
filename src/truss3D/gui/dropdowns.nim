@@ -5,7 +5,7 @@ type DropDown* = ref object of UiElement
   openButton*: Button
   buttons*: seq[Button]
   active*: int
-  dropDownHandler*: proc(dropDown: DropDown, index: int)
+  selectHandler*: proc(index: int)
   opened*: bool
   hoverColor*: Vec4 = vec4(0.3)
   labelColor*: Vec4 = vec4(1)
@@ -13,10 +13,10 @@ type DropDown* = ref object of UiElement
 method layout*(dropDown: DropDown, parent: UiElement, offset: Vec2, state: UiState) =
   procCall UiElement(dropDown).layout(parent, offset, state)
   dropDown.openButton.layout(dropDown, vec2(0), state)
-  if dropdown.opened:
-    var offset = dropDown.openButton.calcSize()
+  var offset = dropDown.openButton.calcSize()
 
-    for button in dropDown.buttons:
+  for i, button in dropDown.buttons:
+    if i != dropDown.active:
       offset.x = 0
       button.layout(dropDown, offset, state)
       offset += button.calcSize()
@@ -24,8 +24,9 @@ method layout*(dropDown: DropDown, parent: UiElement, offset: Vec2, state: UiSta
 method upload*(dropDown: DropDown, state: UiState, target: var UiRenderTarget) =
   dropDown.openButton.upload(state, target)
   if dropDown.opened:
-    for button in dropDown.buttons:
-      button.upload(state, target)
+    for i, button in dropDown.buttons:
+      if i != dropDown.active:
+        button.upload(state, target)
 
 method interact*(dropDown: DropDown, state: UiState)  =
   dropDown.openButton.interact(state)
@@ -33,8 +34,8 @@ method interact*(dropDown: DropDown, state: UiState)  =
     for button in dropDown.buttons:
       button.interact(state)
 
-proc dropDown*[T: DropDown](ui: T, prc: proc(dropDown: DropDown, index: int)): T =
-  ui.dropDownHandler = prc
+proc onSelect*[T: DropDown](ui: T, prc: proc(index: int)): T =
+  ui.selectHandler = prc
   ui
 
 proc dropDown*(): DropDown =
@@ -50,8 +51,8 @@ proc setOptions*[T: DropDown](dropDown: T, Vals: typedesc[enum or range]): T =
     let i = dropDown.buttons.len
     capture val, i:
       proc select(ui: UiElement, state: UiState) =
-        if dropDown.dropDownHandler != nil:
-          dropDown.dropDownHandler(dropDown, i)
+        if dropDown.selectHandler != nil:
+          dropDown.selectHandler(i)
         dropDown.active = i
         discard dropDown.openButton.setLabel($val, dropDown.labelColor)
         dropDown.opened = false

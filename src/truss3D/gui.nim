@@ -65,7 +65,6 @@ type
     inputPos*: Vec2
     screenSize*: Vec2
     scaling*: float32
-    interactedWithCurrentElement*: bool
     overAnyUi*: bool # This is used for blocking input when over gui that do not interact
     dt*: float32
     truss*: ptr Truss
@@ -152,18 +151,16 @@ proc clearInteract*(state: UiState) =
 
 method interact*(ui: UiElement, state: UiState) {.base.} =
   if state.action == nothing or
-    (state.action == overElement and not state.interactedWithCurrentElement and state.currentElement != ui):
+    (state.action == overElement and state.currentElement != ui):
     if isOver(ui, state.inputPos):
       onEnter(ui, state)
       if state.action == overElement:
         reset state.currentElement.flags
       state.action = overElement
       state.currentElement = ui
-      state.interactedWithCurrentElement = true
 
   if state.currentElement == ui:
     if isOver(ui, state.inputPos):
-      state.interactedWithCurrentElement = true
       if state.input.kind == leftClick:
         if state.input.isHeld:
           onDrag(ui, state)
