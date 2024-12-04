@@ -1,7 +1,7 @@
 import vmath, pixie, truss3D
 import truss3D/[shaders, instancemodels, models, gui]
 import truss3D/gui
-import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs]
+import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs, sliders]
 
 var modelData: MeshData[Vec2]
 modelData.appendVerts [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items
@@ -10,7 +10,9 @@ modelData.appendUv [vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)].items
 
 type Colors = enum Red, Green, Blue, Yellow, Orange, Purple
 
-var someGlobal: string = "hello"
+var
+  someGlobal: string = "hello"
+  globalInt = 3
 
 proc hGroup(left, right: UiElement): Layout =
   layout().addChildren(left, right).setDirection(Horizontal)
@@ -32,7 +34,10 @@ proc defineGui(): seq[UiElement] =
     ,
 
     layout()
-      .addChildren(button().setSize(vec2(30)).onClick(proc(_: UiElement, _: UiState) = someGlobal = "test"), button().setSize(vec2(30)))
+      .addChildren(
+        button().setSize(vec2(30)).onClick(proc(_: UiElement, _: UiState) = someGlobal = "test"),
+        button().setSize(vec2(30)).onClick(proc(_: UiElement, _: UiState) = globalInt = 10)
+      )
       .setMargin(10)
       .setAnchor({bottom, right})
       .setPosition(vec2(10))
@@ -54,15 +59,24 @@ proc defineGui(): seq[UiElement] =
     hGroup(
       label().setText("Some Field: ").setSize(vec2(100, 50)),
       textInput()
-        .setSize(vec2(100, 300))
+        .setSize(vec2(300, 100))
         .setBackgroundColor(vec4(0.3, 0.3, 0.3, 1))
         .setTextWatcher(proc(): string = someGlobal)
         .onTextInput(proc(s: string) = someGlobal = s)
         .setColor(vec4(1))
     ).setAnchor({AnchorDirection.right})
-
-
     ,
+
+    slider()
+      .setSize(vec2(300, 20))
+      .setColor(vec4(0, 1, 0, 1))
+      .setBackgroundColor(vec4(0, 0.1, 0, 1))
+      .setRange(0..10)
+      .onValue(proc(i: int) = globalInt = i)
+      .setAnchor({center})
+      .setPosition(vec2(0, 100))
+      .setValueWatcher(proc(): int = globalInt)
+
   ]
 
 
@@ -114,7 +128,7 @@ proc update(truss: var Truss, dt: float32) =
     ele.interact(uiState)
 
 proc draw(truss: var Truss) =
-  glClearColor(0, 0, 0.3, 0)
+  glClearColor(0.1, 0.1, 0.1, 0)
   renderTarget.model.clear()
   for ele in myUi:
     ele.upload(uiState, renderTarget)
