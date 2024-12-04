@@ -16,7 +16,7 @@ method layout*(textInput: TextInput, parent: UiElement, offset: Vec2, state: UiS
     discard textInput.label.setText(textInput.text)
 
   procCall textInput.UiElement.layout(parent, offset, state)
-  textInput.label.layout(textinput, offset, state)
+  textInput.label.layout(textinput, vec2(0), state)
 
 method upload*(textInput: TextInput, state: UiState, target: var UiRenderTarget) =
   textInput.label.upload(state, target)

@@ -1,5 +1,6 @@
 import ../[gui, fontatlaser, instancemodels]
 import pixie
+export HorizontalAlignment, VerticalAlignment
 
 type Label* = ref object of UiElement
   text*: string
@@ -8,6 +9,8 @@ type Label* = ref object of UiElement
   startTimer*: float32
   fontSize*: float32 = 30f
   arrangement*: Arrangement
+  hAlign* = LeftAlign
+  vAlign* = MiddleAlign
 
 proc setText*[T: Label](label: T, text: sink string): T =
   label.text = text
@@ -38,11 +41,11 @@ proc arrange*(label: Label) =
 
   let startSize = defaultFont.size
   var layout = defaultFont.layoutBounds(label.text)
-  while layout.x > label.layoutSize.x or layout.y > label.layoutSize.y:
+  while layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y:
     defaultFont.size -= 1
     layout = defaultFont.layoutBounds(label.text)
   label.fontSize = defaultFont.size
-  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = CenterAlign, vAlign = MiddleAlign)
+  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign)
   defaultFont.size = startSize
 
 method layout*(label: Label, parent: UiElement, offset: Vec2, state: UiState) =
@@ -95,3 +98,11 @@ proc timedLabel*(): Label =
 
 proc label*(): Label =
   Label(flags: {onlyVisual})
+
+proc setHAlign*[T: Label](label: T, align: HorizontalAlignment): T =
+  label.halign = align
+  label
+
+proc setVAlign*[T: Label](label: T, align: VerticalAlignment): T =
+  label.valign = align
+  label

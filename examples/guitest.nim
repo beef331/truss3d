@@ -12,6 +12,9 @@ type Colors = enum Red, Green, Blue, Yellow, Orange, Purple
 
 var someGlobal: string = "hello"
 
+proc hGroup(left, right: UiElement): Layout =
+  layout().addChildren(left, right).setDirection(Horizontal)
+
 proc defineGui(): seq[UiElement] =
   @[
     Box().setSize(vec2(50)).setPosition(vec2(30, 30)).setAnchor({top, left}),
@@ -48,12 +51,16 @@ proc defineGui(): seq[UiElement] =
       .onSelect(proc(i: int) = echo Colors(i))
       .setPosition(vec2(30, 30)),
 
-    textInput()
-      .setSize(vec2(75, 30))
-      .setAnchor({AnchorDirection.right})
-      .setBackgroundColor(vec4(0.7, 0.7, 0.7, 1))
-      .setTextWatcher(proc(): string = someGlobal)
-      .onTextInput(proc(s: string) = someGlobal = s)
+    hGroup(
+      label().setText("Some Field: ").setSize(vec2(100, 50)),
+      textInput()
+        .setSize(vec2(100, 300))
+        .setBackgroundColor(vec4(0.3, 0.3, 0.3, 1))
+        .setTextWatcher(proc(): string = someGlobal)
+        .onTextInput(proc(s: string) = someGlobal = s)
+        .setColor(vec4(1))
+    ).setAnchor({AnchorDirection.right})
+
 
     ,
   ]

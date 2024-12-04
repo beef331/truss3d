@@ -71,7 +71,7 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
     of Horizontal:
       if layout.reversed:
         for child in layout.children.reversed:
-          if child.isVisible:
+          if child.isVisible():
             let oldOffset = offset.y
             case layout.alignment:
             of center:
@@ -81,7 +81,7 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
             else:
               discard
             child.layout(layout, offset, state)
-            offset.x += layout.margin * state.scaling + child.size.x
+            offset.x += layout.margin * state.scaling + child.layoutSize.x
             offset.y = oldOffset
       else:
         for child in layout.children:
@@ -95,7 +95,7 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
             else:
               discard
             child.layout(layout, offset, state)
-            offset.x += layout.margin * state.scaling + child.size.x
+            offset.x += layout.margin * state.scaling + child.layoutSize.x
             offset.y = oldOffset
     of Vertical:
       var offset = vec2(0)
@@ -111,7 +111,7 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
             else:
               discard
             child.layout(layout, offset, state)
-            offset.y += layout.margin * state.scaling + child.size.y
+            offset.y += layout.margin * state.scaling + child.layoutSize.y
             offset.x = oldOffset
       else:
         for child in layout.children:
@@ -125,15 +125,17 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
             else:
               discard
             child.layout(layout, offset, state)
-            offset.y += layout.margin * state.scaling + child.size.y
+            offset.y += layout.margin * state.scaling + child.layoutSize.y
             offset.x = oldOffset
 
 
 
 method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
   for elem in layout.children:
-    elem.upload(state, target)
+    if elem.isVisible:
+      elem.upload(state, target)
 
 method interact*(layout: Layout, state: UiState)  =
   for elem in layout.children:
-    elem.interact(state)
+    if elem.isVisible:
+      elem.interact(state)

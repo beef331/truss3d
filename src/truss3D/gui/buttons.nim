@@ -37,7 +37,7 @@ proc button*(): Button =
   Button(onTickHandler: buttonTick)
 
 proc setLabel*[T: Button](button: T, text: sink string, color = vec4(1)): T =
-  button.label = Label().setText(text).setColor(color)
+  button.label = Label().setText(text).setColor(color).setHAlign(CenterAlign).setVAlign(MiddleAlign)
   button
 
 proc setHoverColor*[T: Button](button: T, color: Vec4): T =
