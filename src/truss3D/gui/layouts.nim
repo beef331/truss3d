@@ -17,7 +17,7 @@ type
     margin*: float32
 
 proc layout*(): Layout =
-  Layout(flags: {onlyVisual})
+  Layout(flags: {onlyVisual}).setColor(vec4(0))
 
 proc addChildren*[T: Layout](layout: T, children: varargs[UiElement]): T =
   layout.children.add @children
@@ -131,6 +131,7 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
 
 
 method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
+  procCall layout.UiElement.upload(state, target)
   if layout.isVisible():
     for elem in layout.children:
       if elem.isVisible:

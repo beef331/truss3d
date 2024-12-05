@@ -126,6 +126,7 @@ proc update(truss: var Truss, dt: float32) =
   for ele in myUi:
     ele.layout(nil, vec2(0), uiState)
     ele.interact(uiState)
+  uiState.clearInteract()
 
 proc draw(truss: var Truss) =
   glClearColor(0.1, 0.1, 0.1, 0)
@@ -140,6 +141,7 @@ proc draw(truss: var Truss) =
     renderTarget.shader.setUniform("fontTex", atlas.texture)
     renderTarget.model.render()
   glDisable(GlBlend)
+  inc uiState.currentFrame
 
 var truss = Truss.init("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)
 uiState.truss = truss.addr

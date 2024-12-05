@@ -20,6 +20,7 @@ method layout*(textInput: TextInput, parent: UiElement, offset: Vec2, state: UiS
 
 method upload*(textInput: TextInput, state: UiState, target: var UiRenderTarget) =
   textInput.label.upload(state, target)
+  textInput.lastRenderFrame = state.currentFrame
 
 proc setColor*[T: TextInput](textInput: T, color: Vec4): T =
   textInput.color = color
@@ -72,5 +73,7 @@ proc onTextInput*[T: TextInput](textInput: T, prc: proc(s: string)): T =
 proc textinput*(): TextInput =
   TextInput(
     label: label(),
-    onTextHandler: textInputOnText
+    onTextHandler: textInputOnText,
+    onEnterHandler: textInputOnEnter,
+    onExitHandler: textInputOnExit
   )

@@ -41,9 +41,10 @@ proc arrange*(label: Label) =
 
   let startSize = defaultFont.size
   var layout = defaultFont.layoutBounds(label.text)
-  while layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y:
+  while (layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y) and defaultFont.size > 0:
     defaultFont.size -= 1
     layout = defaultFont.layoutBounds(label.text)
+
   label.fontSize = defaultFont.size
   label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign)
   defaultFont.size = startSize
@@ -91,7 +92,8 @@ method upload*(label: Label, state: UiState, target: var UiRenderTarget) =
             var pos = parentPos / scrSize + offset / scrSize
             pos.y *= -1
             pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
-            target.model.push UiRenderObj(matrix: translate(vec3(pos, 0)) * scale(vec3(size, 0)), color: color, fontIndex: uint32 fontEntry.id)
+            target.model.push UiRenderObj(matrix: translate(vec3(pos, -label.zDepth)) * scale(vec3(size, 0)), color: color, fontIndex: uint32 fontEntry.id)
+  label.lastRenderFrame = state.currentFrame
 
 proc timedLabel*(): Label =
   Label(onTickHandler: timedLabelTick, flags: {onlyVisual})

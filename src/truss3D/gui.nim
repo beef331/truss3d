@@ -30,11 +30,13 @@ type
     position*, size*, layoutPos*, layoutSize*: Vec2
     flags*: set[UiFlag]
     anchor*: set[AnchorDirection]
+    zDepth*: float32
 
 
     color*: Vec4 = vec4(1, 1, 1, 1)
     backgroundColor*: Vec4 = vec4(0, 0, 0, 0)
     texture*: Texture
+    lastRenderFrame*: uint
 
   UiAction* = enum
     nothing
@@ -66,6 +68,7 @@ type
     screenSize*: Vec2
     scaling*: float32
     overAnyUi*: bool # This is used for blocking input when over gui that do not interact
+    currentFrame*: uint
     dt*: float32
     truss*: ptr Truss
 
@@ -146,20 +149,24 @@ proc onTick(ui: UiElement, state: UiState) =
     ui.onTickHandler(ui, state)
 
 proc clearInteract*(state: UiState) =
-  state.action = nothing
-  state.currentElement = nil
+  if state.currentElement != nil and state.currentElement.lastRenderFrame != state.currentFrame - 1:
+    state.action = nothing
+    if state.currentElement != nil:
+      state.currentElement.flags.excl hovered
+      state.currentElement.onExit(state)
+    state.currentElement = nil
 
 method interact*(ui: UiElement, state: UiState) {.base.} =
-  if state.action == nothing or
-    (state.action == overElement and state.currentElement != ui):
+  if state.currentElement == nil:
     if isOver(ui, state.inputPos):
       onEnter(ui, state)
-      if state.action == overElement:
-        reset state.currentElement.flags
-      state.action = overElement
-      state.currentElement = ui
+      if state.currentElement != nil:
+        state.currentElement.flags.excl hovered
 
-  if state.currentElement == ui:
+      state.currentElement = ui
+      state.currentElement.flags.incl hovered
+
+  elif state.currentElement == ui:
     if isOver(ui, state.inputPos):
       if state.input.kind == leftClick:
         if state.input.isHeld:
@@ -294,12 +301,15 @@ method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base
   pos.y *= -1
   pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
 
-  let mat = translate(vec3(pos, 0)) * scale(vec3(size, 0))
   if ui.backgroundColor.a > 0:
-    target.model.push UiRenderObj(matrix: mat * translate(vec3(0, 0, -0.1)), color: ui.backgroundColor)
+    let mat = translate(vec3(pos, 0)) * scale(vec3(size, 1))
+    target.model.push UiRenderObj(matrix: mat, color: ui.backgroundColor)
 
   if ui.color.a > 0:
+    let mat = translate(vec3(pos, -ui.zDepth)) * scale(vec3(size, 1))
     target.model.push UiRenderObj(matrix: mat, color: ui.color)
+
+  ui.lastRenderFrame = state.currentFrame
 
 
 proc setColor*[T: UiElement](ele: T, color: Vec4): T =
