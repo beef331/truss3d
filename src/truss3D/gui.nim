@@ -3,7 +3,6 @@ import shaders, textures, instancemodels, models, fontatlaser
 import ../truss3D
 import std/[sugar, tables, hashes, strutils, unicode]
 
-
 import pkg/vmath
 export vmath
 
@@ -157,7 +156,7 @@ proc clearInteract*(state: UiState) =
     state.currentElement = nil
 
 method interact*(ui: UiElement, state: UiState) {.base.} =
-  if state.currentElement == nil:
+  if state.currentElement == nil or ui.zDepth > state.currentElement.zDepth:
     if isOver(ui, state.inputPos):
       onEnter(ui, state)
       if state.currentElement != nil:

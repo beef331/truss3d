@@ -15,13 +15,13 @@ method layout*(dropDown: DropDown, parent: UiElement, offset: Vec2, state: UiSta
   procCall UiElement(dropDown).layout(parent, offset, state)
   dropDown.openButton.layout(dropDown, vec2(0), state)
   var offset = dropDown.openButton.calcSize()
-  dropDown.openButton.zDepth = dropDown.zDepth + 0.1
+  dropDown.openButton.zDepth = dropDown.zDepth + 0.1 * (1f + dropDown.opened.float32 * 3)
   for i, button in dropDown.buttons:
     if i != dropDown.active:
       offset.x = 0
       button.layout(dropDown, offset, state)
       offset += button.calcSize()
-    button.zDepth = dropDown.zDepth + 0.1
+    button.zDepth = dropDown.zDepth + 0.1 * (1f + dropDown.opened.float32 * 3)
 
 
 method upload*(dropDown: DropDown, state: UiState, target: var UiRenderTarget) =
