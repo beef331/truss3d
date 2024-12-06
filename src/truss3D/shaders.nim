@@ -1,6 +1,6 @@
-import opengl
+import opengl, vmath
 import std/[tables, typetraits, os]
-import textures, mathtypes, logging
+import textures, logging
 
 type
   ShaderKind* = enum
@@ -37,7 +37,11 @@ const KindLut = [
 
 var shaderPath* = ""
 
-proc makeActive*(shader: Shader) = glUseProgram(Gluint(shader))
+proc isLinked*(shader: Shader): bool = shader.Gluint != 0
+
+proc makeActive*(shader: Shader) =
+  if shader.isLinked:
+    glUseProgram(Gluint(shader))
 
 proc getActiveShader*(): Shader =
   glGetIntegerv(GlCurrentProgram, cast[ptr Glint](addr result))
@@ -215,13 +219,14 @@ template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
   const hasShader = declared(shader)
   when not hasShader:
     var shader = getActiveShader()
-  with shader:
-    let loc = glGetUniformLocation(Gluint(shader), uniform)
-    if (loc == -1) and required:
-      error "Cannot find uniform: ", name
-    body
-    when not hasShader:
-      `=wasMoved`(shader)
+  if shader.isLinked:
+    with shader:
+      let loc = glGetUniformLocation(Gluint(shader), uniform)
+      if (loc == -1) and required:
+        error "Cannot find uniform: ", name
+      body
+      when not hasShader:
+        `=wasMoved`(shader)
 
 
 template makeSetter(T: typedesc, body: untyped) {.dirty.} =
@@ -234,26 +239,41 @@ template makeSetter(T: typedesc, body: untyped) {.dirty.} =
     insideUniform(uniform, value):
       body
 
+makeSetter(openArray[float32]):
+  glUniform1fv(loc, GlSizei value.len, value[0].addr)
+
 makeSetter(float32):
   glUniform1f(loc, value.GlFloat)
 
 makeSetter(int32):
   glUniform1i(loc, value.Glint)
 
+makeSetter(openArray[int32]):
+  glUniform1iv(loc, GlSizei value.len, value[0].addr)
+
+makeSetter(openArray[Vec2]):
+  mixin x
+  glUniform2fv(loc, GlSizei value.len, value[0].x.addr)
+
 makeSetter(Vec2):
-  mixin x, y, z, w
+  mixin x
   glUniform2f(loc, value.x, value.y)
 
+makeSetter(openArray[Vec3]):
+  mixin x
+  glUniform3fv(loc, GlSizei value.len, value[0].x.addr)
+
 makeSetter(Vec3):
-  mixin x, y, z, w
+  mixin x
   glUniform3f(loc, value.x, value.y, value.z)
+
+makeSetter(openArray[Vec4]):
+  mixin x
+  glUniform4fv(loc, GlSizei value.len, value[0].x.addr)
 
 makeSetter(Vec4):
   mixin x, y, z, w
   glUniform4f(loc, value.x, value.y, value.z, value.w)
-
-makeSetter(Mat2):
-  glUniformMatrix2fv(loc, 1, GlFalse,cast[ptr float32](value.unsafeAddr))
 
 makeSetter(Mat3):
   glUniformMatrix3fv(loc, 1, GlFalse, cast[ptr float32](value.unsafeAddr))

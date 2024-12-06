@@ -32,14 +32,16 @@ type
 
   Mat2f* = concept m, type M
     m[0] is float32
+    m isnot openArray
     sizeof(M) == 4 * sizeof(float32)
   Mat3f* = concept m, type M
     m[0] is float32
+    m isnot openArray
     sizeof(M) == 9 * sizeof(float32)
   Mat4f* = concept m, type M
     m[0] is float32
     sizeof(M) == 16 * sizeof(float32)
 
-  Mat2* = Mat and (Mat2V or Mat2f) and not (Vec2 or Vec3 or Vec4)
-  Mat3* = Mat and (Mat3V or Mat3f) and not (Vec2 or Vec3 or Vec4)
-  Mat4* = Mat and (Mat4V or Mat4f) and not (Vec2 or Vec3 or Vec4)
+  Mat2* = Mat and (Mat2V or Mat2f) and not (Vec2 or Vec3 or Vec4 or openArray[float32])
+  Mat3* = Mat and (Mat3V or Mat3f) and not (Vec2 or Vec3 or Vec4 or openArray[float32])
+  Mat4* = Mat and (Mat4V or Mat4f) and not (Vec2 or Vec3 or Vec4 or openArray[float32])
