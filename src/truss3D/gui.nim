@@ -36,6 +36,7 @@ type
     backgroundColor*: Vec4 = vec4(0, 0, 0, 0)
     texture*: Texture
     lastRenderFrame*: uint
+    clipRect*: Vec4
 
   UiAction* = enum
     nothing
@@ -229,6 +230,7 @@ struct data{
   vec4 color;
   vec4 backgroundColor;
   uint fontIndex;
+  vec4 clipRect;
   mat4 matrix;
 };
 
@@ -238,6 +240,7 @@ layout(std430, binding = 0) buffer instanceData{
 
 out vec2 fUv;
 out vec4 color;
+out float gl_ClipDistance[4];
 flat out uint fontIndex;
 
 void main(){
@@ -246,6 +249,14 @@ void main(){
   fUv = uv;
   color = theData.color;
   fontIndex = theData.fontIndex;
+
+
+  vec4 clipRect = theData.clipRect;
+  gl_ClipDistance[0] = gl_Position.x - clipRect.x;
+  gl_ClipDistance[1] = clipRect.y - gl_Position.y;
+  gl_ClipDistance[2] = clipRect.z - gl_Position.x;
+  gl_ClipDistance[3] = gl_Position.y - clipRect.w;
+
 }
 """
 
@@ -284,6 +295,8 @@ type
     color*: Vec4
     backgroundColor*: Vec4
     fontIndex*: uint32
+    _: Vec3
+    clipRect*: Vec4
     matrix* {.align: 16.}: Mat4
 
   RenderInstance* = seq[UiRenderObj]
@@ -291,6 +304,15 @@ type
   UiRenderTarget* = object
     model*: InstancedModel[RenderInstance]
     shader*: Shader
+
+proc getClipRect*(state: UiState, pos: Vec2): Vec2 = # Returns the x/y plane for the points
+  result = (pos / state.screenSize)
+  result.y *= -1
+  result = result * 2f + vec2(-1f, 1f)
+
+proc getClipRect*(state: UiState, topLeft, bottomRight: Vec2): Vec4 =
+  vec4(state.getClipRect(topLeft), state.getClipRect(bottomRight))
+
 
 method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base.} =
   let
@@ -300,13 +322,35 @@ method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base
   pos.y *= -1
   pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
 
+  let clipRect =
+    if ui.clipRect == vec4(0):
+      state.getClipRect(
+        vec2(ui.layoutPos.x, ui.layoutPos.y),
+        vec2(ui.layoutPos.x + ui.layoutSize.x, ui.layoutPos.y + ui.layoutSize.y)
+      )
+    else:
+      let
+        x1 = ui.clipRect.x # max(ui.layoutPos.x, ui.clipRect.x)
+        y1 = ui.clipRect.y # max(ui.layoutPos.y, ui.clipRect.y)
+        x2 = min(ui.layoutPos.x + ui.layoutSize.x, ui.clipRect.x + ui.clipRect.z)
+        y2 = min(ui.layoutPos.y + ui.layoutSize.y, ui.clipRect.y + ui.clipRect.w)
+      state.getClipRect(vec2(x1, y1), vec2(x2, y2))
+
   if ui.backgroundColor.a > 0:
     let mat = translate(vec3(pos, 0)) * scale(vec3(size, 1))
-    target.model.push UiRenderObj(matrix: mat, color: ui.backgroundColor)
+    target.model.push UiRenderObj(
+      matrix: mat,
+      color: ui.backgroundColor,
+      clipRect: clipRect
+    )
 
   if ui.color.a > 0:
     let mat = translate(vec3(pos, -ui.zDepth)) * scale(vec3(size, 1))
-    target.model.push UiRenderObj(matrix: mat, color: ui.color)
+    target.model.push UiRenderObj(
+      matrix: mat,
+      color: ui.color,
+      clipRect: clipRect
+    )
 
   ui.lastRenderFrame = state.currentFrame
 
@@ -318,6 +362,14 @@ proc setColor*[T: UiElement](ele: T, color: Vec4): T =
 proc setBackgroundColor*[T: UiElement](ele: T, color: Vec4): T =
   ele.backgroundColor = color
   ele
+
+proc enableClipDistance*() =
+  for i in 0..3:
+    glEnable GlEnum GlClipDistance0.int + i
+
+proc disableClipDistance*() =
+  for i in 0..3:
+    glDisable GlEnum GlClipDistance0.int + i
 
 
 var

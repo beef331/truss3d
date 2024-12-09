@@ -64,7 +64,7 @@ proc defineGui(): seq[UiElement] =
         .setTextWatcher(proc(): string = someGlobal)
         .onTextInput(proc(s: string) = someGlobal = s)
         .setColor(vec4(1))
-    ).setAnchor({AnchorDirection.right})
+    ).setAnchor({AnchorDirection.right}).setPosition(vec2(50, 0))
     ,
 
     slider()
@@ -137,10 +137,12 @@ proc draw(truss: var Truss) =
   atlas.ssbo.bindBuffer(1)
   glEnable(GlBlend)
   glBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha)
+  enableClipDistance()
   with renderTarget.shader:
     renderTarget.shader.setUniform("fontTex", atlas.texture)
     renderTarget.model.render()
   glDisable(GlBlend)
+  disableClipDistance()
   inc uiState.currentFrame
 
 var truss = Truss.init("Test Program", ivec2(1280, 720), guitest.init, guitest.update, guitest.draw, vsync = true)

@@ -40,13 +40,8 @@ proc arrange*(label: Label) =
     atlas = FontAtlas.init(1024, 1024, 3, defaultFont)
 
   let startSize = defaultFont.size
-  var layout = defaultFont.layoutBounds(label.text)
-  while (layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y) and defaultFont.size > 0:
-    defaultFont.size -= 1
-    layout = defaultFont.layoutBounds(label.text)
-
-  label.fontSize = defaultFont.size
-  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign)
+  defaultFont.size = label.fontSize
+  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign, wrap = false)
   defaultFont.size = startSize
 
 method layout*(label: Label, parent: UiElement, offset: Vec2, state: UiState) =
@@ -92,7 +87,29 @@ method upload*(label: Label, state: UiState, target: var UiRenderTarget) =
             var pos = parentPos / scrSize + offset / scrSize
             pos.y *= -1
             pos.xy = pos.xy * 2f + vec2(-1f, 1f - size.y)
-            target.model.push UiRenderObj(matrix: translate(vec3(pos, -label.zDepth)) * scale(vec3(size, 0)), color: color, fontIndex: uint32 fontEntry.id)
+
+            let clipRect =
+              if label.clipRect == vec4(0):
+                state.getClipRect(
+                  vec2(label.layoutPos.x, label.layoutPos.y),
+                  label.layoutPos + label.layoutSize
+                )
+              else:
+                let
+                  x1 = label.clipRect.x
+                  y1 = label.clipRect.y
+                  x2 = label.clipRect.x + label.clipRect.z
+                  y2 = label.clipRect.y + label.clipRect.w
+                state.getClipRect(vec2(x1, y1), vec2(x2, y2))
+
+
+            target.model.push UiRenderObj(
+              matrix: translate(vec3(pos, -label.zDepth)) * scale(vec3(size, 0)),
+              color: color,
+              fontIndex: uint32 fontEntry.id,
+              clipRect: clipRect
+            )
+
   label.lastRenderFrame = state.currentFrame
 
 proc timedLabel*(): Label =
