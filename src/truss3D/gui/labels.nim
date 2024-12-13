@@ -11,6 +11,11 @@ type Label* = ref object of UiElement
   arrangement*: Arrangement
   hAlign* = LeftAlign
   vAlign* = MiddleAlign
+  scaleToFit* = true
+
+proc setScaleToFit*[T: Label](label: T, val: bool): T =
+  label.scaleToFit = true
+  label
 
 proc setText*[T: Label](label: T, text: sink string): T =
   label.text = text
@@ -40,8 +45,19 @@ proc arrange*(label: Label) =
     atlas = FontAtlas.init(1024, 1024, 3, defaultFont)
 
   let startSize = defaultFont.size
-  defaultFont.size = label.fontSize
-  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign, wrap = false)
+  var layout = label.layoutSize
+  if label.scaleToFit:
+    defaultFont.size = 64
+    layout = defaultFont.layoutBounds(label.text)
+    while (layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y) and defaultFont.size > 0:
+      defaultFont.size -= 1
+      layout = defaultFont.layoutBounds(label.text)
+  else:
+    defaultFont.size = label.fontSize
+
+
+
+  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign, wrap = true)
   defaultFont.size = startSize
 
 method layout*(label: Label, parent: UiElement, offset: Vec2, state: UiState) =
