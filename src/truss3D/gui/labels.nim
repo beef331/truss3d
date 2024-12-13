@@ -42,7 +42,7 @@ proc arrange*(label: Label) =
   if defaultFont.isNil:
     defaultFont = readFont(fontPath)
     defaultFont.size = 64
-    atlas = FontAtlas.init(1024, 1024, 3, defaultFont)
+    fontAtlas = FontAtlas.init(1024, 1024, 3, defaultFont)
 
   let startSize = defaultFont.size
   var layout = label.layoutSize
@@ -91,7 +91,7 @@ method upload*(label: Label, state: UiState, target: var UiRenderTarget) =
 
 
     for i, rune in label.arrangement.runes:
-      let fontEntry = atlas.runeEntry(rune)
+      let fontEntry = fontAtlas.runeEntry(rune)
 
       if fontEntry.id > 0:
         let

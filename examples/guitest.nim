@@ -1,5 +1,5 @@
 import vmath, pixie, truss3D
-import truss3D/[shaders, instancemodels, models, gui]
+import truss3D/[shaders, instancemodels, models, gui, textureatlaser]
 import truss3D/gui
 import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs, sliders]
 
@@ -21,7 +21,20 @@ proc defineGui(): seq[UiElement] =
   @[
     Box().setSize(vec2(50)).setPosition(vec2(30, 30)).setAnchor({top, left}),
     UiElement (let lab = label().setText("Hello").setSize(vec2(100, 50)).setTimer(1).setColor(vec4(1, 1, 0, 1)).setBackgroundColor(vec4(0.1, 0.1, 0.1, 0.5)); lab),
+    button()
+      .setTexture("Samwise")
+      .setAnchor({bottom})
+      .setSize(vec2(100, 100))
+      .setPosition(vec2(0, 100))
+    ,
 
+    button()
+      .setTexture("UiFrame")
+      .setAnchor({bottom})
+      .setSize(vec2(100, 100))
+      .setPosition(vec2(0, 400))
+      .setLabel("Test")
+    ,
 
     Box().onClick(proc(ui: UiElement, state: UiState) = discard lab.setTimer(1)).setSize(vec2(10, 10)).setAnchor({center}),
     button()
@@ -94,6 +107,13 @@ proc init(truss: var Truss) =
   for ele in myUi:
     ele.layout(nil, vec2(0), uiState)
   renderTarget.shader = loadShader(guiVert, guiFrag)
+  textureAtlas = TextureAtlas.init(128, 128, 3)
+
+  let img = readImage("../assets/Sam.jpg")
+  discard textureAtlas.blit("Samwise", img, vec2(float32 img.width, float32 img.height))
+
+  let uiFrame = readImage("../assets/uiframe.png")
+  discard textureAtlas.blit("UiFrame", uiFrame, vec2(float32 uiFrame.width, float32 uiFrame.height))
 
 proc update(truss: var Truss, dt: float32) =
   let
@@ -134,12 +154,14 @@ proc draw(truss: var Truss) =
   for ele in myUi:
     ele.upload(uiState, renderTarget)
   renderTarget.model.reuploadSsbo()
-  atlas.ssbo.bindBuffer(1)
+  fontAtlas.ssbo.bindBuffer(1)
+  textureAtlas.ssbo.bindBuffer(2)
   glEnable(GlBlend)
   glBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha)
   enableClipDistance()
   with renderTarget.shader:
-    renderTarget.shader.setUniform("fontTex", atlas.texture)
+    renderTarget.shader.setUniform("fontTex", fontAtlas.texture)
+    renderTarget.shader.setUniform("textureTex", textureAtlas.texture)
     renderTarget.model.render()
   glDisable(GlBlend)
   disableClipDistance()

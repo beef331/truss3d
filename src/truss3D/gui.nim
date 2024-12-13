@@ -1,5 +1,5 @@
 import vmath, pixie
-import shaders, textures, instancemodels, models, fontatlaser
+import shaders, textures, instancemodels, models, fontatlaser, textureatlaser
 import ../truss3D
 import std/[sugar, tables, hashes, strutils, unicode]
 
@@ -34,7 +34,7 @@ type
 
     color*: Vec4 = vec4(1, 1, 1, 1)
     backgroundColor*: Vec4 = vec4(0, 0, 0, 0)
-    texture*: Texture
+    texture*: string
     lastRenderFrame*: uint
     clipRect*: Vec4
 
@@ -269,19 +269,36 @@ in vec4 color;
 in vec2 fUv;
 
 uniform sampler2D fontTex;
+uniform sampler2D textureTex;
 
 layout(std430, binding = 1) buffer theFontData{
   vec4 fontData[];
 };
 
+layout(std430, binding = 2) buffer theTextureData{
+  vec4 textureData[];
+};
+
 flat in uint fontIndex;
 
+vec4 sampleTex(sampler2D tex, vec2 offset, vec2 size, vec2 texSize, vec2 uv, vec4 color){
+  return texture(tex, offset / texSize + uv * (size / texSize)) * color;
+}
+
+
 void main() {
-  if(fontIndex != 0){
+  bool hasTexture = int(fontIndex >> 31 & 1) == 1;
+  if(hasTexture){
+    int index = int(fontIndex & ~(1 << 31)) - 1;
+    vec2 offset = textureData[index].xy;
+    vec2 size = textureData[index].zw;
+    vec2 texSize = vec2(textureSize(textureTex, 0));
+    frag_color = sampleTex(textureTex, offset, size, texSize, fUv, color);
+  }else if(fontIndex != 0){
     vec2 offset = fontData[fontIndex - 1].xy;
     vec2 size = fontData[fontIndex - 1].zw;
     vec2 texSize = vec2(textureSize(fontTex, 0));
-    frag_color = texture(fontTex, offset / texSize + fUv * (size / texSize)) * color * color.a;
+    frag_color = sampleTex(fontTex, offset, size, texSize, fUv, color);
   }else{
     frag_color = color;
   }
@@ -313,6 +330,11 @@ proc getClipRect*(state: UiState, pos: Vec2): Vec2 = # Returns the x/y plane for
 proc getClipRect*(state: UiState, topLeft, bottomRight: Vec2): Vec4 =
   vec4(state.getClipRect(topLeft), state.getClipRect(bottomRight))
 
+var
+  fontPath*: string
+  defaultFont*: Font
+  fontAtlas*: FontAtlas
+  textureAtlas*: TextureAtlas
 
 method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base.} =
   let
@@ -336,12 +358,19 @@ method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base
         y2 = min(ui.layoutPos.y + ui.layoutSize.y, ui.clipRect.y + ui.clipRect.w)
       state.getClipRect(vec2(x1, y1), vec2(x2, y2))
 
+  let fontIndex =
+    if ui.texture.len > 0:
+      uint32 textureAtlas[ui.texture].id or (1 shl 31)
+    else:
+      0u32
+
   if ui.backgroundColor.a > 0:
     let mat = translate(vec3(pos, 0)) * scale(vec3(size, 1))
     target.model.push UiRenderObj(
       matrix: mat,
       color: ui.backgroundColor,
-      clipRect: clipRect
+      clipRect: clipRect,
+      fontIndex: fontIndex
     )
 
   if ui.color.a > 0:
@@ -349,7 +378,8 @@ method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base
     target.model.push UiRenderObj(
       matrix: mat,
       color: ui.color,
-      clipRect: clipRect
+      clipRect: clipRect,
+      fontIndex: fontIndex
     )
 
   ui.lastRenderFrame = state.currentFrame
@@ -363,6 +393,10 @@ proc setBackgroundColor*[T: UiElement](ele: T, color: Vec4): T =
   ele.backgroundColor = color
   ele
 
+proc setTexture*[T: UiElement](ele: T, tex: string): T =
+  ele.texture = tex
+  ele
+
 proc enableClipDistance*() =
   for i in 0..3:
     glEnable GlEnum GlClipDistance0.int + i
@@ -372,7 +406,4 @@ proc disableClipDistance*() =
     glDisable GlEnum GlClipDistance0.int + i
 
 
-var
-  fontPath*: string
-  defaultFont*: Font
-  atlas*: FontAtlas
+

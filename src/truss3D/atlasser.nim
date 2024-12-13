@@ -96,3 +96,13 @@ proc width*[T, R](atlas: Atlas[T, R]): auto =
 proc height*[T, R](atlas: Atlas[T, R]): auto =
   typeof(atlas.freeRects[0].w) atlas.height
 
+proc resize*[T, R](atlas: var Atlas[T, R], factor: auto) =
+  mixin init
+  let
+    startWidth = atlas.width
+    startHeight = atlas.height
+    margin = atlas.margin
+  atlas.width *= factor
+  atlas.height *= factor
+  atlas.freeRects.add R.init(0, startHeight + margin, startWidth * 2 - margin, startHeight - margin)
+  atlas.freeRects.add R.init(startWidth + margin, 0, startWidth - margin, startHeight)
