@@ -40,16 +40,23 @@ proc `=dup`(tex: Texture): Texture {.error.}
 
 proc `=destroy`(fb: FrameBufferId) =
   if Gluint(fb) != 0:
-    glDeleteFramebuffers(1, Gluint(fb).addr)
+    glDeleteFramebuffers(1, fb.Gluint.addr)
 
 
 proc `=destroy`(tex: Texture) =
   if Gluint(tex) != 0:
-    glDeleteTextures(1, Gluint(tex).addr)
+    glDeleteTextures(1, tex.Gluint.addr)
 
 
+const
+  internalFormatLut =
+    [
+      tfRgba: GlInt GlRgba8,
+      tfRgb: GlInt GlRgb8,
+      tfRg: GlInt GlRg8,
+      tfR: GlInt GlR8
+    ]
 
-const 
   formatLut =
     [
       tfRgba: GlRgba,
@@ -146,12 +153,12 @@ proc attachTexture*(buffer: var FrameBuffer) =
   with buffer:
     if Color in buffer.textures:
       glBindTexture(GlTexture2d, buffer.colourTexture.Gluint)
-      glTexImage2D(GlTexture2d, 0.Glint, formatLut[buffer.format].Glint, buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, formatLut[buffer.format], dataType[buffer.format], nil)
+      glTexImage2D(GlTexture2d, 0.Glint, internalFormatLut[buffer.format], buffer.size.x.GlSizei, buffer.size.y.GlSizei, 0.Glint, formatLut[buffer.format], dataType[buffer.format], nil)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapLut[buffer.wrapMode])
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapLut[buffer.wrapMode])
-      glFramebufferTexture2D(GlFrameBuffer, GlColorAttachment0, GlTexture2D, buffer.colourTexture.Gluint, 0)
+      glNamedFramebufferTexture(buffer.id.Gluint, GlColorAttachment0, buffer.colourTexture.Gluint, 0)
 
     if Depth in buffer.textures:
       glBindTexture(GlTexture2d, buffer.depthTexture.Gluint)
@@ -160,7 +167,7 @@ proc attachTexture*(buffer: var FrameBuffer) =
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapLut[buffer.wrapMode])
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapLut[buffer.wrapMode])
-      glFramebufferTexture2D(GlFrameBuffer, GlDepthAttachment, GlTexture2D, buffer.depthTexture.Gluint, 0)
+      glNamedFramebufferTexture(buffer.id.Gluint, GlDepthAttachment, buffer.depthTexture.Gluint, 0)
 
     glBindTexture(GlTexture2d, Gluint(0))
 

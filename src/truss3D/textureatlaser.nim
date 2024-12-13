@@ -43,8 +43,7 @@ proc blitImpl(atlas: var TextureAtlas, name: string, tex: Texture, size: Vec2): 
         Gluint newTexture, GlTexture2d, 0, 0, 0, 0,
         GlSizei startWidth, GlSizei startHeight, 1
       )
-      atlas.texture = ensureMove newTexture
-
+      atlas.texture = newTexture
 
   glCopyImageSubData(
     Gluint tex, GlTexture2d, 0, 0, 0, 0,
