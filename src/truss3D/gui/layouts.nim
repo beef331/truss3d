@@ -127,7 +127,8 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
             child.layout(layout, offset, state)
             offset.y += layout.margin * state.scaling + child.layoutSize.y
             offset.x = oldOffset
-
+  for elem in layout.children:
+    elem.zdepth = layout.zdepth + 0.1
 
 
 method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
