@@ -79,6 +79,7 @@ proc isVisible*(ui: UiElement): bool = ui.visibleHandler.isNil or ui.visibleHand
 proc isOver(ui: UiElement, pos: Vec2): bool =
   pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y and
+  onlyVisual notin ui.flags and
   ui.isVisible()
 
 method calcSize*(ui: UiElement): Vec2 {.base.} = ui.size
