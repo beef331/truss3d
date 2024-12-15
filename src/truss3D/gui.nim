@@ -337,6 +337,9 @@ var
   textureAtlas*: TextureAtlas
 
 method upload*(ui: UiElement, state: UiState, target: var UiRenderTarget) {.base.} =
+  if not ui.isVisible():
+    return
+
   let
     scrSize = state.screenSize
     size = ui.layoutSize * 2 / scrSize
