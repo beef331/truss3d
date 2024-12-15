@@ -15,6 +15,7 @@ type
     reversed*: bool
     alignment*: AnchorDirection
     margin*: float32
+    padding*: float32 = 10
 
 proc layout*(): Layout =
   Layout(flags: {onlyVisual}).setColor(vec4(0))
@@ -37,6 +38,10 @@ proc setAlignment*[T: Layout](layout: T, align: AnchorDirection): T =
 
 proc setMargin*[T: Layout](layout: T, margin: float32): T =
   layout.margin = margin
+  layout
+
+proc setPadding*[T: Layout](layout: T, padding: float32): T =
+  layout.padding= padding
   layout
 
 method calcSize*(layout: Layout): Vec2 =
@@ -132,7 +137,15 @@ method layout*(layout: Layout, parent: UiElement, offset: Vec2, state: UiState) 
 
 
 method upload*(layout: Layout, state: UiState, target: var UiRenderTarget) =
+  let
+    oldPos = layout.layoutPos
+    startSize = layout.layoutSize
+
+  layout.layoutPos -= vec2(layout.padding) * state.scaling
+  layout.layoutSize += vec2(layout.padding * 2) * state.scaling
+
   procCall layout.UiElement.upload(state, target)
+  layout.layoutPos = oldPos
   if layout.isVisible():
     for elem in layout.children:
       if elem.isVisible:
