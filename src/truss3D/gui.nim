@@ -26,6 +26,7 @@ type
     onTickHandler*: InteractEvent
     onTextHandler*: InteractEvent
     visibleHandler*: proc(ui: UiElement): bool
+    interactableHandler*: proc(ui: UiElement): bool
     position*, size*, layoutPos*, layoutSize*: Vec2
     flags*: set[UiFlag]
     anchor*: set[AnchorDirection]
@@ -75,11 +76,13 @@ type
 const TextEditFields* = {textInput..textNewline}
 
 proc isVisible*(ui: UiElement): bool = ui.visibleHandler.isNil or ui.visibleHandler(ui)
+proc isInteractable*(ui: UiElement): bool = ui.interactableHandler.isNil or ui.interactableHandler(ui)
 
 proc isOver(ui: UiElement, pos: Vec2): bool =
   pos.x in ui.layoutPos.x .. ui.layoutSize.x + ui.layoutPos.x and
   pos.y in ui.layoutPos.y .. ui.layoutSize.y + ui.layoutPos.y and
   onlyVisual notin ui.flags and
+  ui.isInteractable() and
   ui.isVisible()
 
 method calcSize*(ui: UiElement): Vec2 {.base.} = ui.size
@@ -195,7 +198,7 @@ template eventFactory*(name: untyped): untyped =
     proc name*[T: UiElement](ui: T, prc: proc()): T =
       ui.`name Handler` = proc(_: UiElement, _: UiState) = prc()
       ui
-  elif astToStr(name) == "visible":
+  elif astToStr(name) in ["visible", "interactable"]:
     proc name*[T: UiElement](ui: T, prc: proc(): bool): T =
       ui.`name Handler` = proc(_: UiElement): bool = prc()
       ui
@@ -206,6 +209,7 @@ eventFactory onClick
 eventFactory onHover
 eventFactory onText
 eventFactory visible
+eventFactory interactable
 eventFactory onTick
 
 proc setPosition*[T: UiElement](ui: T, pos: Vec2): T =
