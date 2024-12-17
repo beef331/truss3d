@@ -222,9 +222,11 @@ template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
   if shader.isLinked:
     with shader:
       let loc = glGetUniformLocation(Gluint(shader), uniform)
-      if (loc == -1) and required:
-        error "Cannot find uniform: ", name
-      body
+      if (loc == -1):
+        if required:
+          error "Cannot find uniform: ", name
+      else:
+        body
       when not hasShader:
         `=wasMoved`(shader)
 
