@@ -33,8 +33,10 @@ proc addLoggers*(appName: string) =
 when defined(truss3D.log):
   export log, fatal, error, warn, info
 else:
-  template info*(args: varargs[untyped, `$`]) = echo args
-  template error*(args: varargs[untyped, `$`]) = echo args
-  template warn*(args: varargs[untyped, `$`]) = echo args
-  template fatal*(args: varargs[untyped, `$`]) = echo args
+  import std/macros
+
+  template info*(args: varargs[typed]) = unpackVarargs(echo, args)
+  template error*(args: varargs[typed]) = unpackVarargs(echo, args)
+  template warn*(args: varargs[typed]) = unpackVarargs(echo, args)
+  template fatal*(args: varargs[typed]) = unpackVarargs(echo, args)
 

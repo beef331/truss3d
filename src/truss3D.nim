@@ -62,6 +62,8 @@ proc update*(truss: var Truss) =
 
 proc hasInit*(truss: Truss): bool = truss.hasInit
 
+const debugLevel {.define: "truss3D.debugLevel".} = 0
+
 proc openGlDebug(source: GLenum,
     typ: GLenum,
     id: GLuint,
@@ -78,17 +80,17 @@ proc openGlDebug(source: GLenum,
   if length > 0 and message != nil:
     var str = newString(length)
     copyMem(str[0].addr, message, length)
-    when defined(truss3D.log):
-      case severity
-      of GlDebugSeverityHigh:
+    case severity
+    of GlDebugSeverityHigh:
+      if debugLevel >= 0:
         error str
-      of GlDebugSeverityMedium:
+    of GlDebugSeverityMedium:
+      if debugLevel >= 1:
         warn str
-      of GlDebugSeverityLow, GlDebugSeverityNotification:
+    of GlDebugSeverityLow, GlDebugSeverityNotification:
+      if debugLevel >= 2:
         info str
-      else: discard
-    else:
-      echo str
+    else: discard
 
 proc init*(_: typedesc[Truss], name: string, size: IVec2, initProc: InitProc, updateProc: UpdateProc,
     drawProc: DrawProc; vsync = false, flags = {Resizable}): Truss =
@@ -105,7 +107,7 @@ proc init*(_: typedesc[Truss], name: string, size: IVec2, initProc: InitProc, up
     glClearDepth(1)
     enableAutoGLerrorCheck(false)
     discard glSetSwapInterval(cint(ord(vSync)))
-    when not defined(release):
+    when debugLevel >= 0:
       glEnable(GlDebugOutput)
       glDebugMessageCallback(openGlDebug):
         when defined(truss3D.log):
