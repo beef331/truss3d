@@ -62,8 +62,6 @@ proc update*(truss: var Truss) =
 
 proc hasInit*(truss: Truss): bool = truss.hasInit
 
-const debugLevel {.define: "truss3D.debugLevel".} = 0
-
 proc openGlDebug(source: GLenum,
     typ: GLenum,
     id: GLuint,

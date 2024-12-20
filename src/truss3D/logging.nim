@@ -9,9 +9,8 @@ proc newColoredLogger*(threshold = lvlAll, fmtStr = defaultFmtStr, useStderr = f
 const LevelColours: array[Level, Color] = [colWhite, colWhite, colDarkCyan, colDarkOliveGreen, colOrange, colRed, colDarkRed, colWhite]
 
 method log*(logger: ColoredConsoleLogger, level: Level, args: varargs[string, `$`]) {.gcsafe.} =
-  let
-    color = ansiForegroundColorCode(LevelColours[level])
-    lvlname = LevelNames[level]
+  let color = ansiForegroundColorCode(LevelColours[level])
+
   stdout.write(color)
   procCall(logg.log(ConsoleLogger(logger), level, args))
   stdout.write(ansiResetCode)
@@ -19,13 +18,14 @@ method log*(logger: ColoredConsoleLogger, level: Level, args: varargs[string, `$
 when defined(truss3D.log):
   var handlers*: seq[Logger]
 
-proc createPathsRecursively(path: string) =
-  discard
+const debugLevel* {.define: "truss3D.debugLevel".} = 0
+
 
 when defined(truss3D.log):
   export log, fatal, error, warn, info
 else:
   import std/macros
+
 
   template info*(args: varargs[typed]) = unpackVarargs(echo, args)
   template error*(args: varargs[typed]) = unpackVarargs(echo, args)

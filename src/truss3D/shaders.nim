@@ -71,8 +71,11 @@ proc loadShader*(shader: string, kind: ShaderKind, name: string): Gluint =
       len = 0.GlSizeI
     glGetShaderInfoLog(shaderId, 512, len.addr, buff[0].addr)
     buff.setLen(len.int)
+
     if name.len > 0:
       error "Failed to compile: ", name , "\n", buff
+    else:
+      error "Failed to compile: " & buff
     result = Gluint 0
 
   else:
