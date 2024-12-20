@@ -19,16 +19,8 @@ method log*(logger: ColoredConsoleLogger, level: Level, args: varargs[string, `$
 when defined(truss3D.log):
   var handlers*: seq[Logger]
 
-proc addLoggers*(appName: string) =
-  when defined(truss3D.log):
-    addHandler newColoredLogger()
-    let 
-      dir = getCacheDir(appName)
-      time = getTime()
-      logName = time.format("yyyy-MM-dd-ss") & ".log"
-    discard existsOrCreateDir(dir)
-    addHandler newFileLogger(dir / logName)
-    handlers = getHandlers()
+proc createPathsRecursively(path: string) =
+  discard
 
 when defined(truss3D.log):
   export log, fatal, error, warn, info
@@ -39,4 +31,23 @@ else:
   template error*(args: varargs[typed]) = unpackVarargs(echo, args)
   template warn*(args: varargs[typed]) = unpackVarargs(echo, args)
   template fatal*(args: varargs[typed]) = unpackVarargs(echo, args)
+
+proc addLoggers*(appName: string) =
+  when defined(truss3D.log):
+    addHandler newColoredLogger()
+    let 
+      dir = getCacheDir(appName)
+      time = getTime()
+      logName = time.format("yyyy-MM-dd-ss") & ".log"
+    try:
+      createDir(dir)
+      addHandler newFileLogger(dir / logName)
+    except IoError as e:
+      error e.msg
+    except OsError as e:
+      error e.msg
+
+    handlers = getHandlers()
+
+
 
