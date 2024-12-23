@@ -1,7 +1,7 @@
 import vmath, pixie, truss3D
 import truss3D/[shaders, instancemodels, models, gui, textureatlaser]
 import truss3D/gui
-import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs, sliders]
+import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs, sliders, checkboxes]
 
 var modelData: MeshData[Vec2]
 modelData.appendVerts [vec2(0, 0), vec2(0, 1), vec2(1, 1), vec2(1, 0)].items
@@ -89,7 +89,12 @@ proc defineGui(): seq[UiElement] =
       .setAnchor({center})
       .setPosition(vec2(0, 100))
       .setValueWatcher(proc(): int = globalInt)
-
+    ,
+    checkBox()
+      .setPosition(vec2(100, 100))
+      .setSize(vec2(30, 30))
+      .setAnchor({top, right})
+      .setBackgroundColor(vec4(0.3))
   ]
 
 
