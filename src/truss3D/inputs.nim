@@ -236,7 +236,7 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
       input.mouseScroll = sign * e.wheel.y
     of WindowEvent:
       case e.window.event.WindowEventID
-      of WindowEventResized, WindowEventSizeChanged:
+      of WindowEventResized, WindowEventSizeChanged, WindowEventMaximized:
         screenSize.x = e.window.data1
         screenSize.y = e.window.data2
         glViewport(0, 0, screenSize.x, screenSize.y)
