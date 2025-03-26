@@ -3,7 +3,7 @@ import opengl
 import std/[macros, tables, strutils]
 import vmath
 import mathtypes, logging
-export Rect
+export Rect, GameControllerButton, GameControllerAxis
 
 type
   KeyState* = enum
