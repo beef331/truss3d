@@ -118,8 +118,8 @@ proc init*(_: typedesc[Truss], name: string, size: IVec2, initProc: InitProc, up
     result.updateProc = updateProc
     result.drawProc = drawProc
 
-proc moveMouse*(truss: var Truss, target: IVec2) =
-  let target = ivec2(clamp(target.x, 0, truss.windowSize.x), clamp(target.y, 0, truss.windowSize.y))
+proc moveMouse*(truss: var Truss, target: Vec2) =
+  let target = vec2(clamp(target.x, 0f, truss.windowSize.x.float32), clamp(target.y, 0f, truss.windowSize.y.float32))
   truss.inputs.setSoftwareMousePos(target)
   warpMouseInWindow(cast[ptr Window](truss.window), target.x.cint, target.y.cint)
 
@@ -130,7 +130,7 @@ proc getNormalizedMousePos*(truss: Truss): Vec2 =
   let
     screenSize = truss.windowSize
     mousePos = truss.inputs.getMousePos()
-  vec2(mousePos.x / screenSize.x, mousePos.y / screenSize.y)
+  vec2(mousePos.x / screenSize.x.float32, mousePos.y / screenSize.y.float32)
 
 proc time*(truss: Truss): float = truss.time
 

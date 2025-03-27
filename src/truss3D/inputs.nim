@@ -2,7 +2,7 @@ import sdl2_nim/sdl except log
 import opengl
 import std/[macros, tables, strutils]
 import vmath
-import mathtypes, logging
+import logging
 export Rect, GameControllerButton, GameControllerAxis
 
 type
@@ -86,8 +86,8 @@ type
     keyRepeating: array[TKeyCode, KeyState]
     keyState: array[TKeyCode, KeyState]
     mouseState: array[MouseButton, KeyState]
-    mouseDelta: IVec2
-    mousePos: IVec2
+    mouseDelta: Vec2
+    mousePos: Vec2
     mouseScroll: int32
     mouseMovement = MouseAbsolute
     events*: Events
@@ -171,7 +171,7 @@ proc resetInputs(input: var InputState, dt: float32) =
 
   reset input.keyRepeating
 
-  input.mouseDelta = ivec2(0, 0)
+  input.mouseDelta = vec2(0, 0)
   input.mouseScroll = 0
 
 
@@ -223,8 +223,8 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
     of MouseMotion:
       let motion = e.motion
       if input.mouseMovement notin relativeMovement:
-        input.mousePos = ivec2(motion.x.int, motion.y.int)
-      input.mouseDelta = ivec2(motion.xrel.int, motion.yrel.int)
+        input.mousePos = vec2(motion.x.float32, motion.y.float32)
+      input.mouseDelta = vec2(motion.xrel.float32, motion.yrel.float32)
     of MouseButtonDown:
       let button = MouseButton(e.button.button - 1)
       input.mouseState[button] = pressed
@@ -308,11 +308,11 @@ proc simulateClear*(input: var InputState, mb: MouseButton) = input.mouseState[m
 proc state*(input: InputState, mb: MouseButton): KeyState = input.mouseState[mb]
 
 
-proc getMousePos*(input: InputState): IVec2 = input.mousePos
-proc simulateMousePos*(input: var InputState, pos: IVec2) = input.mousePos = pos
+proc getMousePos*(input: InputState): Vec2 = input.mousePos
+proc simulateMousePos*(input: var InputState, pos: Vec2) = input.mousePos = pos
 
-proc getMouseDelta*(input: InputState): IVec2 = input.mouseDelta
-proc simulateMouseDelta*(input: var InputState, pos: IVec2) = input.mouseDelta = pos
+proc getMouseDelta*(input: InputState): Vec2 = input.mouseDelta
+proc simulateMouseDelta*(input: var InputState, pos: Vec2) = input.mouseDelta = pos
 
 proc getMouseScroll*(input: InputState): int32 = input.mouseScroll
 proc simulateMouseScroll*(input: var InputState, dir: int32) = input.mouseScroll = dir
@@ -321,7 +321,7 @@ proc setMouseMode*(input: var InputState, mode: MouseRelativeMode) =
   input.mouseMovement = mode
   discard setRelativeMouseMode(mode in relativeMovement)
 
-proc setSoftwareMousePos*(input: var InputState, pos: IVec2) =
+proc setSoftwareMousePos*(input: var InputState, pos: Vec2) =
   ## Does not move the mouse in the OS, just inside Truss3D.
   ## Useful for things like RTS pan cameras.
   input.mousePos = pos
@@ -340,9 +340,8 @@ proc getAxis*(input: var InputState, axis: GameControllerAxis): float32 =
     if result != 0:
       break
 
-proc getAxis*[T: mathtypes.Vec2](input: var InputState, axisX, axisY: GameControllerAxis): T =
-  result.x = getAxis(axisX)
-  result.y = getAxis(axisY)
+proc getAxis*(input: var InputState, axisX, axisY: GameControllerAxis): Vec2 =
+  vec2(input.getAxis(axisX), input.getAxis(axisY))
 
 proc isDown*(input: var InputState, button: GameControllerButton): bool =
   for controller in input.controllers:
