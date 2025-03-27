@@ -179,44 +179,6 @@ proc copyTo*[T](val: openArray, ssbo: Ssbo[T], buffer = 0) =
   const size = sizeof(typeof(val[0]))
   glNamedBufferData(Gluint ssbo, GlSizeIPtr(sizeof(T) * val.len), val[0].addr, GlDynamicDraw)
 
-type
-  Vec2 = concept v
-    v.x is float32
-    v.y is float32
-    not compiles(v.z)
-  Vec3 = concept v
-    v.x is float32
-    v.y is float32
-    v.z is float32
-    not compiles(v.w)
-  Vec4 = concept v
-    v.x is float32
-    v.y is float32
-    v.z is float32
-    v.w is float32
-  Mat = concept type M
-    supportsCopyMem(M)
-  Mat2V = concept m, type M
-    m[0] is Vec2
-  Mat3V = concept m, type M
-    m[0] is Vec3
-  Mat4v = concept m, type M
-    m[0] is Vec4
-
-  Mat2f = concept m, type M
-    m[0] is float32
-    sizeof(M) == 4 * sizeof(float32)
-  Mat3f = concept m, type M
-    m[0] is float32
-    sizeof(M) == 9 * sizeof(float32)
-  Mat4f = concept m, type M
-    m[0] is float32
-    sizeof(M) == 16 * sizeof(float32)
-
-  Mat2 = Mat and (Mat2V or Mat2f) and not (Vec2 or Vec3 or Vec4)
-  Mat3 = Mat and (Mat3V or Mat3f) and not (Vec2 or Vec3 or Vec4)
-  Mat4 = Mat and (Mat4V or Mat4f) and not (Vec2 or Vec3 or Vec4)
-
 template insideUniform(name: string, value: auto, body: untyped) {.dirty.} =
   bind glGetUniformLocation, Gluint, error
   const hasShader = declared(shader)
@@ -253,32 +215,89 @@ makeSetter(float32):
 makeSetter(int32):
   glUniform1i(loc, value.Glint)
 
+makeSetter(uint32):
+  glUniform1ui(loc, value.GlUint)
+
 makeSetter(openArray[int32]):
   glUniform1iv(loc, GlSizei value.len, value[0].addr)
+
+makeSetter(openArray[uint32]):
+  glUniform1uiv(loc, GlSizei value.len, value[0].addr)
 
 makeSetter(openArray[Vec2]):
   mixin x
   glUniform2fv(loc, GlSizei value.len, value[0].x.addr)
 
+makeSetter(openArray[IVec2]):
+  mixin x
+  glUniform2iv(loc, GlSizei value.len, value[0].x.addr)
+
+makeSetter(openArray[UVec2]):
+  mixin x
+  glUniform2uiv(loc, GlSizei value.len, value[0].x.addr)
+
 makeSetter(Vec2):
   mixin x
   glUniform2f(loc, value.x, value.y)
+
+makeSetter(IVec2):
+  mixin x
+  glUniform2i(loc, value.x, value.y)
+
+makeSetter(UVec2):
+  mixin x
+  glUniform2ui(loc, value.x, value.y)
 
 makeSetter(openArray[Vec3]):
   mixin x
   glUniform3fv(loc, GlSizei value.len, value[0].x.addr)
 
+makeSetter(openArray[IVec3]):
+  mixin x
+  glUniform3iv(loc, GlSizei value.len, value[0].x.addr)
+
+makeSetter(openArray[UVec3]):
+  mixin x
+  glUniform3uiv(loc, GlSizei value.len, value[0].x.addr)
+
 makeSetter(Vec3):
   mixin x
   glUniform3f(loc, value.x, value.y, value.z)
+
+makeSetter(IVec3):
+  mixin x
+  glUniform3i(loc, value.x, value.y, value.z)
+
+makeSetter(UVec3):
+  mixin x
+  glUniform3ui(loc, value.x, value.y, value.z)
 
 makeSetter(openArray[Vec4]):
   mixin x
   glUniform4fv(loc, GlSizei value.len, value[0].x.addr)
 
+makeSetter(openArray[IVec4]):
+  mixin x
+  glUniform4iv(loc, GlSizei value.len, value[0].x.addr)
+
+makeSetter(openArray[UVec4]):
+  mixin x
+  glUniform4uiv(loc, GlSizei value.len, value[0].x.addr)
+
 makeSetter(Vec4):
   mixin x, y, z, w
   glUniform4f(loc, value.x, value.y, value.z, value.w)
+
+makeSetter(IVec4):
+  mixin x, y, z, w
+  glUniform4i(loc, value.x, value.y, value.z, value.w)
+
+makeSetter(UVec4):
+  mixin x, y, z, w
+  glUniform4ui(loc, value.x, value.y, value.z, value.w)
+
+makeSetter(Mat2):
+  glUniformMatrix2fv(loc, 1, GlFalse, cast[ptr float32](value.unsafeAddr))
 
 makeSetter(Mat3):
   glUniformMatrix3fv(loc, 1, GlFalse, cast[ptr float32](value.unsafeAddr))

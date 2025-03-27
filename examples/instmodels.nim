@@ -1,4 +1,4 @@
-import truss3D, truss3D/[models, shaders, instancemodels, audio]
+import truss3D, truss3D/[models, shaders, instancemodels, audio, materials]
 import vmath, chroma, pixie
 import std/[random, enumerate, sugar]
 
@@ -61,7 +61,7 @@ const
 
 var
   model: InstancedModel[Buffer]
-  shader: Shader
+  material = Material()
   view = lookAt(cameraPos, lookPos, vec3(0, 1, 0))
   proj: Mat4
   texture: textures.Texture
@@ -70,22 +70,28 @@ var
 
 
 proc randomizeSSBO() =
-  with shader:
-    for x in model.ssboData.mitems:
-      x.pos = vec4(rand(0f..10f), 0, rand(0f..10f), 0)
-      x.scale = vec4(rand(0f..0.5f))
-    model.reuploadSsbo()
+  for x in model.ssboData.mitems:
+    x.pos = vec4(rand(0f..10f), 0, rand(0f..10f), 0)
+    x.scale = vec4(rand(0f..0.5f))
+  model.reuploadSsbo()
 
 
 proc init(truss: var Truss) =
   model = loadInstancedModel[Buffer]("../assets/Cube.glb")
-  shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
+  let shader = loadShader(ShaderFile(vertShader), ShaderFile(fragShader))
+  new material.shader
+  material.shader[] = shader
+
   let screenSize = truss.windowSize
   proj = perspective(90f, screenSize.x.float / screenSize.y.float, 0.01, 100)
   let sam = readImage"../assets/Sam.jpg"
   texture = genTexture()
   sam.copyTo texture
-  shader.setUniform "tex", texture
+
+  let matTex = new Texture
+  matTex[] = texture
+  material.setProperty("tex", matTex)
+
   randomizeSSBO()
   model.drawCount = model.ssboData.len
   audio.init()
@@ -100,22 +106,22 @@ proc init(truss: var Truss) =
 
 
 proc moveSSBO(dt: float32) =
-  with shader:
-    for x in model.ssboData.mitems:
-      x.pos.y += (1 / length(x.scale)) * 0.1 * dt
-    model.reuploadSsbo()
+  for x in model.ssboData.mitems:
+    x.pos.y += (1 / length(x.scale)) * 0.1 * dt
+  model.reuploadSsbo()
 
 proc update(truss: var Truss, dt: float32) =
   let screenSize = truss.windowSize
   proj = perspective(90f, truss.windowSize.x.float / truss.windowSize.y.float, 0.01, 100)
   moveSsbo(dt)
   audio.update()
+  material.setProperty("VP", proj * view)
 
 proc draw(truss: var Truss) =
-  with shader:
+  with material:
     glEnable(GlDepthTest)
-    setUniform("VP", proj * view)
     model.render()
+
 var truss = Truss.init("Test", ivec2(1280, 720), instmodels.init, update, draw)
 
 truss.inputs.addEvent(KeyCodeQ, pressed, epHigh) do(keyEvent: var KeyEvent, dt: float):
