@@ -1,5 +1,5 @@
 import vmath, pixie, truss3D
-import truss3D/[shaders, instancemodels, models, gui, textureatlaser]
+import truss3D/[shaders, instancemodels, models, gui, textureatlaser, materials]
 import truss3D/gui
 import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs, sliders, checkboxes]
 
@@ -104,6 +104,7 @@ var
   renderTarget: UiRenderTarget
   myUi: typeof(defineGui())
   uiState = UiState(scaling: 1)
+  material = Material()
 
 
 proc init(truss: var Truss) =
@@ -111,8 +112,16 @@ proc init(truss: var Truss) =
   myUi = defineGui()
   for ele in myUi:
     ele.layout(nil, vec2(0), uiState)
-  renderTarget.shader = loadShader(guiVert, guiFrag)
+
+
+  new material.shader
+  material.shader[] = loadShader(guiVert, guiFrag)
   textureAtlas = TextureAtlas.init(128, 128, 3)
+
+  material.setBuffer 1, fontAtlas.ssbo
+  material.setBuffer 2, textureAtlas.ssbo
+  material.setProperty("fontTex", fontAtlas.texture.addr)
+  material.setProperty("textureTex", textureAtlas.texture.addr)
 
   let img = readImage("../assets/Sam.jpg")
   discard textureAtlas.blit("Samwise", img, vec2(float32 img.width, float32 img.height))
@@ -159,15 +168,14 @@ proc draw(truss: var Truss) =
   for ele in myUi:
     ele.upload(uiState, renderTarget)
   renderTarget.model.reuploadSsbo()
-  fontAtlas.ssbo.bindBuffer(1)
-  textureAtlas.ssbo.bindBuffer(2)
+
+
   glEnable(GlBlend)
   glBlendFunc(GlSrcAlpha, GlOneMinusSrcAlpha)
   enableClipDistance()
-  with renderTarget.shader:
-    renderTarget.shader.setUniform("fontTex", fontAtlas.texture)
-    renderTarget.shader.setUniform("textureTex", textureAtlas.texture)
+  with material:
     renderTarget.model.render()
+
   glDisable(GlBlend)
   disableClipDistance()
   inc uiState.currentFrame
