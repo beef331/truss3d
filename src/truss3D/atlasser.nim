@@ -34,17 +34,19 @@ proc getNearestSizeIndex*[T, R](atlas: Atlas[T, R], rect: R): int =
   var dist = typeof(R.x).high
   type FieldType = typeof(atlas.freeRects[0].w)
   result = -1
+
   for i, freeRect in atlas.freeRects.pairs:
     let 
       wDiff = freeRect.w - rect.w
       hDiff = freeRect.h - rect.h
       mDist = wDiff + hDiff
+
     if wDiff >= 0.FieldType and hDiff >= 0.FieldType and
     dist > mDist and freeRect.x + rect.w < atlas.width and freeRect.y + rect.h < atlas.height:
       dist = mDist 
       result = i
-    if wDiff == 0.FieldType and hDiff == 0.FieldType:
-      break
+      if wDiff == 0.FieldType and hDiff == 0.FieldType: # Found nearest fit
+        break
 
 proc add*[T, R](atlas: var Atlas[T, R], name: T, rect: R): (bool, R) =
   mixin init
