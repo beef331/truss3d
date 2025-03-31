@@ -1,5 +1,5 @@
 import vmath, pixie, truss3D
-import truss3D/[shaders, instancemodels, models, gui, textureatlaser, materials]
+import truss3D/[shaders, instancemodels, models, gui, textureatlaser, materials, fontatlaser]
 import truss3D/gui
 import truss3D/gui/[labels, boxes, buttons, layouts, dropdowns, textinputs, sliders, checkboxes]
 
@@ -97,9 +97,6 @@ proc defineGui(): seq[UiElement] =
       .setBackgroundColor(vec4(0.3))
   ]
 
-
-fontPath = "../assets/fonts/MarradaRegular-Yj0O.ttf"
-
 var
   renderTarget: UiRenderTarget
   myUi: typeof(defineGui())
@@ -108,6 +105,9 @@ var
 
 
 proc init(truss: var Truss) =
+  let font = readFont("../assets/fonts/MarradaRegular-Yj0O.ttf")
+  font.size = 60
+  fontAtlas = FontAtlas.init(1024, 1024, 3, font)
   renderTarget.model = uploadInstancedModel[RenderInstance](modelData)
   myUi = defineGui()
   for ele in myUi:

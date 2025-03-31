@@ -1,4 +1,5 @@
 import ../[gui, fontatlaser, instancemodels]
+import std/tables
 import pixie
 export HorizontalAlignment, VerticalAlignment
 
@@ -12,6 +13,7 @@ type Label* = ref object of UiElement
   hAlign* = LeftAlign
   vAlign* = MiddleAlign
   scaleToFit* = true
+  font*: string = "default"
 
 proc setScaleToFit*[T: Label](label: T, val: bool): T =
   label.scaleToFit = true
@@ -39,26 +41,23 @@ proc setTimer*[T: Label](label: T, timer: float32): T =
   label
 
 proc arrange*(label: Label) =
-  if defaultFont.isNil:
-    defaultFont = readFont(fontPath)
-    defaultFont.size = 64
-    fontAtlas = FontAtlas.init(1024, 1024, 3, defaultFont)
-
-  let startSize = defaultFont.size
+  let
+    font = fontAtlas.fonts[label.font]
+    startSize = font.size
   var layout = label.layoutSize
   if label.scaleToFit:
-    defaultFont.size = 64
-    layout = defaultFont.layoutBounds(label.text)
-    while (layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y) and defaultFont.size > 0:
-      defaultFont.size -= 1
-      layout = defaultFont.layoutBounds(label.text)
+    font.size = 64
+    layout = font.layoutBounds(label.text)
+    while (layout.x >= label.layoutSize.x or layout.y >= label.layoutSize.y) and font.size > 0:
+      font.size -= 1
+      layout = font.layoutBounds(label.text)
   else:
-    defaultFont.size = label.fontSize
+    font.size = label.fontSize
 
 
 
-  label.arrangement = defaultFont.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign, wrap = true)
-  defaultFont.size = startSize
+  label.arrangement = font.typeset(label.text, label.layoutSize, hAlign = label.hAlign, vAlign = label.vAlign, wrap = true)
+  font.size = startSize
 
 method layout*(label: Label, parent: UiElement, offset: Vec2, state: UiState) =
   procCall UiElement(label).layout(parent, offset, state)
@@ -81,17 +80,17 @@ method upload*(label: Label, state: UiState, target: var UiRenderTarget) =
   procCall UiElement(label).upload(state, target)
   label.backgroundColor = bgColor
   label.color = color
-
+  let font = fontAtlas.fonts[label.font]
   if label.text.len > 0 and label.arrangement != nil:
     let
       color = mix(vec4(label.color.rgb, 0), label.color, progress)
       scrSize = state.screenSize
       parentPos = label.layoutPos
-      scale = label.fontSize /  defaultFont.size
+      scale = label.fontSize /  font.size
 
 
     for i, rune in label.arrangement.runes:
-      let fontEntry = fontAtlas.runeEntry(rune)
+      let fontEntry = fontAtlas.runeEntry(rune, label.font)
 
       if fontEntry.id > 0:
         let

@@ -336,8 +336,6 @@ proc getClipRect*(state: UiState, topLeft, bottomRight: Vec2): Vec4 =
   vec4(state.getClipRect(topLeft), state.getClipRect(bottomRight))
 
 var
-  fontPath*: string
-  defaultFont*: Font
   fontAtlas*: FontAtlas
   textureAtlas*: TextureAtlas
 

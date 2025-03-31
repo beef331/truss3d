@@ -2,10 +2,6 @@ import pixie, opengl
 import textures, shaders, atlasser, logging
 import std/[tables]
 
-proc init*(_: typedesc[Rect], w, h: float32): Rect = Rect(x: 0, y: 0, w: w, h: h)
-proc init*(_: typedesc[Rect], x, y, w, h: float32): Rect = Rect(x: x, y: y, w: w, h: h)
-
-
 type
   TextureEntry* = object
     id*: int = -1
@@ -28,13 +24,13 @@ proc init*(_: typedesc[TextureAtlas], w, h, margin: float32): TextureAtlas =
   result.ssbo = genSsbo[seq[Rect]](1)
 
 proc blitImpl(atlas: var TextureAtlas, name: string, tex: Texture, size: Vec2): TextureEntry =
-  var (added, rect) = atlas.atlas.add(name, Rect.init(size.x, size.y))
+  var (added, rect) = atlas.atlas.add(name, Rect(w: size.x, h: size.y))
   let
     startWidth = atlas.atlas.width
     startHeight = atlas.atlas.height
   while not added:
     atlas.atlas.resize(2f)
-    (added, rect) = atlas.atlas.add(name, Rect.init(size.x, size.y))
+    (added, rect) = atlas.atlas.add(name, Rect(w: size.x, h: size.y))
     if added:
       var newTexture = genTexture()
       newTexture.setSize(int atlas.atlas.width, int atlas.atlas.height)

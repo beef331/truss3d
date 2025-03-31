@@ -82,6 +82,12 @@ type
     instanceId: JoystickID
     sdlController: GameController
     buttonState: array[ControllerButtonA.ord..ControllerButtonDpadRight.ord, KeyState]
+
+  DeviceInteraction* = enum
+    Mouse
+    Gamepad
+    Keyboard
+
   InputState* = object
     keyRepeating: array[TKeyCode, KeyState]
     keyState: array[TKeyCode, KeyState]
@@ -93,6 +99,7 @@ type
     events*: Events
     textInput: TextInput
     controllers: seq[Controller]
+    interactedWithThisFrame*: set[DeviceInteraction]
 
 
 
@@ -104,6 +111,8 @@ const
   AxisRightY* = ControllerAxisRightY
   AxisTriggerL* = ControllerAxisTriggerLeft
   AxisTriggerR* = ControllerAxisTriggerRight
+
+  GamePadAxes* = [AxisLeftX, AxisLeftY, AxisRightX, AxisRightY, AxisTriggerL, AxisTriggerR]
 
 
   ButtonA* = ControllerButtonA
@@ -140,6 +149,7 @@ proc dispatchEvents(input: var InputState, keyCode: TKeyCode, state: KeyState, d
           event.interrupted = true
 
 proc resetInputs(input: var InputState, dt: float32) =
+  input.interactedWithThisFrame = {}
   for key, state in input.keyState.pairs:
     case state:
     of released:
@@ -193,6 +203,8 @@ proc inputText*(input: InputState): lent string = input.textInput.text
 proc inputText*(input: var InputState): var string = input.textInput.text
 
 
+proc getAxis*(input: var InputState, axis: GameControllerAxis): float32
+
 proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRunning: var bool) =
   input.resetInputs(dt)
 
@@ -201,6 +213,7 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
   while pollEvent(addr e) != 0:
     case e.kind
     of Keydown:
+      input.interactedWithThisFrame.incl Keyboard
       let
         key = e.key.keysym.sym
         lutd = KeyLut[key]
@@ -211,6 +224,7 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
         input.keyState[lutd] = pressed
         input.dispatchEvents(lutd, pressed, dt)
     of KeyUp:
+      input.interactedWithThisFrame.incl Keyboard
       let
         key = e.key.keysym.sym
         lutd = KeyLut[key]
@@ -221,17 +235,21 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
         input.keyState[KeyLut[key]] = released
         input.dispatchEvents(lutd, released, dt)
     of MouseMotion:
+      input.interactedWithThisFrame.incl Mouse
       let motion = e.motion
       if input.mouseMovement notin relativeMovement:
         input.mousePos = vec2(motion.x.float32, motion.y.float32)
       input.mouseDelta = vec2(motion.xrel.float32, motion.yrel.float32)
     of MouseButtonDown:
+      input.interactedWithThisFrame.incl Mouse
       let button = MouseButton(e.button.button - 1)
       input.mouseState[button] = pressed
     of MouseButtonUp:
+      input.interactedWithThisFrame.incl Mouse
       let button = MouseButton(e.button.button - 1)
       input.mouseState[button] = released
     of MouseWheel:
+      input.interactedWithThisFrame.incl Mouse
       let sign = if e.wheel.direction == MouseWheelFlipped: -1 else: 1
       input.mouseScroll = sign * e.wheel.y
     of WindowEvent:
@@ -249,11 +267,13 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
       input.textInput.pos = e.edit.start
       #textInput.text = $e.edit.text
     of ControllerButtonUp:
+      input.interactedWithThisFrame.incl Gamepad
       for controller in input.controllers.mitems:
         if controller.instanceId == e.cbutton.which:
           controller.buttonState[e.cbutton.button.ord] = released 
 
     of ControllerButtonDown:
+      input.interactedWithThisFrame.incl Gamepad
       for controller in input.controllers.mitems:
         if controller.instanceId == e.cbutton.which:
           controller.buttonState[e.cbutton.button.ord] = pressed
@@ -274,6 +294,13 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
 
 
     else: discard
+
+  for axis in GamePadAxes:
+    if input.getAxis(axis) notin -0.1..0.1:
+      input.interactedWithThisFrame.incl Gamepad
+
+proc interactedWith*(input: InputState): set[DeviceInteraction] = input.interactedWithThisFrame
+
 
 proc isDown*(input: InputState, k: TKeycode): bool = input.keyState[k] == pressed
 proc simulateDown*(input: var InputState, k: TKeycode) = input.keyState[k] = pressed

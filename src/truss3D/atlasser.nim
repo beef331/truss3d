@@ -1,32 +1,24 @@
 import std/tables
 type
-  RectangleImpl = concept r, type R # TODO: Expand this
-    r.x - r.x
-    typeof(r.x).high
-    init(R, r.x, r.x, r.x, r.x)
-    init(R, r.x, r.x)
-
-  
-  Atlas*[T; R: RectangleImpl] = object
+  Atlas*[T; R] = object
     width, height, margin*: typeof(default(R).x)
     usedRects: Table[T, R]
     freeRects: seq[R]
 
-proc init*[T; R: RectangleImpl](_: typedesc[Atlas[T, R]], width, height, margin: auto): Atlas[T, R] =
-  mixin init
+proc init*[T; R](_: typedesc[Atlas[T, R]], width, height, margin: auto): Atlas[T, R] =
   type FieldType = typeof(result.freeRects[0].w)
   Atlas[T, R](
     width: FieldType width,
     height: FieldType height,
     margin: FieldType margin,
-    freeRects: @[R.init(FieldType width, FieldType height)]
+    freeRects: @[R(w: FieldType width, h: FieldType height)]
   )
 
 proc clear*[T, R](atlas: var Atlas[T, R]) =
   mixin init
   type FieldType = typeof(atlas.freeRects[0].w)
   atlas.freeRects.setLen(1)
-  atlas.freeRects[0] = R.init(FieldType atlas.width, FieldType atlas.height)
+  atlas.freeRects[0] = R(w: FieldType atlas.width, h: FieldType atlas.height)
   atlas.usedRects.clear()
 
 proc getNearestSizeIndex*[T, R](atlas: Atlas[T, R], rect: R): int =
@@ -39,10 +31,9 @@ proc getNearestSizeIndex*[T, R](atlas: Atlas[T, R], rect: R): int =
     let 
       wDiff = freeRect.w - rect.w
       hDiff = freeRect.h - rect.h
-      mDist = wDiff + hDiff
+      mDist = abs(wDiff) + abs(hDiff)
 
-    if wDiff >= 0.FieldType and hDiff >= 0.FieldType and
-    dist > mDist and freeRect.x + rect.w < atlas.width and freeRect.y + rect.h < atlas.height:
+    if wDiff >= 0.FieldType and hDiff >= 0.FieldType:
       dist = mDist 
       result = i
       if wDiff == 0.FieldType and hDiff == 0.FieldType: # Found nearest fit
@@ -59,24 +50,22 @@ proc add*[T, R](atlas: var Atlas[T, R], name: T, rect: R): (bool, R) =
       rightWidth = oldRect.w - rect.w
       bottomHeight = oldRect.h - rect.h
 
-    if rightWidth > 0:
-      atlas.freeRects.add R.init(oldRect.x + rect.w + atlas.margin, oldRect.y, rightWidth, oldRect.h) # Add right side
+    if rightWidth >= atlas.margin:
+      atlas.freeRects.add R(x: oldRect.x + rect.w + atlas.margin, y: oldRect.y, w: rightWidth - atlas.margin, h: oldRect.h) # Add right side
 
-    if bottomHeight > 0:
-      atlas.freeRects.add R.init(oldRect.x, oldRect.y + rect.h + atlas.margin, rect.w, bottomHeight) # Add Bottom side
+    if bottomHeight >= atlas.margin:
+      atlas.freeRects.add R(x: oldRect.x, y: oldRect.y + rect.h + atlas.margin, w: rect.w, h: bottomHeight - atlas.margin) # Add Bottom side
 
     atlas.freeRects.del(rectInd)
     
     if name notin atlas.usedRects:
-      result[0] = true
-      result[1] = R.init(oldRect.x, oldRect.y, rect.w, rect.h) 
+      result = (true, R(x: oldRect.x, y: oldRect.y, w: rect.w, h: rect.h))
       atlas.usedRects[name] = result[1] # Add new rect
 
 proc remove*[T, R](atlas: var Atlas[T, R], name: T) =
-  mixin init
   type FieldType = typeof(atlas.freeRects[0].w)
   const zero = FieldType 0
-  let r = atlas.usedRects.getOrDefault(name, R.init(zero, zero))
+  let r = atlas.usedRects.getOrDefault(name, R(w: zero, h: zero))
   if r.w != zero and r.h != zero:
     atlas.freeRects.add r
     atlas.usedRects.del(name)
@@ -106,5 +95,5 @@ proc resize*[T, R](atlas: var Atlas[T, R], factor: auto) =
     margin = atlas.margin
   atlas.width *= factor
   atlas.height *= factor
-  atlas.freeRects.add R.init(0, startHeight + margin, startWidth * 2 - margin, startHeight - margin)
-  atlas.freeRects.add R.init(startWidth + margin, 0, startWidth - margin, startHeight)
+  atlas.freeRects.add R(x: 0, y: startHeight + margin, w: startWidth * 2 - margin, h: startHeight - margin)
+  atlas.freeRects.add R(x: startWidth + margin, y: 0, w: startWidth - margin, h: startHeight)
