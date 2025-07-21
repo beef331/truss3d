@@ -37,15 +37,7 @@ proc push*[T](instModel: var InstancedModel[T], val: auto) =
     instModel.ssboData.add val
   inc instModel.drawCount
 
-proc render*(instModel: InstancedModel) =
-  instModel.ssbo.bindBuffer(0)
-  for buf in instModel.model.buffers:
-    glBindVertexArray(buf.vao)
-    glDrawElementsInstanced(GlTriangles, buf.size, GlUnsignedInt, nil, GlSizei instModel.drawCount)
-  glBindVertexArray(0)
-  unbindSsbo()
-
-proc render*(instModel: InstancedModel, binding: int) =
+proc render*(instModel: InstancedModel, binding: int = 0) =
   if instModel.drawCount > 0:
     instModel.ssbo.bindBuffer(binding)
     for buf in instModel.model.buffers:
