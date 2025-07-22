@@ -87,6 +87,9 @@ when useAssimp:
           )
 
         mesh.vertices[vertInd] = cast[TVector3D]((tsfm * vert).xyz)
+        if norm in components:
+          let normal = cast[Vec3](mesh.normals[vertInd])
+          mesh.normals[vertInd] = cast[TVector3D](mat3(tsfm[0].xyz, tsfm[1].xyz, tsfm[2].xyz) * normal)
 
       glCreateBuffers(ord(VboKinds.high) + 1, vbos[vert].addr)
       glNamedBufferStorage(vbos[vert], mesh.vertexCount * vboSize[vert], mesh.vertices, GLbitfield 0)
