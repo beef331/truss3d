@@ -1,7 +1,7 @@
 import truss3D, truss3D/[models, shaders]
 import vmath, chroma
 
-type 
+type
   LineRenderer = object
     width: float
     points: seq[Vec2]
@@ -14,7 +14,7 @@ proc getLength(lr: LineRenderer): float32 =
     if i in 1..lr.points.high:
       result += dist(cur, lr.points[i - 1])
 
-proc generateMesh(lr: var LineRenderer) = 
+proc generateMesh(lr: var LineRenderer) =
   assert lr.points.len >= 2
   lr.meshData.indices.setLen(0)
   lr.meshData.verts.setLen(0)

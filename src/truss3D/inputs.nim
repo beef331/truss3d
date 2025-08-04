@@ -88,6 +88,10 @@ type
     Gamepad
     Keyboard
 
+  DropEvent* = object
+    isFile*: bool
+    data*: string
+
   InputState* = object
     keyRepeating: array[TKeyCode, KeyState]
     keyState: array[TKeyCode, KeyState]
@@ -100,6 +104,7 @@ type
     textInput: TextInput
     controllers: seq[Controller]
     interactedWithThisFrame*: set[DeviceInteraction]
+    dropEvents: seq[DropEvent]
 
 
 
@@ -183,6 +188,7 @@ proc resetInputs(input: var InputState, dt: float32) =
 
   input.mouseDelta = vec2(0, 0)
   input.mouseScroll = 0
+  input.dropEvents.setLen(0)
 
 
 proc startTextInput*(input: var InputState, r: Rect, text: sink string = "") =
@@ -284,6 +290,10 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
 
       info "Connected: ", gameControllerNameForIndex(id) 
       input.controllers.add Controller(instanceId: id, sdlController: gameControllerOpen(id))
+    of DropFile, DropText:
+      input.dropEvents.add DropEvent(isFile: e.drop.kind == DropFile, data: $e.drop.file)
+      free(e.drop.file)
+
     of ControllerDeviceRemoved:
       for x, controller in input.controllers.mpairs:
         if controller.instanceId == e.cdevice.which:
@@ -298,6 +308,10 @@ proc pollInputs*(input: var InputState, screenSize: var IVec2, dt: float32, isRu
   for axis in GamePadAxes:
     if input.getAxis(axis) notin -0.1..0.1:
       input.interactedWithThisFrame.incl Gamepad
+
+iterator dropped*(input: InputState): DropEvent =
+  for drop in input.dropEvents:
+    yield drop
 
 proc interactedWith*(input: InputState): set[DeviceInteraction] = input.interactedWithThisFrame
 
