@@ -63,7 +63,7 @@ proc onValue*[T: Slider](slider: T, prc: proc(i: int)): T =
   slider.onValueHandler = proc(f: float32) = prc(int(f))
   slider
 
-proc setValueWatcher[T: Slider](slider: T, prc: proc(): float32): T =
+proc setValueWatcher*[T: Slider](slider: T, prc: proc(): float32): T =
   slider.valueWatcher = prc
   slider
 
