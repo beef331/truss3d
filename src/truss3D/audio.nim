@@ -8,7 +8,7 @@ type
     positionFunc: proc(): Vec3
 
 var
-  engine: AudioEngine
+  engine*: AudioEngine
   soundEffects: seq[SoundEffect]
 
 
