@@ -21,11 +21,17 @@ proc `=copy`[T](a: var Ssbo[T], b: Ssbo[T]) {.error.}
 
 proc `=destroy`[T](ssbo: Ssbo[T]) =
   if Gluint(ssbo) > 0:
-    glDeleteBuffers(1, GLuint(ssbo).addr)
+    try:
+      glDeleteBuffers(1, GLuint(ssbo).addr)
+    except:
+      discard
 
 proc `=destroy`(shader: Shader) =
   if Gluint(shader) > 0:
-    glDeleteShader(Gluint(shader))
+    try:
+      glDeleteShader(Gluint(shader))
+    except:
+      discard
 
 
 
